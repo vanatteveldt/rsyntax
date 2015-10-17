@@ -1,0 +1,11 @@
+Package: rsyntax
+Type: Package
+Title: R library to help dealing with syntactic structure
+Version: 0.1
+Date: 2015-10-17
+Author: Wouter van Atteveldt
+Maintainer: Wouter van Atteveldt <wouter@vanatteveldt.com>
+Depends:
+    igraph
+Description: R library to help dealing with syntactic structure
+License: MIT license

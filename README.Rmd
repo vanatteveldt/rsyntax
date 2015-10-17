@@ -1,0 +1,50 @@
+---
+title: "README"
+output: md_document
+---
+
+R functions for working with syntactic structure coded as token lists (e.g. CONLL format)
+
+Installation
+====
+
+You can install directly from github:
+
+```{r, eval=F}
+library(devtools)
+install_github("kasperwelbers/corpus-tools")
+```
+
+Usage
+====
+
+The functions in this module assume that you have a list of tokens in a data frame.
+A simple example is provided with the module:
+
+```{r, message=F, eval=F}
+library(rsyntax)
+data(example_tokens)
+head(tokens)
+```
+
+```{r, echo=F, message=F}
+library(rsyntax)
+data(example_tokens)
+library(knitr)
+kable(head(tokens))
+```
+
+Get the text of a sentence, optionally specifying which column(s) to use:
+
+```{r}
+get_text(tokens)
+get_text(tokens, word.column = c("lemma", "pos"))
+```
+
+Plot the syntactic structure of a sentence:
+(Note: if you have multiple sentences in one token list, you should filter it or provide a sentence= argument)
+
+```{r readme_example_plot, fig.path=".", fig.cap="Syntactic Structure of example sentence"}
+g = graph_from_sentence(tokens)
+plot(g)
+```
