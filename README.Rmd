@@ -12,7 +12,7 @@ You can install directly from github:
 
 ```{r, eval=F}
 library(devtools)
-install_github("kasperwelbers/corpus-tools")
+install_github("vanatteveldt/rsyntax")
 ```
 
 Usage
@@ -24,14 +24,14 @@ A simple example is provided with the module:
 ```{r, message=F, eval=F}
 library(rsyntax)
 data(example_tokens)
-head(tokens)
+tokens
 ```
 
 ```{r, echo=F, message=F}
 library(rsyntax)
 data(example_tokens)
 library(knitr)
-kable(head(tokens))
+kable(tokens)
 ```
 
 Get the text of a sentence, optionally specifying which column(s) to use:
@@ -46,5 +46,49 @@ Plot the syntactic structure of a sentence:
 
 ```{r readme_example_plot, fig.path=".", fig.cap="Syntactic Structure of example sentence"}
 g = graph_from_sentence(tokens)
+plot(g)
+```
+
+Clauses and Sources
+====
+
+You can use the `get_quotes` function to extract quotes and paraphrases from the sentences.
+Note that for this, the token ids need to be globally unique. 
+If that is not the case, you can use the `unique.ids` function to make them unique:
+
+```{r}
+tokens = unique_ids(tokens)
+```
+
+You can get the quotes from the tokens with `get_quotes`:
+
+```{r, eval=F}
+quotes = get_quotes(tokens)
+quotes
+```
+```{r, echo=F}
+quotes = get_quotes(tokens)
+kable(quotes)
+```
+
+A single quote was found, with node 2 ("say") as the key, node 1 ("John") as the  sources, and nodes 3 through 6 ("that Mary hit him") as quote. 
+
+To find the clauses, you can use the get_clauses function, which takes the quotes as an optional argument to make sure that speech actions are not listed as clauses:
+
+```{r, eval=F}
+clauses = get_clauses(tokens, quotes=quotes)
+clauses
+```
+```{r, echo=F}
+clauses = get_clauses(tokens, quotes=quotes)
+kable(clauses)
+```
+
+Finally, you can also provide the quotes and clauses to the `graph_from_sentence` function. 
+This will fill the clauses in a desaturated rainbow, with the subject as a circle and the predicate as rectangle.
+Quotes are represented with a bright node for the source, and the border in the same colour for the quote.
+
+```{r readme_example_plot_clauses, fig.path=".", fig.cap="Syntactic Structure of example sentence with clauses and quotes marked"}
+g = graph_from_sentence(tokens, quotes = quotes, clauses = clauses)
 plot(g)
 ```
