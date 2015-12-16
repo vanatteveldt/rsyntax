@@ -57,26 +57,39 @@ get_clauses <- function(tokens, quotes=NULL) {
   # remove non-verbal predicates
   clauses = clauses[tokens$pos1[match(clauses$predicate, tokens$id)] == 'V', ]
   
-  # add passives without agent
+  # add passives without agent and parataxis verbs without subject
   passives = tokens$parent[tokens$relation == "nsubjpass"]
-  passives = setdiff(passives, clauses$predicate)
-  clauses = rbind(clauses, data.frame(subject=rep(NA, length(passives)), predicate=passives))
+  parataxis = find_nodes(tokens, relation="parataxis", children=c("dobj"))$id
+  extra = setdiff(c(passives, parataxis), clauses$predicate)
+  clauses = rbind(clauses, data.frame(subject=NA, predicate=extra))
   
   # add verbal xcomps
   xcomps = find_nodes(tokens, children=c("xcomp", "dobj"))
   xcomps = xcomps[!(xcomps$xcomp %in% c(block, clauses$subject)), ]
-  
   clauses = rbind(clauses, data.frame(subject=xcomps$dobj, predicate=xcomps$xcomp))
+  
+  # add copula - verbs (be ready to ...)
+  copx = find_nodes(tokens, children=c("nsubj", "xcomp", "cop"), pos1="A", columns = "sentence")
+  clauses = rbind(clauses, data.frame(subject=copx$nsubj, predicate=copx$id))
+  
   
   # add nominal actions. Currently restrict to 'attack' nouns, should get a list of nominal actions somewhere
   if (!is.null(tokens$attack)) {
-    tokens$action = tokens$attack & !(tokens$lemma %in% c("soldier", "troops"))
+    tokens$action = tokens$attack & !(tokens$lemma %in% c("soldier", "troops", "force"))
     nominal = find_nodes(tokens, pos1="N", action=T, children="poss")
     clauses = rbind(clauses, data.frame(subject=nominal$poss, predicate=nominal$id))
     
     # battle between X and Y
-    battles = find_nodes(tokens, pos1="N", attack=T, children=list("prep_between", rename="actor"))
+    battles = find_nodes(tokens, attack=T, children=list("prep_between", rename="actor"))
     clauses = rbind(clauses, data.frame(subject=battles$actor, predicate=battles$id))
+
+    # attack [launched] from
+    from = rbind(find_nodes(tokens, attack=T, children=list("prep_from")),
+                 find_nodes(tokens, attack=T, children=list("vmod", children="prep_from", rename="prep_from")))
+    from = subset(from, !(id %in% clauses$predicate))
+    clauses = rbind(clauses, data.frame(subject=from$prep_from, predicate=from$id))
+    
+    
   } else battles = NULL
   
   
@@ -84,7 +97,7 @@ get_clauses <- function(tokens, quotes=NULL) {
   
   # deal with conjunctions
   pred_tokens = merge(clauses, tokens[c("id", "relation", "parent")], by.x="predicate", by.y="id")
-  conj = with(pred_tokens[pred_tokens$relation == "conj_and",], data.frame(subject=subject, predicate=parent))
+  conj = with(pred_tokens[pred_tokens$relation %in% c("conj_and", "conj_but"),], data.frame(subject=subject, predicate=parent))
   clauses = rbind(clauses, conj)
   
   clauses$clause_id = 1:nrow(clauses)
@@ -92,10 +105,10 @@ get_clauses <- function(tokens, quotes=NULL) {
   # Deal with subordinate 'who' clauses
   parents = match(tokens$parent, tokens$id)
   grandparents = tokens$id[parents[parents]]
-  subord_who = tokens$id[!is.na(grandparents) & tokens$lemma == "who" & tokens$relation[parents] == "rcmod"]
+  subord_who = tokens$id[!is.na(grandparents) & tokens$lemma %in% c("who", "that") & tokens$relation[parents] == "rcmod"]
   clause_gps = grandparents[match(clauses$subject, tokens$id)]
   clauses$subject[clauses$subject %in% subord_who] = clause_gps[clauses$subject %in% subord_who]
-  
+
   # melt to long format, fill out children, and return
   clauses = melt(clauses, id.vars="clause_id", na.rm = T)
   if (!is.null(battles)) {
@@ -104,7 +117,6 @@ get_clauses <- function(tokens, quotes=NULL) {
     extra = merge(subset(clauses, variable=="subject"), battles, by.x="value", by.y="actor.x")
     if (nrow(extra)>0) clauses = rbind(clauses, with(extra, data.frame(clause_id=clause_id, variable="predicate", value=actor.y)))
   }
-  
   
   
   filled= fill(id=clauses$value, tokens, block=c(clauses$value, block))
