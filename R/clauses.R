@@ -1,5 +1,5 @@
 .SAY_VERBS = c("tell", "show", " acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "proclaim", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "write", "add")
-.QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass")
+.QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
 .SUBJECT_RELS = c('su', 'nsubj', 'agent') 
 
 #' Get all quotes in the tokens
@@ -17,6 +17,10 @@ get_quotes <- function(tokens) {
   
   quotes = find_nodes(tokens, lemma__in=.SAY_VERBS, children=list(src_expr, quote_expr))
   
+  # deal with conjunctions
+  # quotes2 = find_nodes(tokens, lemma__in=.SAY_VERBS, children=list(list(relation__in=c("conj_and", "conj_but"), rename="source", children=src_expr), quote_expr))
+  # quotes = unique(rbind(quotes, quotes2))
+  
   # check for xcomp - subjects
   quotes_nosrc = subset(find_nodes(tokens, lemma__in=.SAY_VERBS, children=list(quote_expr)), !(id %in% quotes$id))
   xcomp_src = find_nodes(tokens, pos1="V", children=list(src_expr, list(relation="xcomp", id__in=quotes_nosrc$id)))
@@ -29,7 +33,7 @@ get_quotes <- function(tokens) {
   quotes = melt(quotes, id.vars=c("quote_id", "id"))
   colnames(quotes) = c("quote_id", "key", "quote_role", "id")
   
-  filled= fill(id=quotes$id, tokens)
+  filled = fill(id=quotes$id, tokens)
   quotes = merge(quotes, filled)
   quotes$id <- NULL
   colnames(quotes)[4] = "id"
