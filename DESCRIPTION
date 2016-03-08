@@ -9,7 +9,8 @@ Depends:
     igraph,
     reshape2,
     plyr,
-    colorspace
+    colorspace,
+    Matrix
 Description: R library to help dealing with syntactic structure
 License: MIT license
 RoxygenNote: 5.0.1

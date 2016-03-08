@@ -60,7 +60,8 @@ graph_from_sentence <-function(tokens, sentence=NULL, quotes=NULL, clauses=NULL)
       V(g)$shape[V(g)$name %in%  clauses$id[clauses$clause_role == "subject"]] = "circle"  
     }
     return(g)
-  }
+}
+
 #' Get the text from a tokens data frame 
 #' 
 #' The data is sorted by aid, sentence, and offset, and the words are pasted together to a single character value.
