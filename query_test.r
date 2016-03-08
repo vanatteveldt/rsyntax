@@ -23,6 +23,8 @@ testQuery(tokens, 'wilders', 'pvv OR geert', tokenfreq = T, keywordIC = F)
 testQuery(tokens, 'wilders', 'pvv OR geert', tokenfreq = F, keywordIC = T)
 testQuery(tokens, 'wilders', 'pvv OR geert')
 
+testQuery(tokens, 'wilders', 'pvv OR geert', kwic_nwords = 50)
+
 
 testQuery(tokens, 'energie*', 'duurza* OR groen* OR milieuvriendelijk*')
 

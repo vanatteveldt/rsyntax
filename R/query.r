@@ -24,8 +24,8 @@ parseQueries <- function(query){
   query = gsub(' NOT ', ' &! ', query)
   
   ## also allow space as OR
-  query = gsub('(\\w)[ ]+(\\w)', '\\1 OR \\2', query)
-
+  query = gsub('([a-zA-Z0-9*?)])[ ]+([a-zA-Z0-9*?(])', '\\1 | \\2', query)
+  
   query_form = as.list(gsub('([*a-zA-Z0-9/~_-]+)', '%s', query))
   query_terms = regmatches(query, gregexpr('([*a-zA-Z0-9/~_-]+)', query))
   
@@ -127,18 +127,17 @@ codeTokens <- function(tokens, queries, default.window=25, columnname='code', fi
 #' Get keyword-in-context from a token list
 #' 
 #' @param tokens a data frame of tokens containing columns for article id, term location and term string (column names can be specified in aid_var, term_i_var and term_var parameters, respectively). 
-#' @param column the name of the column in 'tokens' in which the keyword is searched
-#' @param value the keyword
+#' @param token_i The tokens for which the context is given. Can be a logical vector or a numeric vector with indices.
 #' @param nwords the number of words in front and after the keyword
 #' @param aid_var a character string giving the name of the article id column 
 #' @param term_i_var a character string giving the name of the term location column
 #' @param term_var a character string giving the name of the term string column 
 #' @return A data.frame with the keyword in context
 #' @export
-kwic <- function(tokens, column, value, nwords=10, aid_var='aid', term_i_var='id', term_var='word', prettypaste=T){
-  where = which(tokens[,column] == value)
-
-  kwicldply <- function(i, aids, terms, nwords=nwords){
+kwic <- function(tokens, hits, nwords=10, aid_var='aid', term_i_var='id', term_var='word', prettypaste=T){
+  token_i = tokenLookup(tokens, hits[,aid_var], hits[,term_i_var], aid_var, term_i_var)
+  
+  kwicldply <- function(i, aids, terms, nwords){
     aid = aids[i]
     sent_i = (i-nwords):(i+nwords)
     sent = as.character(terms[sent_i])
@@ -148,7 +147,7 @@ kwic <- function(tokens, column, value, nwords=10, aid_var='aid', term_i_var='id
     sent = sent[aids[sent_i] == aid] # only show context words if they occur in the same article
     data.frame(aid=aid, kwic=paste(sent, collapse=' '))  
   }
-  o = ldply(where, kwicldply, aids=tokens[,aid_var], terms=tokens[,term_var], nwords=10)
+  o = ldply(token_i, kwicldply, aids=tokens[,aid_var], terms=tokens[,term_var], nwords=nwords)
   if(prettypaste) {
     o$kwic = gsub('_', ' ', o$kwic)
     o$kwic = gsub('  ', ' ', o$kwic)
@@ -159,6 +158,13 @@ kwic <- function(tokens, column, value, nwords=10, aid_var='aid', term_i_var='id
   o
 }
 
+tokenLookup <- function(tokens, article_id, term_i, aid_var='aid', term_i_var='id'){
+  tokens$i = 1:nrow(tokens)
+  tokens = tokens[tokens[,aid_var] %in% unique(article_id), c('i', aid_var, term_i_var)]
+  which.sub = match(paste(article_id, term_i, sep='___'),
+                    paste(tokens[,aid_var], tokens[,term_i_var], sep='___'))
+  tokens$i[which.sub]
+}
 
 #' Search for tokens in a tokenlist using indicators with conditions
 #' 
@@ -182,33 +188,35 @@ kwic <- function(tokens, column, value, nwords=10, aid_var='aid', term_i_var='id
 #' @export
 #'
 #' @examples
-searchQuery <- function(tokens, indicator, condition, meta=NULL, condition_once=FALSE, presorted=T, filter=rep(T, nrow(tokens)), sample_n=NULL, random_sample=T, keywordIC=F, kwic_nwords=10, aid_var='aid', term_i_var='id', term_var='word'){
+searchQuery <- function(tokens, indicator, condition='', default.window=25, meta=NULL, condition_once=FALSE, presorted=T, filter=rep(T, nrow(tokens)), aid_var='aid', term_i_var='id', term_var='word'){
   tokens$hit = NULL
   query = data.frame(code=1, indicator=indicator, condition=condition)
-  tokens = codeTokens(tokens, query, columnname = 'hit', filter=filter, aid_var='aid', term_i_var='id', term_var='word', presorted=presorted)
+  tokens = codeTokens(tokens, query, columnname = 'hit', filter=filter, aid_var='aid', term_i_var='id', term_var='word', presorted=presorted, default.window = default.window)
   o = tokens[tokens$hit == 1, c(aid_var, term_i_var, term_var)]
   
-  message(sprintf('%s hits in %s articles (N = %s)', nrow(o), length(unique(o[,aid_var])), length(unique(tokens[,aid_var]))))
-  cat('\n')
-  
-  if(keywordIC) o$kwic = kwic(tokens, 'hit', value=1, nwords = kwic_nwords)$kwic
-  if(!is.null(sample_n)) {
-    if(random_sample) o = o[sample(1:nrow(o), nrow(o)),]
-    o = head(o, sample_n) 
-  }
+  nhits = nrow(o)
+  narts = length(unique(o[,aid_var]))
+  message(sprintf('%s hit%s in %s article%s (N = %s)', nhits, ifelse(nhits==1, '', 's'), 
+                                                       narts, ifelse(narts==1, '', 's'), 
+                                                       length(unique(tokens[,aid_var]))))
+
   if(!is.null(meta)) o = merge(meta, o, by=aid_var, all.x=F, all.y=T)
   o
 }
 
-testQuery <- function(tokens, indicator, condition, tokenfreq=T, keywordIC=T, kwic_nwords=10, keywordIC_sample=10, random_sample=T, meta=NULL, aid_var='aid', term_i_var='id', term_var='word', condition_once=FALSE, presorted=T){
-  ## convenience function
-  hits = searchQuery(tokens, indicator, condition, sample_n = NULL, meta=meta, aid_var=aid_var, term_i_var=term_i_var, term_var=term_var, keywordIC=keywordIC, kwic_nwords=kwic_nwords, condition_once=condition_once, presorted=presorted)
+testQuery <- function(tokens, indicator, condition='', default.window=25, tokenfreq=T, keywordIC=T, kwic_nwords=10, keywordIC_sample=10, random_sample=T, meta=NULL, condition_once=FALSE, presorted=T, aid_var='aid', term_i_var='id', term_var='word'){
+  hits = searchQuery(tokens, indicator, condition, default.window, meta=meta, aid_var=aid_var, term_i_var=term_i_var, term_var=term_var, condition_once=condition_once, presorted=presorted)
+  cat('\n')
   if(tokenfreq) reportTokenFreq(hits, aid_var, term_var)
-  if(!is.null(keywordIC_sample)) {
-    if(random_sample) hits = hits[sample(1:nrow(hits), nrow(hits)),]
-    hits = head(hits, keywordIC_sample) 
+
+  if(keywordIC) {
+    if(!is.null(keywordIC_sample)) {
+      if(random_sample) hits = hits[sample(1:nrow(hits), nrow(hits)),]
+      hits = head(hits, keywordIC_sample) 
+    }
+    hits$kwic = kwic(tokens, hits, nwords = kwic_nwords)$kwic
+    reportKWIC(hits, aid_var, term_i_var, term_var) 
   }
-  if(keywordIC) reportKWIC(hits, aid_var, term_i_var, term_var) 
 }
 
 reportTokenFreq <- function(hits, aid_var, term_var){
@@ -225,20 +233,25 @@ reportKWIC <- function(hits, aid_var='aid', term_i_var='id', term_var='word'){
       message(paste(metaname, paste(unique(ahits[,metaname]), collapse=' / '), sep=': '))
     }
     for(term_i in ahits[,term_i_var]){
-      cat(ahits[ahits$id == term_i,]$kwic)
+      cat('\t',ahits[ahits$id == term_i,]$kwic)
       cat('\n')
     }
   }
 }
 
-compareHits <- function(hits.x, hits.y, sample_n=10, aid_var='aid', term_i_var='id'){
-  id.x = paste(hits.x[,aid_var], hits.x[,'term_i_var'], sep='---')
-  id.y = paste(hits.y[,aid_var], hits.y[,'term_i_var'], sep='---')
-  label.x = hits.x$hit
+
+
+compareHits <- function(tokens, hits.x, hits.y, sample_n=10, aid_var='aid', term_i_var='id'){
+  id.x = paste(hits.x[,aid_var], hits.x[,term_i_var], sep='---')
+  id.y = paste(hits.y[,aid_var], hits.y[,term_i_var], sep='---')
   x_not_y = hits.x[!id.x %in% id.y,] 
   y_not_x = hits.y[!id.y %in% id.x,] 
   x_and_y = hits.x[]
 }
+
+#hits.x = searchQuery(tokens, 'sap')
+#hits.y = searchQuery(tokens, 'sap', 'jolande fractievoorzit* groenlinks')
+
 
 #hits = list(test1=data.frame(aid=c(1,2,3), hits=c(1,1,1)),test2=data.frame(aid=c(1,2,3), hits=c(1,1,1)), test3=data.frame(aid=c(1,2,3), hits=c(1,1,1)))
 #xy = combn(names(hits), 2)
