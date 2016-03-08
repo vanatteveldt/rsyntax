@@ -22,6 +22,8 @@ codeTokens(tokens, queries, default.window = 25, columnname = "code",
 \item{term_var}{a character string giving the name of the term string column}
 
 \item{condition_once}{logical. If TRUE, then if an indicator satisfies its conditions once in an article, all indicators within that article are coded.}
+
+\item{presorted}{The data has to be sorted on order(aid_var, term_i_var). If this is already the case, presorted can be set to TRUE to save time (which is usefull when testing many individual queries for large tokenlists)}
 }
 \value{
 the annotated tokens data frame
