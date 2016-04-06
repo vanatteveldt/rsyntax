@@ -1,7 +1,36 @@
-.SAY_VERBS = c("tell", "show", " acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "proclaim", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "write", "add")
-.QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
+.SAY_VERBS = c("zeggen", "stellen", "roepen", "schrijven", "denken", "vaststellen")
+.VIND_VERBS = c("vinden", "meen", "beken", "concludeer", "erken", "waarschuw", "weet")
+
+.VIND_VERBS = union(.SAY_VERBS, c("accepteer", "antwoord", "beaam", "bedenk", "bedoel", "begrijp", "beken", "beklemtoon", "bekrachtig", "belijd", "beluister", "benadruk", "bereken", "bericht", "beschouw", "beschrijf", "besef", "betuig", "bevestig", "bevroed", "beweer", "bewijs", "bezweer", "biecht", "breng", "brul", "concludeer", "confirmeer", "constateer", "debiteer", "declareer", "demonstreer", "denk", "draag_uit", "email", "erken", "expliceer", "expliciteer", "fantaseer", "formuleer", "geef_aan", "geloof", "hoor", "hamer", "herinner", "houd_vol", "kondig_aan", "kwetter", "licht_toe", "maak_bekend", "maak_hard", "meld", "merk", "merk_op", "motiveer", "noem", "nuanceer", "observeer", "onderschrijf", "onderstreep", "onthul", "ontsluier", "ontval", "ontvouw", "oordeel", "parafraseer", "postuleer", "preciseer", "presumeer", "pretendeer", "publiceer", "rapporteer", "realiseer", "redeneer", "refereer", "reken", "roep", "roer_aan", "ruik", "schat", "schets", "schilder", "schreeuw", "schrijf", "signaleer", "snap", "snater", "specificeer", "spreek_uit", "staaf", "stellen", "stip_aan", "suggereer", "tater", "teken_aan", "toon_aan", "twitter", "verbaas", "verhaal", "verklaar", "verklap", "verkondig", "vermoed", "veronderstel", "verraad", "vertel", "vertel_na", "verwacht", "verwittig", "verwonder", "verzeker", "vind", "voel", "voel_aan", "waarschuw", "wed", "weet", "wijs_aan", "wind", "zeg", "zet_uiteen", "zie", "twitter"))
+    
+
+.VOLGENS = c("volgens", "aldus")
+.QUOTES = c('"', "'", "''", "`", "``")
+.QPUNC = union(.QUOTES, c(":"))
+
+.QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl", 'nucl')
 .SUBJECT_RELS = c('su', 'nsubj', 'agent') 
 
+#tokens2 = tokens
+#tokens = tokens2[tokens2$sentence == 5,]
+
+get_quotes <- function(tokens){
+
+  src_expr=list(relation__in=.SUBJECT_RELS, rename="source")
+  quote_expr=list(relation__in=.QUOTE_RELS, rename="quote")
+  direct.quotes=find_nodes(tokens, lemma__in=.VIND_VERBS, children=list(src_expr, quote_expr))
+  
+  src_expr=list(relation__in=.SUBJECT_RELS, rename="source")
+  quote_expr=list(relation__in=.QUOTE_RELS, rename="quote")
+  quotes = c(quotes, direct=list(find_nodes(tokens, lemma__in=.VIND_VERBS, children=list(src_expr, quote_expr))))
+
+  volgens = find_nodes(tokens, children=list(lemma="volgens"))
+  colnames(volgens) = c("quote", "id")
+  objs = find_nodes(tokens, children=list(relation="obj1", rename="source"))
+  #merge(volgens, objs)
+}
+
+#tokens = tokens[tokens$sentence == 1,]
 
 #' Get all quotes in the tokens
 #' 
@@ -11,7 +40,7 @@
 #' @param tokens a data frame of tokens containing id, parent, relation, pos1 and lemma columns. 
 #' @return the quotes in long format, i.e. a data frame with quote id, quote role, and token id
 #' @export
-get_quotes <- function(tokens) {
+get_quotes2 <- function(tokens) {
   
   src_expr=list(relation__in=.SUBJECT_RELS, rename="source")
   quote_expr=list(relation__in=.QUOTE_RELS, rename="quote")
@@ -38,7 +67,7 @@ get_quotes <- function(tokens) {
   colnames(quotes)[4] = "id"
   quotes
 }
-  
+
 
 #' Get the clauses for the given sentences
 #' 
@@ -53,7 +82,7 @@ get_quotes <- function(tokens) {
 #' @export
 get_clauses <- function(tokens, quotes=NULL) {
   block = if (is.null(quotes)) NULL else unique(c(quotes$id[quotes$quote_role == "source"], quotes$key))
-                                                
+  
   clauses = data.frame(subject=tokens$id[tokens$relation %in% .SUBJECT_RELS & !(tokens$id %in% block)])
   clauses$predicate = tokens$parent[match(clauses$subject, tokens$id)]
   
@@ -85,7 +114,7 @@ get_clauses <- function(tokens, quotes=NULL) {
     # battle between X and Y
     battles = find_nodes(tokens, attack=T, children=list("prep_between", rename="actor"))
     clauses = rbind(clauses, data.frame(subject=battles$actor, predicate=battles$id))
-
+    
     # attack [launched] from
     from = rbind(find_nodes(tokens, attack=T, children=list("prep_from")),
                  find_nodes(tokens, attack=T, children=list("vmod", children="prep_from", rename="prep_from")))
@@ -111,7 +140,7 @@ get_clauses <- function(tokens, quotes=NULL) {
   subord_who = tokens$id[!is.na(grandparents) & tokens$lemma %in% c("who", "that") & tokens$relation[parents] == "rcmod"]
   clause_gps = grandparents[match(clauses$subject, tokens$id)]
   clauses$subject[clauses$subject %in% subord_who] = clause_gps[clauses$subject %in% subord_who]
-
+  
   # melt to long format, fill out children, and return
   clauses = melt(clauses, id.vars="clause_id", na.rm = T)
   if (!is.null(battles)) {

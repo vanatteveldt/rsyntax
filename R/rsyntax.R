@@ -20,6 +20,7 @@ graph_from_sentence <-function(tokens, sentence=NULL, quotes=NULL, clauses=NULL)
     nodes = tokens[tokens$id %in% c(edges$parent, edges$id), c("id", setdiff(colnames(tokens), c("id")))]
     # check single root
     root = as.character(setdiff(nodes$id, edges$id))
+
     if (length(root) == 0) stop("Cannot find root in ", nrow(tokens), " tokens (sentence=",sentence,")")
     if (length(root) > 1) stop("Multiple roots (", length(root), ") in ", nrow(tokens), " tokens (sentence=",sentence,")")
     
