@@ -14,3 +14,4 @@ Depends:
 Description: R library to help dealing with syntactic structure
 License: MIT license
 RoxygenNote: 5.0.1
+Suggests: testthat

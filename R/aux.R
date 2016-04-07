@@ -36,13 +36,12 @@ unique_ids <- function(tokens) {
 #' @param ... other filters
 #' @return a df with the ids of (parent) id and child (id)
 get_children <- function(tokens, relation=NULL, rename=relation, ...) {
+  
   filters = c(list(...), if (is.null(relation)) NULL else list(relation=relation))
-  tokens = do.call(function(...) find_nodes(tokens, ..., columns="parent"), filters)
-  #for (name in names(filters))
-  #  tokens = tokens[tokens[[name]] == filters[[name]], ]
-  tokens = data.frame(id=tokens$parent, child=tokens$id)
-  if (!is.null(rename)) colnames(tokens)[2] = rename
-  tokens
+  ctokens = do.call(find_nodes, c(list(tokens, columns="parent"), filters))
+  # rename parent to id, id to `rename`, keep the rest and return with id as first column
+  ctokens = rename(ctokens, c(parent="id", id=rename))
+  cbind(ctokens[2], ctokens[-2])
 }
 
 #' Search for nodes matching specific criteria
@@ -71,15 +70,23 @@ find_nodes <- function(tokens, children=NULL, columns=NULL, ...) {
       result = result[match_values %in% filter_value,]
     } else {
       if (grepl("__i$", name)) {match_values = tolower(match_values); filter_value = tolower(filter_value)}
-      result = result[match_values == filter_value,]
+      result = result[!is.na(match_values) & match_values == filter_value,]
     }
   }
   result = result[c("id", columns)]
-  if (!is.null(names(children))) children = list(children)
+  #if (!is.null(names(children))) children = list(children)
   
   for (i in seq_along(children)) {
-    t = do.call(function(...) get_children(tokens, ...), as.list(children[[i]]))
-    t = rename(t, c(child=paste("rel", i, sep = "_")), warn_missing = F) # in case no rel is given
+    name = NULL
+    if (is.list(children[[i]]) && !is.null(children[[i]][["rename"]])) {
+      name = children[[i]][["rename"]]
+      children[[i]][["rename"]] <- NULL
+    }
+    if (is.null(name) && !is.null(names(children))) name = names(children)[i]
+    if (is.null(name) || name == "") name = paste("rel", i, sep="_")
+  
+    t = do.call(get_children, c(list(tokens, rename=name), as.list(children[[i]])))
+    
     result = merge(result, t)
   }
   result  
