@@ -7,6 +7,7 @@
 .QUOTES = c('"', "'", "''", "`", "``")
 .QPUNC = union(.QUOTES, c(":"))
 
+.SUBJECT_RELS = c('su')
 
 
 #' Get quotes from tokens parsed by Alpino
@@ -51,3 +52,4 @@ get_quotes_nl <- function(tokens) {
 
   rbind(zegtdat, stelt, yzegt, volgens, impliciet, impliciet2)
 }
+

@@ -13,3 +13,11 @@ NULL
 #' @name example_tokens_dutchquotes
 #' @usage data(dutchquotes)
 NULL
+
+#' Tokens from Dutch sentences for testing get_clauses
+#' 
+#' @docType data
+#' @keywords datasets
+#' @name example_tokens_dutchclauses
+#' @usage data(dutchclauses)
+NULL

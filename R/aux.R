@@ -9,7 +9,7 @@ fill <- function(id, tokens, block=unique(id)) {
   f = unique(data.frame(id=id, filled=id))  
   while (T) {
     f2 = merge(f, parents, by.x="filled", by.y="parent")
-    f2 = unique(data.frame(id=f2$id, filled=f2$child))
+    f2 = unique(data.frame(id=as.character(f2$id), filled=as.character(f2$child), stringsAsFactors = F))
     f2 = f2[f2$id == f2$filled | !(f2$filled %in% block),]
     if (nrow(f) == nrow(f2)) return(f2)
     f = f2
@@ -66,13 +66,21 @@ find_nodes <- function(tokens, children=NULL, columns=NULL, ...) {
     filter_value = filters[[name]]
     filter_column = sub("__.*$", "", name)
     match_values = result[[filter_column]]
-    if (grepl("__in$", name)) {
-      result = result[match_values %in% filter_value,]
-    } else {
-      if (grepl("__i$", name)) {match_values = tolower(match_values); filter_value = tolower(filter_value)}
+    
+    if (grepl("__i$", name)) { # gebruiken we ooit case insensitive, en zo ja, moet het dan niet op een manier waarop het ook in combi met __in en __not_in gebruikt kan worden?
+      match_values = tolower(match_values); filter_value = tolower(filter_value)
+    }
+    if (!grepl("__in$|__not_in$", name)) {
       result = result[!is.na(match_values) & match_values == filter_value,]
     }
+    if (grepl("__in$", name)) {
+      result = result[match_values %in% filter_value,]
+    } 
+    if (grepl("__not_in$", name)) {
+      result = result[!match_values %in% filter_value,]
+    }
   }
+  
   result = result[c("id", columns)]
   #if (!is.null(names(children))) children = list(children)
   
@@ -90,4 +98,39 @@ find_nodes <- function(tokens, children=NULL, columns=NULL, ...) {
     result = merge(result, t)
   }
   result  
+}
+
+
+#' Annotate a tokenlist with clauses
+#'
+#' @param tokens a df of tokens
+#' @param clauses the output of get_clauses
+#'
+#' @return a df of tokens with columns for clause_id and clause_role
+#' @export
+tokenClauseAnnotation <- function(tokens, clauses){
+  tokens$clause_id = NA
+  tokens$clause_role = ''
+  
+  token_i = match(clauses$subject, tokens$id)
+  clauses$aid = tokens$aid[token_i]
+  clauses$sentence = tokens$sentence[token_i]
+  clauses = clauses[order(clauses$aid, clauses$sentence),]
+
+  ## get all children of subject and predicate nodes
+  ## (to do: restrict subject children so that modifiers etc are excluded)
+  subject = fill(clauses$subject, tokens)
+  predicate = fill(clauses$predicate, tokens)
+  predicate = predicate[!predicate$filled %in% subject$filled,] # subject is a child of predicate, so remove overlapping nodes from predicate
+  clauses_subject = merge(clauses, subject, by.x = 'subject', by.y='id')
+  clauses_predicate = merge(clauses, predicate, by.x = 'predicate', by.y='id')
+
+  subject_i = match(clauses_subject$filled, tokens$id)
+  predicate_i = match(clauses_predicate$filled, tokens$id)
+  tokens$clause_id[subject_i] = clauses_subject$clause_id
+  tokens$clause_role[subject_i] = 'subject'
+  tokens$clause_id[predicate_i] = clauses_predicate$clause_id
+  tokens$clause_role[predicate_i] = 'predicate'
+  
+  tokens
 }
