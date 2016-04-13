@@ -29,37 +29,56 @@ unique_ids <- function(tokens) {
   tokens
 }
 
-#' get all child-parent pairs with the given relation
+#' get all children with the given relation
 #' @param tokens a df of tokens
 #' @param rel the relation of child with parent (optional)
 #' @param rename optionally rename the output column, defaults to re
 #' @param ... other filters
 #' @return a df with the ids of (parent) id and child (id)
 get_children <- function(tokens, relation=NULL, rename=relation, ...) {
-  
   filters = c(list(...), if (is.null(relation)) NULL else list(relation=relation))
   ctokens = do.call(find_nodes, c(list(tokens, columns="parent"), filters))
   # rename parent to id, id to `rename`, keep the rest and return with id as first column
-  ctokens = rename(ctokens, c(parent="id", id=rename))
+  ctokens = plyr::rename(ctokens, c(parent="id", id=rename))
   cbind(ctokens[2], ctokens[-2])
+}
+
+#' get all parents with the given relation, 
+#' @param tokens a df of tokens
+#' @param rel the relation of child with parent (optional)
+#' @param rename optionally rename the output column, defaults to re
+#' @param ... other filters
+#' @return a df with the ids of (parent) id and child (id)
+get_parents <- function(tokens, relation=NULL, rename=relation, ...) {
+  filters = c(list(...), if (is.null(relation)) NULL else list(relation=relation))
+  ctokens = do.call(find_nodes, c(list(tokens=tokens, child=list(rename='___child___')), filters))
+  ctokens = plyr::rename(ctokens, c('id'=rename, '___child___'='id'))
+  cbind(ctokens[2], ctokens[-2])
+  #do.call(find_nodes, c(list(tokens=tokens, child_filter, child=parent_filter)))
 }
 
 #' Search for nodes matching specific criteria
 #' 
-#' You can search on node attributes (lemma, pos) and on attributes of children.
-#' The function will return a data frame with the found nodes and a column for each matched child relation.
-#' The node attributes allow __i (e.g. lemma_i="bush") to match case insensitive, 
-#' and __in (e.g. id__in=ids) to match multiple values.
-#' The child attributes can be either a single relation name, or a list of node attributes.
+#' You can search on node attributes (lemma, pos) and on attributes of children or parents.
+#' The function will return a data frame with the found nodes and a column for each matched child/parent relation.
+#' The node attributes allow the extension __in (e.g. id__in=ids) to match multiple values, __not to not match a value, and __not_in to not match multiple values.
+#' The child/parent attributes can be either a single relation name, or a list of node attributes.
 #' The return column for children is named after the explicit rename= attribute, defaulting to the relation pattern, if given.
 #' 
 #' @param tokens a df of tokens
 #' @param ... node attribute filters
+#' @param child a list of child attribute filters. If multiple children are sought, use the children parameter instead.
+#' @param parent a list of parent attribute filters. If multiple parents are sought, use the parents parameter instead.
 #' @param children a list of children, each a list of child attribute filters
+#' @param parents a list of parents, each a list of parent attribute filters
+#' @param parents a list of parents, each a list of parent attribute filters
 #' @param columns vector of column names to return from the node
 #' @return a df with (parent) id and a column for each rel with the respective child id
 #' @export
-find_nodes <- function(tokens, children=NULL, columns=NULL, ...) {
+find_nodes <- function(tokens, child=NULL, parent=NULL, children=NULL, parents=NULL, columns=NULL, ...) {
+  children[['']] = child
+  parents[['']] = parent
+  
   filters = list(...)
   result = tokens
   for (name in names(filters)) {
@@ -67,10 +86,11 @@ find_nodes <- function(tokens, children=NULL, columns=NULL, ...) {
     filter_column = sub("__.*$", "", name)
     match_values = result[[filter_column]]
     
-    if (grepl("__i$", name)) { # gebruiken we ooit case insensitive, en zo ja, moet het dan niet op een manier waarop het ook in combi met __in en __not_in gebruikt kan worden?
-      match_values = tolower(match_values); filter_value = tolower(filter_value)
-    }
-    if (!grepl("__in$|__not_in$", name)) {
+    ## case insensitive search
+    filter_value = tolower(filter_value)
+    match_values = tolower(match_values)
+    
+    if (!grepl("__in$|__not_in$|__not", name)) {
       result = result[!is.na(match_values) & match_values == filter_value,]
     }
     if (grepl("__in$", name)) {
@@ -79,25 +99,33 @@ find_nodes <- function(tokens, children=NULL, columns=NULL, ...) {
     if (grepl("__not_in$", name)) {
       result = result[!match_values %in% filter_value,]
     }
-  }
-  
-  result = result[c("id", columns)]
-  #if (!is.null(names(children))) children = list(children)
-  
-  for (i in seq_along(children)) {
-    name = NULL
-    if (is.list(children[[i]]) && !is.null(children[[i]][["rename"]])) {
-      name = children[[i]][["rename"]]
-      children[[i]][["rename"]] <- NULL
+    if (grepl("__not$", name)) {
+      result = result[!match_values == filter_value,]
     }
-    if (is.null(name) && !is.null(names(children))) name = names(children)[i]
-    if (is.null(name) || name == "") name = paste("rel", i, sep="_")
-  
-    t = do.call(get_children, c(list(tokens, rename=name), as.list(children[[i]])))
-    
+  }
+  result = result[c("id", columns)]
+
+  ## Find children
+  for (i in seq_along(children)) {
+    children[[i]] = prepFilterList(children, i)
+    t = do.call(get_children, c(list(tokens=tokens), as.list(children[[i]])))
     result = merge(result, t)
   }
+  ## Find parents
+  for (i in seq_along(parents)) {
+    parents[[i]] = prepFilterList(parents, i)
+    t = do.call(get_parents, c(list(tokens=tokens), as.list(parents[[i]])))
+    result = merge(result, t)
+  }
+  
   result  
+}
+
+prepFilterList <- function(filters, filter_i){
+  flist = as.list(filters[[filter_i]])
+  if (is.null(flist[['rename']]) && !is.null(names(filters))) flist[['rename']] = names(filters)[filter_i]
+  if (is.null(flist[['rename']]) || flist[['rename']] == '') flist[['rename']] = paste("rel", filter_i, sep="_")  
+  flist
 }
 
 

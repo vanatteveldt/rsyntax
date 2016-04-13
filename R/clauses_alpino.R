@@ -92,24 +92,7 @@ function(){
 get_clauses_nl <- function(tokens, quotes = NULL){
   block = if (is.null(quotes)) NULL else unique(quotes$id)
   
-  ## [subject] [verb] [object]
-  verbbased = find_nodes(tokens, pos='verb', id__not_in=block, 
-                  children=list(subject = list(relation__in=.SUBJECT_RELS)))
-  colnames(verbbased) = c('predicate', 'subject')
-  
-  ##### The following rules check whether a subject is passive -> object zijn/worden verb (door subject)
-  ## first remove subject from passive phrases.
-  passive = find_nodes(tokens, lemma__in=.PASSIVE_VC,
-                        children = list(verb = list(id__in=verbbased$predicate)))
-  verbbased$subject[match(passive$verb, verbbased$predicate)] = NA
-  ## then, if an obj1 is found through a passive modifier (an 'ld' or 'mod', generally the lemma 'door') assume this is the subject.
-  passive_subject = find_nodes(tokens, id__in=passive$verb, 
-                        children = list(passmod = list(lemma__in=.PASSIVE_MOD,
-                                        children = list(subject = list(relation='obj1')))))
-  verbbased$subject[match(passive_subject$id, verbbased$predicate)] = passive_subject$subject
-  
-  ## if a verb clause is passive, use the .PASSIVE_VC (which is the verb's parent) to indicate the predicate.
-  verbbased$predicate[match(passive$verb, verbbased$predicate)] = passive$id
+  verbbased = verbbased_clauses(tokens, quotes)
   
   #### prepare clauses
   clauses = rbind(verbbased)
@@ -122,6 +105,28 @@ get_clauses_nl <- function(tokens, quotes = NULL){
   clauses[,c('clause_id','subject','predicate')]
 }
 
+verbbased_clauses <- function(tokens, block){
+  ## [subject] [verb] [object]
+  verbbased = find_nodes(tokens, pos='verb', id__not_in=block, 
+                         children=list(subject = list(relation__in=.SUBJECT_RELS)))
+  colnames(verbbased) = c('predicate', 'subject')
+  
+  ##### The following rules check whether a subject is passive -> object zijn/worden verb (door subject)
+  ## first remove subject from passive phrases.
+  passive = find_nodes(tokens, lemma__in=.PASSIVE_VC,
+                       children = list(verb = list(id__in=verbbased$predicate)))
+  verbbased$subject[match(passive$verb, verbbased$predicate)] = NA
+  ## then, if an obj1 is found through a passive modifier (an 'ld' or 'mod', generally the lemma 'door') assume this is the subject.
+  passive_subject = find_nodes(tokens, id__in=passive$verb, 
+                               children = list(passmod = list(lemma__in=.PASSIVE_MOD,
+                                                              children = list(subject = list(relation='obj1')))))
+  verbbased$subject[match(passive_subject$id, verbbased$predicate)] = passive_subject$subject
+  
+  ## if a verb clause is passive, use the .PASSIVE_VC (which is the verb's parent) to indicate the predicate.
+  verbbased$predicate[match(passive$verb, verbbased$predicate)] = passive$id
+  
+  verbbased
+}
 
 ### ANAPHOR
 .ANAPHOR_self = c('zich','zichzelf')

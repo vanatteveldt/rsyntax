@@ -24,7 +24,6 @@ test_that("get_nodes works", {
   kinderen = get_children(tokens, "body", rename="kind", children=list(kleinkind="vc"))
   expect_equal(colnames(kinderen), c("id", "kind", "kleinkind"))
   
-  
   # test grandchildren
   body = find_nodes(tokens, children=list(kind=list("body", children=list(kleinkind="vc"))))
   expect_equal(nrow(body), 1)
@@ -35,5 +34,17 @@ test_that("get_nodes works", {
   expect_equal(nrow(dets), 2)
   expect_equal(sort(dets$det), sort(c("t_46", "t_48")) )
   
+  # get parents
+  parents = find_nodes(tokens, relation="vc", parent = list(pos='verb', rename='parent'))
+  expect_equal(nrow(parents), 2)
+  expect_equal(colnames(parents), c('id', 'parent'))
   
+  # get parents, grandparents, children and grandchildren
+  family = find_nodes(tokens, relation="vc", 
+             parent = list(pos='verb', rename='parent',
+                           parent = list(relation='vc', rename='grandparent')),
+             child = list(relation='obj1', rename='child', 
+                          child = list(relation='mod', rename='grandchild')))
+  expect_equal(nrow(family), 1)
+  expect_equal(colnames(family), c('id','child','grandchild','parent','grandparent'))
 })

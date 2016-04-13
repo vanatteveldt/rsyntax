@@ -4,26 +4,34 @@
 \alias{find_nodes}
 \title{Search for nodes matching specific criteria}
 \usage{
-find_nodes(tokens, children = NULL, columns = NULL, ...)
+find_nodes(tokens, child = NULL, parent = NULL, children = NULL,
+  parents = NULL, columns = NULL, ...)
 }
 \arguments{
 \item{tokens}{a df of tokens}
 
+\item{child}{a list of child attribute filters. If multiple children are sought, use the children parameter instead.}
+
+\item{parent}{a list of parent attribute filters. If multiple parents are sought, use the parents parameter instead.}
+
 \item{children}{a list of children, each a list of child attribute filters}
+
+\item{parents}{a list of parents, each a list of parent attribute filters}
 
 \item{columns}{vector of column names to return from the node}
 
 \item{...}{node attribute filters}
+
+\item{parents}{a list of parents, each a list of parent attribute filters}
 }
 \value{
 a df with (parent) id and a column for each rel with the respective child id
 }
 \description{
-You can search on node attributes (lemma, pos) and on attributes of children.
-The function will return a data frame with the found nodes and a column for each matched child relation.
-The node attributes allow __i (e.g. lemma_i="bush") to match case insensitive, 
-and __in (e.g. id__in=ids) to match multiple values.
-The child attributes can be either a single relation name, or a list of node attributes.
+You can search on node attributes (lemma, pos) and on attributes of children or parents.
+The function will return a data frame with the found nodes and a column for each matched child/parent relation.
+The node attributes allow the extension __in (e.g. id__in=ids) to match multiple values, __not to not match a value, and __not_in to not match multiple values.
+The child/parent attributes can be either a single relation name, or a list of node attributes.
 The return column for children is named after the explicit rename= attribute, defaulting to the relation pattern, if given.
 }
 
