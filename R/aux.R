@@ -128,37 +128,35 @@ prepFilterList <- function(filters, filter_i){
   flist
 }
 
+match_tokens <- function(ids, tokens, block) {
+  filled = merge(ids, fill(ids$id, tokens, block = block))
+  filled$id <- NULL
+  plyr::rename(filled, c(filled="id"))
+}
+
+
 
 #' Annotate a tokenlist with clauses
 #'
 #' @param tokens a df of tokens
+#' @param quotes the output of get_quotes
 #' @param clauses the output of get_clauses
 #'
 #' @return a df of tokens with columns for clause_id and clause_role
 #' @export
-tokenClauseAnnotation <- function(tokens, clauses){
-  tokens$clause_id = NA
-  tokens$clause_role = ''
-  
-  token_i = match(clauses$subject, tokens$id)
-  clauses$aid = tokens$aid[token_i]
-  clauses$sentence = tokens$sentence[token_i]
-  clauses = clauses[order(clauses$aid, clauses$sentence),]
-
-  ## get all children of subject and predicate nodes
-  ## (to do: restrict subject children so that modifiers etc are excluded)
-  subject = fill(clauses$subject, tokens)
-  predicate = fill(clauses$predicate, tokens)
-  predicate = predicate[!predicate$filled %in% subject$filled,] # subject is a child of predicate, so remove overlapping nodes from predicate
-  clauses_subject = merge(clauses, subject, by.x = 'subject', by.y='id')
-  clauses_predicate = merge(clauses, predicate, by.x = 'predicate', by.y='id')
-
-  subject_i = match(clauses_subject$filled, tokens$id)
-  predicate_i = match(clauses_predicate$filled, tokens$id)
-  tokens$clause_id[subject_i] = clauses_subject$clause_id
-  tokens$clause_role[subject_i] = 'subject'
-  tokens$clause_id[predicate_i] = clauses_predicate$clause_id
-  tokens$clause_role[predicate_i] = 'predicate'
-  
-  tokens
+tokenClauseAnnotation <- function(tokens, quotes, clauses){
+    quotes$quote_id = 1:nrow(quotes)
+    block = c(quotes$source, quotes$quote)
+    
+    x = match_tokens(data.frame(quote_id=quotes$quote_id, id=quotes$source, quote_role="source"), tokens, block)
+    
+    quote_add = rbind(match_tokens(data.frame(quote_id=quotes$quote_id, id=quotes$source, quote_role="source"), tokens, block),
+                      match_tokens(data.frame(quote_id=quotes$quote_id, id=quotes$quote, quote_role="quote"), tokens, block))
+    
+    block = c(block, clauses$subject, clauses$predicate)
+    pred_add = rbind(match_tokens(data.frame(clause_id=clauses$clause_id, id=clauses$subject, clause_role="subject"), tokens, block),
+                     match_tokens(data.frame(clause_id=clauses$clause_id, id=clauses$predicate, clause_role="predicate"), tokens, block))
+    
+    merge(merge(tokens, quote_add, all.x=T), pred_add, all.x=T)
 }
+  

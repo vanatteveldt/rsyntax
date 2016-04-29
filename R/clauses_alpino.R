@@ -1,11 +1,3 @@
-.SAY_VERBS = c("zeggen", "stellen", "roepen", "schrijven", "denken", "vaststellen")
-
-.VIND_VERBS = union(.SAY_VERBS, c("accepteren", "antwoorden", "beamen", "bedenken", "bedoelen", "begrijpen", "bekenen", "beklemtonen", "bekrachtigen", "belijden", "beluisteren", "benadrukken", "berekenen", "berichten", "beschouwen", "beschrijven", "beseffen", "betuigen", "bevestigen", "bevroeden", "beweren", "bewijzen", "bezweren", "biechten", "brengen", "brullen", "concluderen", "confirmeren", "constateren", "debiteren", "declareren", "demonstreren", "denken", "uitdragen", "emailen", "erkennen", "expliceren", "expliciteren", "fantaseren", "formuleren", "aangeven", "geloven", "horen", "hameren", "herinneren", "volhouden", "aankondigen", "kwetteren", "toelichten", "bekendmaken", "hardmaken", "melden", "merken", "opmerken", "motiveren", "noemen", "nuanceren", "observeren", "onderschrijven", "onderstrepen", "onthullen", "ontsluieren", "ontvallen", "ontvouwen", "oordelen", "parafraseren", "postuleren", "preciseren", "presumeren", "pretenderen", "publiceren", "rapporteren", "realiseren", "redeneren", "refereren", "rekenen", "roepen", "aanroeren", "ruiken", "schatten", "schetsen", "schilderen", "schreeuwen", "schrijven", "signaleren", "snappen", "snateren", "specificeren", "uitspreken", "staven", "stellen", "aanstippen", "suggereren", "tateren", "aantekenen", "aantonen", "twitteren", "verbazen", "verhalen", "verklaren", "verklappen", "verkondigen", "vermoeden", "veronderstellen", "verraaden", "vertellen", "navertellen", "verwachten", "verwittigen", "verwonderen", "verzekeren", "vinden", "voelen", "aanvoelen", "waarschuwen", "wedden", "weten", "aanwijzen", "winden", "zeggen", "uiteenzetten", "zien", "twitteren"))
-
-.VOLGENS = c("volgens", "aldus")
-.QUOTES = c('"', "'", "''", "`", "``")
-.QPUNC = union(.QUOTES, c(":"))
-
 .SUBJECT_RELS = c('su')
 .CONJUNCTIONS = c('cnj')
 
@@ -53,7 +45,7 @@ get_quotes_nl <- function(tokens) {
   impliciet2 = find_nodes(tokens, children=list(punc=list(lemma__in = .QPUNC), quote=list(relation__in=c("tag", "nucl", "sat"))))
   impliciet2 = unique(with(impliciet2, data.frame(id=rep(NA, nrow(impliciet2)), source=id, quote=quote)))
 
-  rbind(zegtdat, stelt, yzegt, volgens, impliciet, impliciet2)
+  rbind(zegtdat, stelt, yzegt, volgens, impliciet, noem, impliciet2)
 }
 
 #' Collapse conjunctions
@@ -92,7 +84,7 @@ function(){
 get_clauses_nl <- function(tokens, quotes = NULL){
   block = if (is.null(quotes)) NULL else unique(quotes$id)
   
-  verbbased = verbbased_clauses(tokens, quotes)
+  verbbased = verbbased_clauses(tokens, block)
   
   #### prepare clauses
   clauses = rbind(verbbased)

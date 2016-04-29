@@ -4,10 +4,12 @@
 \alias{tokenClauseAnnotation}
 \title{Annotate a tokenlist with clauses}
 \usage{
-tokenClauseAnnotation(tokens, clauses)
+tokenClauseAnnotation(tokens, quotes, clauses)
 }
 \arguments{
 \item{tokens}{a df of tokens}
+
+\item{quotes}{the output of get_quotes}
 
 \item{clauses}{the output of get_clauses}
 }

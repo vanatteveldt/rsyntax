@@ -41,6 +41,12 @@ get_quotes_nl <- function(tokens) {
   volgens = with(volgens, data.frame(id=key, source=source, quote=id))
   tokens = .removetokens(tokens, volgens)
   
+  # y, zo noemt x het
+  puncparents = unique(tokens$parent[tokens$lemma %in% .QPUNC & tokens$relation == " --"])
+  noem = find_nodes(tokens, children=list(source="su"), relation="tag", parent=list(rename="quote"))
+  noem = noem[noem$quote %in% puncparents, ]
+  tokens = .removetokens(tokens, noem)
+  
   # x is het er ook mee eens: y
   impliciet = find_nodes(tokens, children=list(punc=list(lemma__in = .QPUNC), quote=list(relation__in=c("tag", "nucl", "sat")), source="su"))
   impliciet = unique(with(impliciet, data.frame(id=rep(NA, nrow(impliciet)), source=source, quote=quote)))
@@ -50,6 +56,6 @@ get_quotes_nl <- function(tokens) {
   impliciet2 = find_nodes(tokens, children=list(punc=list(lemma__in = .QPUNC), quote=list(relation__in=c("tag", "nucl", "sat"))))
   impliciet2 = unique(with(impliciet2, data.frame(id=rep(NA, nrow(impliciet2)), source=id, quote=quote)))
 
-  rbind(zegtdat, stelt, yzegt, volgens, impliciet, impliciet2)
+  rbind(zegtdat, stelt, yzegt, volgens, noem, impliciet, impliciet2)
 }
 
