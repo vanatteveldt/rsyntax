@@ -160,3 +160,22 @@ tokenClauseAnnotation <- function(tokens, quotes, clauses){
     merge(merge(tokens, quote_add, all.x=T), pred_add, all.x=T)
 }
   
+#' Construct a list of source/subject/object triples from a tokens list with clauses and quotes
+#'
+#' @param tokens a data frame with clause_id, clause_role, quote_id and quote_role columns
+#' @param concept_column the name of the column in tokens that contains identified 'concepts'
+#'
+#' @return a data frame with clause_id and source, subject, object columns indicating concepts found in those positions
+#' @export
+construct_triples <- function(tokens, concept_column="concept") {
+  sources = tokens[tokens$quote_role == "source" & !is.na(tokens[[concept_column]]), c(concept_column, "quote_id")]
+  sources = unique(merge(sources, tokens[!is.na(tokens$clause_id), c("clause_id", "quote_id")]))[c("clause_id", concept_column)]
+  colnames(sources)[2] = "source"
+  
+  subjects = unique(tokens[!is.na(tokens$clause_id) & !is.na(tokens[[concept_column]]) & tokens$clause_role == "subject", c("clause_id", concept_column)])
+  colnames(subjects)[2] = "subject"
+  objects = unique(tokens[!is.na(tokens$clause_id) & !is.na(tokens[[concept_column]]) & tokens$clause_role == "predicate", c("clause_id", concept_column)])
+  colnames(objects)[2] = "object"
+  
+  merge(sources, merge(subjects, objects, all=T), all=T)
+}
