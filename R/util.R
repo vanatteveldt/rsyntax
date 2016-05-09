@@ -168,7 +168,7 @@ tokenClauseAnnotation <- function(tokens, quotes, clauses){
 #' @return a data frame with clause_id and source, subject, object columns indicating concepts found in those positions
 #' @export
 construct_triples <- function(tokens, concept_column="concept") {
-  sources = tokens[tokens$quote_role == "source" & !is.na(tokens[[concept_column]]), c(concept_column, "quote_id")]
+  sources = tokens[!is.na(tokens$quote_role) & tokens$quote_role == "source" & !is.na(tokens[[concept_column]]), c(concept_column, "quote_id")]
   sources = unique(merge(sources, tokens[!is.na(tokens$clause_id), c("clause_id", "quote_id")]))[c("clause_id", concept_column)]
   colnames(sources)[2] = "source"
   
