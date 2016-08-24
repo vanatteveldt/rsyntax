@@ -57,7 +57,7 @@ function() {
   quotes = get_quotes_nl(tokens)
   clauses = get_clauses_nl(tokens, quotes)
   
-  tokens = tokenClauseAnnotation(tokens, clauses)
+  tokens = tokenClauseAnnotation(tokens, quotes, clauses)
   tokens[,c('word','sentence','pos','relation','clause_role')]
   
   

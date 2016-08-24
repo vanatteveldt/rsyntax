@@ -11,7 +11,6 @@
 #' @return a data frame with columns id, source, and quote
 #' @export
 get_quotes_nl <- function(tokens) {
-  
   .removetokens <- function(tokens, quotes) tokens[!(tokens$sentence %in% tokens$sentence[tokens$id %in% quotes$source]), ]
   ## Is alleen de id node verwijderen niet voldoende? 
   
@@ -119,29 +118,4 @@ verbbased_clauses <- function(tokens, block){
   
   verbbased
 }
-
-### ANAPHOR
-.ANAPHOR_self = c('zich','zichzelf')
-.ANAPHOR_male = c('hij', 'zijn', 'hem')
-.ANAPHOR_plur = c('zij', 'ze', 'hen', 'hun')
-.ANAPHOR_fema = c('zij', 'ze', 'haar')
-.ANAPHOR = unique(c(.ANAPHOR_male, .ANAPHOR_fema, .ANAPHOR_plur))
-
-anafora_resolution <- function(tokens, clauses){
-  #tokens
-  ## exclude self ref for subjects in the same sentence
-  allsubjects = fill(clauses$subject, tokens)$filled
-  sent_subj = unique(tokens[tokens$id %in% allsubjects, c('id','sentence')])
-
-  ## hoe aan te pakken? misschien een sparse matrix waar nrow is nrow(tokens), met alle mogelijke entiteiten waar een anafora naar kan verwijzena als kolommen. In eerste instantie alle entiteiten in hetzelfde artikel. Dan filterregels toevoegen (geslacht/meervoud/zelfref). Dan de eerstvorige entiteit die overblijft.
-  
-  #is_ana = tokens$lemma %in% .ANAPHOR
-}
-
-## sommige anafora kunnen niet verwijzen naar het subject in dezelfde clause: hem, haar (toekennen aan eerstvorige entiteit dat niet het subject van dezelfde zin is)
-## sommige anafore zijn zelf referentieel: zich, 
-
-## eerst binnen clauses kijken
-## dan de nog niet toegekende anafora behandelen
-
 
