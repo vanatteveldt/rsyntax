@@ -136,7 +136,7 @@ match_tokens <- function(ids, tokens, block) {
 
 
 
-#' Annotate a tokenlist with clauses
+#' Annotate a tokenlist with quotes and clauses
 #'
 #' @param tokens a df of tokens
 #' @param quotes the output of get_quotes
@@ -144,7 +144,7 @@ match_tokens <- function(ids, tokens, block) {
 #'
 #' @return a df of tokens with columns for clause_id and clause_role
 #' @export
-tokenClauseAnnotation <- function(tokens, quotes, clauses){
+annotate_tokens <- function(tokens, quotes, clauses){
     quotes$quote_id = 1:nrow(quotes)
     block = c(quotes$source, quotes$quote)
     

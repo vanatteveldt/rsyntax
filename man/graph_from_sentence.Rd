@@ -4,17 +4,11 @@
 \alias{graph_from_sentence}
 \title{Create an igraph tree from a sentence}
 \usage{
-graph_from_sentence(tokens, sentence = NULL, quotes = NULL,
-  clauses = NULL)
+graph_from_sentence(tokens)
 }
 \arguments{
-\item{tokens}{a data frame of tokens containing id, parent, and relation columns}
-
-\item{sentence}{an optional sentence to filter the tokens (which should then contain a sentence column)}
-
-\item{quotes}{optionally, a list of quotes as returned by get_quotes}
-
-\item{clauses}{optionally, a list of clauses as returned by get_quotes}
+\item{tokens}{a data frame of tokens containing id, parent, and relation columns. If there are also quote and clause columns
+(as output by annotate_tokens), the graph will be annotated with these relations.}
 }
 \value{
 an igraph graph

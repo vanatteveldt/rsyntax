@@ -7,14 +7,11 @@
 #' The data frame should contain a single sentence with a single root node (with no parent).
 #' 
 #' 
-#' @param tokens a data frame of tokens containing id, parent, and relation columns
-#' @param sentence an optional sentence to filter the tokens (which should then contain a sentence column)
-#' @param quotes optionally, a list of quotes as returned by get_quotes
-#' @param clauses optionally, a list of clauses as returned by get_quotes
+#' @param tokens a data frame of tokens containing id, parent, and relation columns. If there are also quote and clause columns
+#' (as output by annotate_tokens), the graph will be annotated with these relations. 
 #' @return an igraph graph
 #' @export
-graph_from_sentence <-function(tokens, sentence=NULL, quotes=NULL, clauses=NULL) {  
-    if (!is.null(sentence)) tokens = tokens[tokens$sentence == sentence,]
+graph_from_sentence <-function(tokens) {  
     # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
     edges = tokens[!is.na(tokens$parent), c("parent", "id", setdiff(colnames(tokens), c("parent", "id")))]
     nodes = tokens[tokens$id %in% c(edges$parent, edges$id), c("id", setdiff(colnames(tokens), c("id")))]
@@ -40,25 +37,29 @@ graph_from_sentence <-function(tokens, sentence=NULL, quotes=NULL, clauses=NULL)
     V(g)$shape = "none"
     
     # process quotes/clauses  
-    if (!is.null(quotes)) {  
-      quote_ids = unique(quotes$quote_id[quotes$id %in% tokens$id])
-      colors =rainbow(length(quote_ids))
-      for (qid in quote_ids) {
-        quote = quotes[quotes$quote_id == qid,]
-        V(g)$shape[V(g)$name %in% quote$id] = "rectangle"
-        V(g)$frame.color[V(g)$name %in% quote$id] =colors[1]
-        V(g)$color[V(g)$name %in% quote$id[quote$quote_role == "source"]] = colors[1]
+    if (!is.null(tokens$quote_id)) {
+    quote_ids = unique(na.omit(tokens$quote_id))
+    colors =rainbow(length(quote_ids))
+    for (i in seq_along(quote_ids)) {
+      qtokens = tokens$id[!is.na(tokens$quote_id) & tokens$quote_id == quote_ids[i]]
+      srctokens = intersect(qtokens, tokens$id[tokens$quote_role == "source"])
+      V(g)$shape[V(g)$name %in% qtokens] = "rectangle"
+      V(g)$frame.color[V(g)$name %in% qtokens] =colors[i]
+      V(g)$color[V(g)$name %in% srctokens] = colors[i]
       }
     }  
-    if (!is.null(clauses)) {
-      clause_ids = unique(clauses$clause_id[clauses$id %in% tokens$id])
+    
+    if (!is.null(tokens$clause_id)) {
+      clause_ids = unique(na.omit(tokens$clause_id))
       colors =rainbow_hcl(length(clause_ids), s=.2)
-      for (cid in clause_ids) {
-        V(g)$color[V(g)$name %in% clauses$id[clauses$clause_id == cid]] = colors[match(cid, clause_ids)]  
-        V(g)$shape[V(g)$name %in% clauses$id[clauses$clause_id == cid]] = "rectangle"
-        
+      for (i in seq_along(clause_ids)) {
+        ctokens = tokens$id[!is.na(tokens$clause_id) & tokens$clause_id == clause_ids[i]]
+        subjtokens = intersect(ctokens, tokens$id[tokens$clause_role == "subject"])
+        V(g)$color[V(g)$name %in% ctokens] = colors[i]  
+        V(g)$shape[V(g)$name %in% ctokens] = "rectangle"
+        V(g)$shape[V(g)$name %in% subjtokens] = "circle"    
       }
-      V(g)$shape[V(g)$name %in%  clauses$id[clauses$clause_role == "subject"]] = "circle"  
+      
     }
     return(g)
 }
