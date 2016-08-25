@@ -187,8 +187,8 @@ construct_triples <- function(tokens, concept_column="concept") {
 #' @return a data frame compatible with getclauses / getquotes
 #' @export
 tokens_from_coreNLP <- function(a) {
-  tokens = getToken(a)
-  deps = getDependency(a, type="CCprocessed")
+  tokens = coreNLP::getToken(a)
+  deps = coreNLP::getDependency(a, type="CCprocessed")
   deps = data.frame(sentence=deps$sentence, id=deps$dependentIdx, parent=deps$governorIdx, relation=deps$type)
   tokens = merge(tokens, deps)
   tokens$pos1 = substr(tokens$POS, 1, 1)

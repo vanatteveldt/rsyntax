@@ -21,17 +21,19 @@ Usage
 The functions in this module assume that you have a list of tokens in a data frame.
 A simple example is provided with the module:
 
+```{r, echo=F}
+head = function(...) knitr::kable(utils::head(...))
+```
+
 ```{r, message=F, eval=F}
 library(rsyntax)
 data(example_tokens)
-tokens
+head(tokens)
 ```
 
 ```{r, echo=F, message=F}
 library(rsyntax)
 data(example_tokens)
-library(knitr)
-kable(tokens)
 ```
 
 Get the text of a sentence, optionally specifying which column(s) to use:
@@ -62,26 +64,26 @@ tokens = unique_ids(tokens)
 
 You can get the quotes from the tokens with `get_quotes`:
 
-```{r, eval=F}
+```{r}
 quotes = get_quotes(tokens)
-quotes
-```
-```{r, echo=F}
-quotes = get_quotes(tokens)
-kable(quotes)
+head(quotes)
 ```
 
 A single quote was found, with node 2 ("say") as the key, node 1 ("John") as the  sources, and nodes 3 through 6 ("that Mary hit him") as quote. 
 
 To find the clauses, you can use the get_clauses function, which takes the quotes as an optional argument to make sure that speech actions are not listed as clauses:
 
-```{r, eval=F}
+```{r}
 clauses = get_clauses(tokens, quotes=quotes)
-clauses
+head(clauses)
 ```
-```{r, echo=F}
-clauses = get_clauses(tokens, quotes=quotes)
-kable(clauses)
+
+You can annotate the original tokens file with the quotes and tokens to facilitate processing
+(e.g. to create a word cloud or topic model of all utterances per source):
+
+```{r}
+tokens = annotate_tokens(tokens, quotes, clauses)
+head(tokens)
 ```
 
 Finally, you can also provide the quotes and clauses to the `graph_from_sentence` function. 
@@ -89,6 +91,41 @@ This will fill the clauses in a desaturated rainbow, with the subject as a circl
 Quotes are represented with a bright node for the source, and the border in the same colour for the quote.
 
 ```{r readme_example_plot_clauses, fig.path=".", fig.cap="Syntactic Structure of example sentence with clauses and quotes marked"}
-g = graph_from_sentence(tokens, quotes = quotes, clauses = clauses)
+g = graph_from_sentence(tokens)
 plot(g)
 ```
+
+Use with coreNLP
+====
+
+You can use the coreNLP package to directly parse (English) sentences and create a token list. 
+
+First, initialize coreNLP and parse the sentence:
+
+```{r, message=F, echo=F}
+# note: the doc says the function will use CORENLP_HOME, but it doesn't seem to actually do so...
+coreNLP::initCoreNLP(libLoc=Sys.getenv("CORENLP_HOME"))
+```
+```{r, eval=F}
+coreNLP::initCoreNLP()
+```
+```{r}
+a = coreNLP::annotateString("John told Mary he loves her")
+```
+
+Now, you can create a token list from the coreNLP annotation and use that to compute sources and clauses as normal:
+
+```{r}
+tokens = tokens_from_coreNLP(a)
+quotes = get_quotes(tokens)
+clauses = get_clauses(tokens, quotes)
+tokens = annotate_tokens(tokens, quotes, clauses)
+head(tokens)
+```
+
+And plot the sentence:
+
+```{r readme_example_plot_corenlp, fig.path=".", fig.cap="Syntactic Structure of example sentence from coreNLP"}
+plot(graph_from_sentence(tokens))
+```
+
