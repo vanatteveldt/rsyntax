@@ -6,6 +6,14 @@
 #' @usage data(example_tokens)
 NULL
 
+#' Tokens for CorenLP sentences containing simple quotes
+#' 
+#' @docType data
+#' @keywords datasets
+#' @name example_tokens_corenlp
+#' @usage data(example_tokens_corenlp)
+NULL
+
 #' Tokens from Dutch sentences containing quotes
 #' 
 #' @docType data

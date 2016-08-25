@@ -20,9 +20,9 @@ fill <- function(id, tokens, block=unique(id)) {
 #' @param tokens a data frame of tokens
 #' @return the data frame with id and parent made globally unique
 #' @export
-unique_ids <- function(tokens) {
-  ids = interaction(tokens$aid, tokens$id) # aid.id
-  parents = interaction(tokens$aid, tokens$parent) # aid.parent
+unique_ids <- function(tokens, context=tokens$aid) {
+  ids = interaction(context, tokens$id) # aid.id
+  parents = interaction(context, tokens$parent) # aid.parent
   
   tokens$id = match(ids, na.omit(unique(ids))) # generate new unique id for each aid.id
   tokens$parent = tokens$id[match(parents, ids)] # match aid.parent with aid.id and get new id
@@ -178,4 +178,20 @@ construct_triples <- function(tokens, concept_column="concept") {
   colnames(objects)[2] = "object"
   
   merge(sources, merge(subjects, objects, all=T), all=T)
+}
+
+#' Create a tokens dataframe from a CoreNLP annotation object
+#'
+#' @param a coreNLP annotation as returned by coreNLP::annotate*
+#'
+#' @return a data frame compatible with getclauses / getquotes
+#' @export
+tokens_from_coreNLP <- function(a) {
+  tokens = getToken(a)
+  deps = getDependency(a, type="CCprocessed")
+  deps = data.frame(sentence=deps$sentence, id=deps$dependentIdx, parent=deps$governorIdx, relation=deps$type)
+  tokens = merge(tokens, deps)
+  tokens$pos1 = substr(tokens$POS, 1, 1)
+  tokens = plyr::arrange(tokens, sentence, id)
+  unique_ids(tokens, context=tokens$sentence)
 }

@@ -4,7 +4,7 @@
 \alias{unique_ids}
 \title{Make tokens ids globally unique (and update parents accordingly)}
 \usage{
-unique_ids(tokens)
+unique_ids(tokens, context = tokens$aid)
 }
 \arguments{
 \item{tokens}{a data frame of tokens}
