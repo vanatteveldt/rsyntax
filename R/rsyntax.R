@@ -18,8 +18,8 @@ graph_from_sentence <-function(tokens) {
     # check single root
     root = as.character(setdiff(nodes$id, edges$id))
 
-    if (length(root) == 0) stop("Cannot find root in ", nrow(tokens), " tokens (sentence=",sentence,")")
-    if (length(root) > 1) stop("Multiple roots (", length(root), ") in ", nrow(tokens), " tokens (sentence=",sentence,")")
+    if (length(root) == 0) stop("Cannot find root in ", nrow(tokens), " tokens")
+    if (length(root) > 1) stop("Multiple roots (", length(root), ") in ", nrow(tokens), " tokens")
     
     g = graph.data.frame(edges, vertices=nodes, directed = T)
     g$layout = layout.reingold.tilford(g, root=as.character(root))

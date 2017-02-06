@@ -17,11 +17,14 @@
 #' @return a data frame with columns id, source, and quote
 #' @export
 get_quotes_nl <- function(tokens) {
-  
   .removetokens <- function(tokens, quotes) tokens[!(tokens$sentence %in% tokens$sentence[tokens$id %in% quotes$source]), ]
+  
+  if (is.null(tokens$relation) && !is.null(tokens$rel)) tokens$relation = tokens$rel
   
   # x zegt dat y
   zegtdat = find_nodes(tokens, lemma__in=.VIND_VERBS, children=list(source="su", body=list("vc", pos="comp", children=list(quote="body"))))
+  if (nrow(zegtdat) == 0) zegtdat = find_nodes(tokens, lemma__in=.VIND_VERBS, children=list(source="su", body=list("vc", pos="C", children=list(quote="body"))))
+  
   zegtdat = zegtdat[c("id", "source", "quote")]
   tokens = .removetokens(tokens, zegtdat)
   
