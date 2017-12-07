@@ -17,4 +17,3 @@ a data frame with clause_id and source, subject, object columns indicating conce
 \description{
 Construct a list of source/subject/object triples from a tokens list with clauses and quotes
 }
-

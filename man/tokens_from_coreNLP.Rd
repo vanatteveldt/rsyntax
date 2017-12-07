@@ -15,4 +15,3 @@ a data frame compatible with getclauses / getquotes
 \description{
 Create a tokens dataframe from a CoreNLP annotation object
 }
-

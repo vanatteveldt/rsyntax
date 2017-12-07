@@ -1,24 +1,30 @@
 CORENLP_SAY_VERBS = c("tell", "show", " acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "proclaim", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "write", "add")
 CORENLP_QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
 CORENLP_SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
-#' Get all quotes in the tokens
-#' 
-#' Runs the syntax rules to get quotes/paraphrases from the sentences.
-#' Note: The token ids should be globally unique, see unique_ids!
-#' 
-#' @param tokens a data frame of tokens containing id, parent, relation, pos1 and lemma columns. 
-#' @return the quotes in long format, i.e. a data frame with quote id, quote role, and token id
-#' @export
+
+CORENLP_VERB_POS = c('MD','VB','VBD','VBG','VBN','VBP','VBZ')
+CORENLP_NOUN_POS = c('NN','NNS','FW')
+CORENLP_ADJ_POS = c('JJ','JJR','JJS','WRB')
+CORENLP_PREP_POS = 'IN'
+CORENLP_CONJ_POS = 'LS'
+CORENLP_PNOUN_POS = c('NNS','NNPS')
+CORENLP_DETER_POS = c('PDT','DT','WDT')
+CORENLP_ADVERB_POS = c('RB','RBR','RBS')
+
+#' Get quotes from tokens parsed by coreNLP
+#'
+#' @param tokens     a token list data frame
+#' @param block      Optionally, .G_ID's to exclude from search. Can also be a data.table with nodes, as returned by
+#'                   find_nodes or get_quotes_alpino
+#'
+#' @return a data.table with nodes (as .G_ID) for id, source and quote
 get_quotes <- function(tokens) {
+  tokens = as_tokenindex(tokens_corenlp)
   
   src_expr=list(relation__in=CORENLP_SUBJECT_RELS, rename="source")
   quote_expr=list(relation__in=CORENLP_QUOTE_RELS, rename="quote")
   
   quotes_direct = find_nodes(tokens, lemma__in=CORENLP_SAY_VERBS, children=list(src_expr, quote_expr))
-  
-  # deal with conjunctions
-  # quotes2 = find_nodes(tokens, lemma__in=.SAY_VERBS, children=list(list(relation__in=c("conj_and", "conj_but"), rename="source", children=src_expr), quote_expr))
-  # quotes = unique(rbind(quotes, quotes2))
   
   # check for xcomp - subjects
   quotes_nosrc = subset(find_nodes(tokens, lemma__in=CORENLP_SAY_VERBS, children=list(quote_expr)), !(id %in% quotes_direct$id))
@@ -35,24 +41,20 @@ get_quotes <- function(tokens) {
 }
   
 
-#' Get the clauses for the given sentences
-#' 
-#' Runs the grammar rules on the tokens to get clauses (subject - predicate pairs).
-#' If you give the quotes  (as returned by get.quotes), they will be excluded from being clauses as well.
-#' Note: the token ids should be globally unique, see unique_ids. 
-#' If the tokens contain a boolean 'attack' column, nouns with attack=T are considered for nominal actions
-#' 
-#' @param tokens a data frame of tokens containing id, parent, relation, pos1 and lemma columns. 
-#' @param quotes optionally, the quotes in long format, i.e. a data frame with quote id, quote role, and token id
-#' @return the clauses in long format, i.e. a data frame with clause id, clause role, and token id
-#' @export
+
+#' Get clauses from tokens parsed by coreNLP
+#'
+#' @param tokens     a token list data frame
+#' @param block      Optionally, .G_ID's to exclude from search. Can also be a data.table with nodes, as returned by
+#'                   find_nodes or get_quotes_alpino
+#'
+#' @return a data.table with nodes (as .G_ID) for id, subject and predicate
 get_clauses <- function(tokens, quotes=NULL) {
-  
+  tokens = as_tokenindex(tokens_corenlp)
   block = if (is.null(quotes)) NULL else unique(quotes$id)
   
-  
   clauses = find_nodes(tokens, pos1='V', id__not_in=block, 
-                         children=list(subject = list(relation__in=CORENLP_SUBJECT_RELS)))
+                       children=list(subject = list(relation__in=CORENLP_SUBJECT_RELS)))
   colnames(clauses) = c('predicate', 'subject')
   
   # add passives without agent and parataxis verbs without subject
@@ -84,6 +86,6 @@ get_clauses <- function(tokens, quotes=NULL) {
   subord_who = tokens$id[!is.na(grandparents) & tokens$lemma %in% c("who", "that") & tokens$relation[parents] == "rcmod"]
   clause_gps = grandparents[match(clauses$subject, tokens$id)]
   clauses$subject[clauses$subject %in% subord_who] = clause_gps[clauses$subject %in% subord_who]
-
+  
   clauses[c("clause_id", "subject", "predicate")]
 }

@@ -1,3 +1,4 @@
+function(){
 create_test_tokens <- function(libLoc) {
   library(coreNLP)
   coreNLP::initCoreNLP(libLoc = libLoc)
@@ -77,3 +78,4 @@ test_that("extracting clauses works with coreNLP", {
     .check_clause(tokens, clauses, predicate="love")
   
 })
+}

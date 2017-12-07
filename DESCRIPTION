@@ -11,7 +11,10 @@ Depends:
     plyr,
     colorspace,
     Matrix
+Imports:
+    data.table
+LazyData: true
 Description: R library to help dealing with syntactic structure
 License: MIT license
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
 Suggests: testthat

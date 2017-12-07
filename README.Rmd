@@ -25,15 +25,10 @@ A simple example is provided with the module:
 head = function(...) knitr::kable(utils::head(...))
 ```
 
-```{r, message=F, eval=F}
-library(rsyntax)
-data(example_tokens)
-head(tokens)
-```
 
 ```{r, echo=F, message=F}
 library(rsyntax)
-data(example_tokens)
+tokens = as_tokenindex(tokens_corenlp)
 ```
 
 Get the text of a sentence, optionally specifying which column(s) to use:
