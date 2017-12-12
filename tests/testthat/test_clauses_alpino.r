@@ -22,8 +22,11 @@ get_clauses_alpino <- function(tokens, block=NULL){
 test_that("extracting clauses works", {
   tokens = as_tokenindex(tokens_dutchclauses)
   
+  tokenindex_columns()
+  
   # subject and subject -> verb -> object
   clauses = get_clauses_alpino(tokens[tokens$sentence == 1,])
+  annotate_nodes(tokens[tokens$sentence == 1,], clauses, column='test')
   expect_equal(nrow(clauses), 1)
   .check_clause(tokens, clauses, predicate = 'hebben', subject='en')
   

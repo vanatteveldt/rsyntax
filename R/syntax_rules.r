@@ -17,8 +17,8 @@
 #' .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 #' 
 #' quotes_direct = rule(select = lemma %in% .SAY_VERBS,
-#'                          children(save = 'source', rel = .SUBJECT_RELS),
-#'                          children(save = 'quote', rel = .QUOTE_RELS))
+#'                          children(save = 'source', p_rel = .SUBJECT_RELS),
+#'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows rule
 #' 
 #' tokens = subset(tokens_corenlp, sentence == 1)
@@ -49,7 +49,7 @@ apply_rules <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
 #' Write rules for extracting syntactic elements from tokens with dependency relations.
 #'
 #' This is the primary workhorse for writing rules for quote and clause extraction.
-#' Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, rel)
+#' Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, p_rel)
 #' Then, from the position of these nodes, you can lookup parents or children, optionally with 
 #' another select expression. This can be done recursively to find children of children etc. 
 #' 
@@ -60,15 +60,15 @@ apply_rules <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
 #'                functions for details.
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
-#' @param rel     A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
-#'                you should nest a children() search and specify rel there.#' @param not_rel Like rel, but for excluding relations
+#' @param p_rel   A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+#'                you should nest a children() search and specify p_rel there.
+#' @param not_p_rel Like p_rel, but for excluding relations
 #' @param lemma   A character vector, specifying lemma
 #' @param not_lemma Like lemma, but for excluding lemma
 #' @param POS     A character vector, specifying part-of-speech tags
 #' @param not_POS Like POS, but for excluding part-of-speech tags
 #' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
-#'                This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
-#'                Also, it can be slower as it will not use binary search.
+#'                This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed (p_rel, lemma, pos and g_id use will use the \link{tokenindex_columns} aliases).
 #'                Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
 #'                absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.
 #' @param g_id    A data.frame or data.table with 2 columns: (1) doc_id and (2) token_id, indicating the global id. While this can also be done using 'select', this alternative uses fast binary search.
@@ -82,14 +82,14 @@ apply_rules <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
 #' .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 #' 
 #' quotes_direct = rule(select = lemma %in% .SAY_VERBS,
-#'                          children(save = 'source', rel = .SUBJECT_RELS),
-#'                          children(save = 'quote', rel = .QUOTE_RELS))
+#'                          children(save = 'source', p_rel = .SUBJECT_RELS),
+#'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows rule
 #' @export
-rule <- function(..., save=NA, rel=NULL, not_rel=NULL, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select=NULL, g_id=NULL) {
+rule <- function(..., save=NA, p_rel=NULL, not_p_rel=NULL, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select=NULL, g_id=NULL) {
   select = deparse(substitute(select))
   f <- function(tokens, block=NULL, check=T, e=parent.frame()) {
-    find_nodes(tokens, ..., save=save, rel=rel, not_rel=not_rel, select=select, g_id=g_id, block=block, check=check, e=e)
+    find_nodes(tokens, ..., save=save, p_rel=p_rel, not_p_rel=not_p_rel, select=select, g_id=g_id, block=block, check=check, e=e)
   }
   class(f) = c('rsyntaxRule', class(f))
   attr(f, 'print') = format_syscall(sys.call()) 
@@ -124,9 +124,9 @@ format_syscall <- function(sc) {
 #' @method print rsyntaxRule
 #' @examples
 #' rule = rule(select = lemma %in% .VIND_VERBS, 
-#'                    children(save = 'source', rel=.SUBJECT_REL),
-#'                    children(rel='vc', select = POS %in% c('C', 'comp'),
-#'                             children(save='quote', rel=.SUBJECT_BODY)))
+#'                    children(save = 'source', p_rel=.SUBJECT_REL),
+#'                    children(p_rel='vc', select = POS %in% c('C', 'comp'),
+#'                             children(save='quote', p_rel=.SUBJECT_BODY)))
 #' rule 
 #' @export
 print.rsyntaxRule <- function(x, ...) cat(attr(x, 'print'))

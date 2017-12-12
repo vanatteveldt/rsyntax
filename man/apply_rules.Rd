@@ -32,8 +32,8 @@ Apply rules created with \link{rule}
 .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 
 quotes_direct = rule(select = lemma \%in\% .SAY_VERBS,
-                         children(save = 'source', rel = .SUBJECT_RELS),
-                         children(save = 'quote', rel = .QUOTE_RELS))
+                         children(save = 'source', p_rel = .SUBJECT_RELS),
+                         children(save = 'quote', p_rel = .QUOTE_RELS))
 quotes_direct ## print shows rule
 
 tokens = subset(tokens_corenlp, sentence == 1)

@@ -16,8 +16,8 @@ S3 print for rsyntaxRule class
 }
 \examples{
 rule = rule(select = lemma \%in\% .VIND_VERBS, 
-                   children(save = 'source', rel=.SUBJECT_REL),
-                   children(rel='vc', select = POS \%in\% c('C', 'comp'),
-                            children(save='quote', rel=.SUBJECT_BODY)))
+                   children(save = 'source', p_rel=.SUBJECT_REL),
+                   children(p_rel='vc', select = POS \%in\% c('C', 'comp'),
+                            children(save='quote', p_rel=.SUBJECT_BODY)))
 rule 
 }

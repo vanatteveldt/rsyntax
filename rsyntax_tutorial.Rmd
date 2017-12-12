@@ -110,10 +110,10 @@ For selecting, you can use
 
 * `lemma`: lemmatized token
 * `POS`: part-of-speech tag
-* `rel`: dependency relation.
+* `p_rel`: dependency relation of node to its parent
 * `g_id`: "global id", given as a data.frame or data.table with two columns: doc_id and token_id
 * `select`: an R expression that can use any column in the token data. This is supported for versatility.
-* `NOT_*`: for `lemma`, `POS` and `rel`, you can also use `not_lemma`, `not_POS` and `not_rel` for negative selection.
+* `NOT_*`: for `lemma`, `POS` and `p_rel`, you can also use `not_lemma`, `not_POS` and `not_p_rel` for negative selection.
 
 In this case, the only selection criterion is that the key should be a verb (POS = 'verb').
 
@@ -144,5 +144,5 @@ tokens = annotate_qc(tokens,
                      quote_rules = alpino_quote_rules(),
                      clause_rules = alpino_clause_rules(),
                      with_rule = T)
-head(tokens[,c('token', 'quote_rule', 'quote_id','quote')])
+tokens[,c('token', 'quote_rule', 'quote_id','quote')]
 ```

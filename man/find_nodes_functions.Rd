@@ -6,11 +6,11 @@
 \alias{parents}
 \title{Search for parents or children in find_nodes}
 \usage{
-children(..., save = NA, rel = NULL, not_rel = NULL, lemma = NULL,
+children(..., save = NA, p_rel = NULL, not_p_rel = NULL, lemma = NULL,
   not_lemma = NULL, POS = NULL, not_POS = NULL, select = NULL,
   g_id = NULL, NOT = F, depth = 1)
 
-parents(..., save = NA, rel = NULL, not_rel = NULL, lemma = NULL,
+parents(..., save = NA, p_rel = NULL, not_p_rel = NULL, lemma = NULL,
   not_lemma = NULL, POS = NULL, not_POS = NULL, select = NULL,
   g_id = NULL, NOT = F, depth = 1)
 }
@@ -21,10 +21,10 @@ grandgrandchildren, etc. This is only the first argument for syntactic reasons (
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
-\item{rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
-you should nest a children() search and specify rel there.}
+\item{p_rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+you should nest a children() search and specify p_rel there.}
 
-\item{not_rel}{Like rel, but for excluding relations.}
+\item{not_p_rel}{Like p_rel, but for excluding relations}
 
 \item{lemma}{A character vector, specifying lemma}
 
@@ -35,8 +35,7 @@ you should nest a children() search and specify rel there.}
 \item{not_POS}{Like POS, but for excluding part-of-speech tags}
 
 \item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
-This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
-Also, it can be slower as it will not use binary search.
+This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed (p_rel, lemma, pos and g_id use will use the \link{tokenindex_columns} aliases).
 Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
 absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.}
 

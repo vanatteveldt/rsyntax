@@ -139,7 +139,7 @@ prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, check=T, fill_bl
     .NODES = data.table::melt(.NODES, id.vars=c(cname('doc_id'),'.PATH','.KEY', '.RULE'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T)
     .NODES = unique(.NODES)
     .NODES = rm_duplicates(.NODES)
-    .NODES = unique(subset(.NODES, select = c(cname('doc_id'), '.KEY', '.ROLE', '.G_ID', '.RULE')))
+    .NODES = unique(subset(.NODES, select = c(cname('doc_id'), '.KEY', '.ROLE', cname('token_id'), '.RULE')))
   }
   
   if (fill) {

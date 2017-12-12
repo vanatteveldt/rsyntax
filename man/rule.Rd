@@ -4,7 +4,7 @@
 \alias{rule}
 \title{Write rules for extracting syntactic elements from tokens with dependency relations.}
 \usage{
-rule(..., save = NA, rel = NULL, not_rel = NULL, lemma = lemma,
+rule(..., save = NA, p_rel = NULL, not_p_rel = NULL, lemma = lemma,
   not_lemma = not_lemma, POS = POS, not_POS = not_POS, select = NULL,
   g_id = NULL)
 }
@@ -15,8 +15,10 @@ functions for details.}
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
-\item{rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
-you should nest a children() search and specify rel there.#' @param not_rel Like rel, but for excluding relations}
+\item{p_rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+you should nest a children() search and specify p_rel there.}
+
+\item{not_p_rel}{Like p_rel, but for excluding relations}
 
 \item{lemma}{A character vector, specifying lemma}
 
@@ -27,8 +29,7 @@ you should nest a children() search and specify rel there.#' @param not_rel Like
 \item{not_POS}{Like POS, but for excluding part-of-speech tags}
 
 \item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
-This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
-Also, it can be slower as it will not use binary search.
+This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed (p_rel, lemma, pos and g_id use will use the \link{tokenindex_columns} aliases).
 Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
 absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.}
 
@@ -39,7 +40,7 @@ A function for performing the specified rule, using the \link{apply_rules} funct
 }
 \description{
 This is the primary workhorse for writing rules for quote and clause extraction.
-Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, rel)
+Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, p_rel)
 Then, from the position of these nodes, you can lookup parents or children, optionally with 
 another select expression. This can be done recursively to find children of children etc.
 }
@@ -54,7 +55,7 @@ Please look at the examples below for a recommended syntactic style for using th
 .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 
 quotes_direct = rule(select = lemma \%in\% .SAY_VERBS,
-                         children(save = 'source', rel = .SUBJECT_RELS),
-                         children(save = 'quote', rel = .QUOTE_RELS))
+                         children(save = 'source', p_rel = .SUBJECT_RELS),
+                         children(save = 'quote', p_rel = .QUOTE_RELS))
 quotes_direct ## print shows rule
 }

@@ -19,3 +19,21 @@
 #' @format data.frame
 'tokens_corenlp'
 
+
+#' Dutch lemma
+#'
+#' Various categories of lemma, for use in syntax rules
+#'
+#' @docType data
+#' @usage data(dutch)
+#' @format list
+'dutch'
+
+#' Quote punctuation
+#' 
+#' Punctuation used in quotes, for use in syntax rules.
+#'
+#' @docType data
+#' @usage data(quote_punctuation)
+#' @format character()
+'quote_punctuation'
