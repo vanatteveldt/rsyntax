@@ -8,6 +8,17 @@
   }
 }
 
+get_quotes_alpino <- function(tokens, block=NULL) {
+  rules = alpino_quote_rules()
+  apply_rules(tokens, rules, as_chain=T, block = block, check = F)
+}
+
+get_clauses_alpino <- function(tokens, block=NULL){
+  rules = alpino_clause_rules()
+  apply_rules(tokens, rules, as_chain=T, block = block, check = F)
+}
+
+
 test_that("extracting sources works", {
   tokens = as_tokenindex(tokens_dutchquotes)
 

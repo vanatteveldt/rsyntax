@@ -7,7 +7,7 @@
 alpino_clause_rules()
 }
 \value{
-A list with rynstax rules, as created with \link{create_rule}
+A list with rynstax rules, as created with \link{rule}
 }
 \description{
 Returns a list with the clause rules for ALPINO

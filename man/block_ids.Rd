@@ -4,7 +4,7 @@
 \alias{block_ids}
 \title{Get and/or merge ids for the block argument in \link{find_nodes}}
 \usage{
-block_ids(...)
+block_ids(..., names = NULL)
 }
 \arguments{
 \item{...}{Either a data.table with the columns doc_id and token_id, or the output of \link{find_nodes}}

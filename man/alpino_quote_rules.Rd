@@ -7,7 +7,7 @@
 alpino_quote_rules()
 }
 \value{
-A list with rynstax rules, as created with \link{create_rule}
+A list with rynstax rules, as created with \link{rule}
 }
 \description{
 Returns a list with the quote rules for ALPINO

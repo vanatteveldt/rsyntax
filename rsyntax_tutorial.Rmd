@@ -1,0 +1,149 @@
+---
+title: "The rsyntax package"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(printr)
+```
+
+
+# What is rsyntax
+
+Many techniques for automatic content analysis rely on a bag-of-words assumption, meaning that syntactic information and even the order of words is ignored.
+Despite severely simplifying communication, this is a powerfull and computationally efficient approach. Still, syntax can be crucial for extracting certain types of information from texts. The rsyntax package offers tools to annotate token data with syntactic information, thus enabling more fine-grained automatic content analysis at the level of quotes and clauses, using the same bag-of-words techniques for the analysis. 
+
+# Input: dependency parse data
+
+The input data for `rsyntax` is a data.frame with the output of a dependency parser, such as Stanford CoreNLP (english), Alpino (dutch) or ParZu (German). 
+As a convenient way to use these parsers, you can set up an NLPipe server (also developed by the authors) or use an existing server. The `nlpiper` package offers bindings for interacting with an NLPipe server directly from within R.
+
+Here we show how to parse a sentence using `nlpiper`. We first install the latest `nlpiper` version, and set up a connection.
+
+```{r, eval=F}
+devtools::install_github('vanatteveldt/nlpiper')
+```
+```{r, message=F, warning=F}
+library(nlpiper)
+options(nlpiper.token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJpYXQiOjE1MDE4NzgzMDF9.Zqjoo_NcUTWQu6bZce4q3FhQRcKEbwfkzi2w2-yqK2g")
+options(nlpiper.server="https://nlpipe.amcat.nl")
+```
+
+Now, we can choose a module and enter a text using the `process()` function. NLPipe keeps a cache of all texts that have been parsed, and if a text has not been parsed before, NLPipe can parse it on the fly. Note that for more and/or larger texts this can take a long time, so then it would be recommended to use `process_async()` to start a job on the NLPipe server without waiting for it to finish.
+
+```{r}
+tokens = nlpiper::process("alpinocoref", text = "Jan zegt dat Marie een tas heeft gekocht", format = "csv")
+```
+
+If `process()` does not return any data, the NLPipe server or the specific parser that you are trying to use might be down. Note that it is possible that you can obtain cached data but not process new data, which would mean that NLPipe is up and running, but the specific parser is down.
+
+# rsyntax
+
+First, install the latest version of rsyntax.
+
+```{r, eval=F}
+devtools::install_github('vanatteveldt/rsyntax')
+```
+```{r, message=F, warning=F}
+library(rsyntax)
+```
+
+The input for rsyntax is a data.frame with the output of a dependency parser.
+This data.frame needs to have certain columnnames.
+We can test whether this is the case by converting the token data.frame with `as_tokenindex()`, which also prepare the data for more efficient processing.
+
+
+```{r}
+tokens = as_tokenindex(tokens)
+```
+
+We can now create and use rules.
+Rules are created with the `rule()` function, and can be applied in several ways. From most specific to most convenient, these are:
+
+* `apply_rules()` applies a rule or a list of rules to find nodes (i.e. tokens in a parse tree).
+* `annotate_nodes()` uses the nodes (output of `apply_rules`) to annotate the token data.
+* `annotate()` is a wrapper that combines `apply_rules` and `annotate_nodes`. 
+* `annotate_qs()` is short for annotate quotes and soures. This function requires two lists of rules, one for quotes and one for sources. Effectively, this is identical to calling `annotate` twice, but it also uses the `block` argument in annotate to prevent the sources of quote to also be assigned as subjects of clauses. 
+
+We'll first demonstrate annotate_qs, which is the function you would use if you only want to apply the pre-defined rules in `rsyntax` for quote and clause extraction.
+
+(for now, we'll demonstrate the Dutch rules, because the English rules are not yet converted to the new rsyntax design)
+
+```{r}
+tokens = annotate_qc(tokens, 
+                     quote_rules = alpino_quote_rules(),
+                     clause_rules = alpino_clause_rules())
+```
+
+The tokens data now has four additional columns.
+The `quote_id` and `clause_id` columns contain the unique ids of quotes and clauses, with the value referring to the token_id of the `key` of the rule (explained later).
+The `quote` column indicates whether a token is the `source` or `quote` of a quote, and the `source` column indicates if a token is the `subject` or `predicate` of a clause. 
+
+For validating results, and possibly optimizing rules, it is convenient to plot the dependency tree, with the quotes and clauses highlighted. For this we can use the `plot_tree()` function. By default, this function plots the first sentence in the token data. Alternatively, we can set it to using the n-th sentence, and also to focus on a specific document, or to use a specific sentence.
+
+```{r}
+plot_tree(tokens)
+```
+
+Here the red nodes represent quotes, with square frames being the source and round frame being the quote.
+The blue nodes represent clauses, with square frames being the subject and round frames being the predicate.
+Also, if a clause is nested inside a quote, the (blue) frames have red borders.
+
+## Creating rules
+
+It is easy to add or change rules, or even to build a new set of rules altogether.
+The quote and clause rules used above are lists with rsyntaxRule objects.
+These are regular R lists, so changing rules in the list or creating new lists works accordingly.
+
+For example, see the results of the `alpino_clause_rules` function, which is a list of rules.
+
+```{r}
+alpino_clause_rules()
+```
+
+Here we see three rules: for passive, present perfect and active clauses. 
+The print method of rsyntaxRules has been set to display how the rules were entered, which makes it transparent and easy to change or replicate.
+
+For illustration, see the first rule (passive).
+The first line specifies the query for the starting node, referred to as the `key`.
+For selecting, you can use 
+
+* `lemma`: lemmatized token
+* `POS`: part-of-speech tag
+* `rel`: dependency relation of node to parent
+* `g_id`: "global id", given as a data.frame or data.table with two columns: doc_id and token_id
+* `select`: an R expression that can use any column in the token data. This is supported for versatility.
+* `NOT_*`: for `lemma`, `POS` and `rel`, you can also use `not_lemma`, `not_POS` and `not_rel` for negative selection.
+
+In this case, the only selection criterion is that the key should be a verb (POS == 'verb').
+
+On the second line, we see a nested `parents()` function.
+This means that we will now look for parents of the key node. 
+We can use the same selection parameters, which in this case is used to look for the lemma in .ALPINO.PASSIVE_VC.
+Here we also see the "save" parameter, by which we specify that we consider this node to be the root of the predicate.
+
+On the third line, we see a `children()` function, that is nested in `rule()`, but not in `parents()`.
+This means that we are looking for children of the key node.
+
+On the fourth line, we see another `children()` function, but this time it is nested in the previous `children()` function. 
+This means that here, we are looking for children of children (i.e. the grandchildren of the key node).
+
+For more detailed instructions, see the help page of the `rule()` function
+
+## Lists of rules
+
+There are two things to keep in mind regarding the way rules are organized in lists.
+Firstly, the order of rules matters. 
+Since tokens can only be assigned once, certain rules need to have priority over other in case their results overlap.
+Rules that occur earlier in the list have priority over rules further down the list.
+The second thing to keep in mind is that it's good to use named lists.
+This way, the `with_rule` argument can be used in the `annotate` functions to see which rule was used for which tokens, which is convenient for improving rules.
+
+```{r}
+tokens = annotate_qc(tokens, 
+                     quote_rules = alpino_quote_rules(),
+                     clause_rules = alpino_clause_rules(),
+                     with_rule = T)
+head(tokens[,c('token', 'quote_rule', 'quote_id','quote')])
+```

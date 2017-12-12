@@ -1,11 +1,9 @@
 #' Prepare a tokenIndex
 #' 
 #' Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
-#' Accepts any data.frame given that the required columns (doc_id, token_id, parent, relation) are present.
+#' Accepts any data.frame given that the required columns (doc_id, token_id, parent, relation, lemma, POS) are present.
 #' 
-#' The default column names can be changed with \link{tokenindex_columns}. Note, however, that you can only change
-#' the special columns used in the functions for finding and annotating nodes (doc_id, token_id, relation, parent). If you want to use specific rules,
-#' such as for quote or clause extraction, other specific columns might be required (e.g., POS, lemma). 
+#' The default column names can be changed with \link{tokenindex_columns}. 
 #' 
 #' The data will be sorted by the doc_id and token_id columns (or aliases specified in \link{tokenindex_columns}).
 #' Accordingly, it is recommended to use numeric token_id's. 
@@ -24,6 +22,8 @@ as_tokenindex <- function(tokens) {
   doc_id__parent = paste(cname('doc_id','parent'), collapse='__')     ## paired doc_id__parent index
   if (!doc_id__parent %in% has_indices) data.table::setindexv(tokens, cname('doc_id','parent'))
   if (!cname('relation') %in% has_indices) data.table::setindexv(tokens, cname('relation')) ## relation index
+  if (!cname('POS') %in% has_indices) data.table::setindexv(tokens, cname('POS')) ## relation index
+  if (!cname('lemma') %in% has_indices) data.table::setindexv(tokens, cname('lemma')) ## relation index
   
   if (new_index) {
     check_tokens(tokens)
@@ -49,19 +49,33 @@ as_tokenindex <- function(tokens) {
 #' @param relation dependency relation of token to it's parent
 #'
 #' @export
-tokenindex_columns <- function(doc_id='doc_id', token_id='token_id', parent='parent', relation='relation') {
+tokenindex_columns <- function(doc_id='doc_id', sentence='sentence', token_id='token_id', parent='parent', relation='relation', POS='POS', lemma='lemma') {
   options(TOKENINDEX_doc_id = doc_id)
+  options(TOKENINDEX_sentence = sentence)
   options(TOKENINDEX_token_id = token_id)
   options(TOKENINDEX_parent = parent)
   options(TOKENINDEX_relation = relation)
+  options(TOKENINDEX_POS = POS)
+  options(TOKENINDEX_lemma = lemma)
 }
 
-## shorthand for getting column names from either the specified options or default (itself)
-cname <- function(...) sapply(list(...), function(x) getOption(paste0('TOKENINDEX_', x), default = x))
-
+#' Get a tokenindex column name
+#' 
+#' gets a tokenindex colunm name, taking into account aliases specified with tokenindex_column. Uses the input if no alias is specified.
+#'
+#' @param ... character strings
+#'
+#' @return a character vector
+#' @export
+#'
+#' @examples
+#' cname('doc_id')
+cname <- function(...) {
+  sapply(list(...), function(x) getOption(paste0('TOKENINDEX_', x), default = x))
+}
 
 check_colnames <- function(columns) {
-  names = c('doc_id','token_id','parent','relation')
+  names = c('doc_id','sentence','token_id','parent','relation','POS','lemma')
   missing = c()
   for (name in names) {
     if (!cname(name) %in% columns) missing = c(missing, sprintf('"%s" (%s)', cname(name), name))

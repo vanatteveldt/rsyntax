@@ -1,14 +1,11 @@
 #' Query parse trees by searching nodes and recursively searching their parents and/or children
 #'
 #' This is the primary workhorse for writing rules for quote and clause extraction.
-#' Specific nodes can be selected using standard R expressions, such as: 
-#' \itemize{
-#' \item pos == "verb" & lemma \%in\% .SAY_VERBS
-#' }
+#' Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, rel)
 #' Then, from the position of these nodes, you can lookup children, optionally with 
 #' another select expression. This can be done recursively to find children of children etc. 
 #' 
-#' To look for parents or children, use the \link{parents} and \link{children} functions (and optionally \link{all_parents} or \link{all_children}).
+#' To look for parents or children, use the \link{parents} and \link{children} functions.
 #' Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
 #'
 #' @param tokens  A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).
@@ -18,41 +15,45 @@
 #'                If NA, the column is not returned.
 #' @param rel     A character vector, specifying the relation of the node to its parent. 
 #' @param not_rel Like rel, but for excluding relations
-#' @param select  An expression to select specific parents/children. All columns in the tokens input for \link{find_nodes} can be used, 
-#'                as well as any column in the environment from which find_nodes is called. (similar to \link{subset.data.frame}).
-#'                Note (!!) that select should not rely on absolute positions (i.e. choosing rows with a logical vector or a numeric vector with indices).
+#' @param lemma   A character vector, specifying lemma
+#' @param not_lemma Like lemma, but for excluding lemma
+#' @param POS     A character vector, specifying part-of-speech tags
+#' @param not_POS Like POS, but for excluding part-of-speech tags
+#' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
+#'                This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
+#'                Also, it can be slower as it will not use binary search.
+#'                Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
+#'                absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.
 #' @param g_id    A data.frame or data.table with 2 columns: (1) doc_id and (2) token_id, indicating the global id. While this can also be done using 'select', this alternative uses fast binary search.
-#' @param chain   The output of another find_nodes search, for chaining different queries (e.g., different ways of extracting quotes). Nodes already assigned earlier in the chain will be ignored (see 'block' argument) and results will combined (rbind) as a single data.table.  
 #' @param block   Optionally, specify ids (like g_id) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 #'                Can also be a data.table returned by (a previous) find_nodes, in which case all ids are blocked. 
 #' @param check   If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
-#' @param e       environment used for evaluating select (used for chaining)
+#' @param e       environment used for evaluating select.
 #'
 #' @return        A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
 #'                (parents / children) with names as specified in the save argument.
 #' @export
-find_nodes <- function(tokens, ..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=NULL, chain=NULL, block=NULL, check=T, e=parent.frame()) {
+find_nodes <- function(tokens, ..., save=NA, rel=NULL, not_rel=NULL, lemma=NULL, not_lemma=NULL, POS=NULL, not_POS=NULL, select=NULL, g_id=NULL, block=NULL, check=T, e=parent.frame()) {
   .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
   safe_save_name(save)
   tokens = as_tokenindex(tokens)  
-  block = block_ids(block, chain)
+  block = block_ids(block)
 
   if (!class(substitute(select)) == 'name') select = deparse(substitute(select))
   
   
-  ids = filter_tokens(tokens, rel=rel, not_rel=not_rel, select=select, g_id=g_id, block=block, e=e)
+  ids = filter_tokens(tokens, .REL=rel, .NOT_REL=not_rel, .LEMMA=lemma, .NOT_LEMMA=not_lemma, .POS=POS, .NOT_POS=not_POS, select=select, .G_ID=g_id, .BLOCK=block, e=e)
   ids = subset(ids, select = c(cname('doc_id'),cname('token_id')))
-  if (length(ids) == 0) return(chain)
+  if (length(ids) == 0) return(NULL)
   ql = list(...)
   if (length(ql) > 0) {
     nodes = rec_find(tokens, ids=ids, ql=ql, e=e, block=block)
   } else {
     data.table::setnames(ids, old = cname('token_id'), new='.KEY')
     if (!is.na(save)) ids[,(save) := .KEY]
-    if (!is.null(chain)) ids = rbind(chain, ids, fill=T)
     return(ids)
   }
-  if (nrow(nodes) == 0) return(chain)
+  if (nrow(nodes) == 0) return(NULL)
   
   ## always remember the node from which the search starts as .ID, for identifying unique matches
   nodes[, .KEY := .MATCH_ID]
@@ -84,9 +85,6 @@ find_nodes <- function(tokens, ..., save=NA, rel=NULL, not_rel=NULL, select=NULL
   }
   
   data.table::setnames(nodes, colnames(nodes), gsub('\\.[xy]$', '', colnames(nodes)))
-  if (!is.null(chain)) {
-    nodes = if (is.null(nodes)) chain else rbind(chain, nodes, fill=T) 
-  }
   nodes[]
 }
 
@@ -94,13 +92,12 @@ find_nodes <- function(tokens, ..., save=NA, rel=NULL, not_rel=NULL, select=NULL
 #'
 #' Can be used (and should only be used) inside of the \link{find_nodes} function.
 #' Enables searching for parents or children, either direct (depth = 1) or untill a given depth (depth 2 for children and grandchildren, etc.).
-#' The functions all_children and all_parents are shorthand for recursively retrieving all parents/children
 #' 
 #' Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have parents/children.
 #' If select is used to pass an expression, the node must have parents/children for which the expression is TRUE.
 #' The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 #'   
-#' @param ...     can be used to nest other children, parents, all_children or all_parents functions, to look for grandchildren, 
+#' @param ...     can be used to nest other children and parents functions, to look for grandchildren, 
 #'                grandgrandchildren, etc. This is only the first argument for syntactic reasons (see details). Please see the examples for recommended syntax. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
@@ -108,19 +105,23 @@ find_nodes <- function(tokens, ..., save=NA, rel=NULL, not_rel=NULL, select=NULL
 #'                If NULL, any relation is allowed. This is different from selecting on the relation column with the select argument, 
 #'                because it take into account that when you look for parents, the relation column of the current node should be used 
 #'                instead of the relation column of the parent node. In addition, use rel is faster because it uses binary search.
-#'                Note that if depth > 1 (or if all_parents/all_children are used), rel is only used for the first parent/child.
+#'                Note that if depth > 1, rel is only used for the first parent/child.
 #'                In this case, it makes more sense for syntactical clarity to first look for only the direct parent/child and then nest 
 #'                another (all_)parents/children search. 
 #' @param not_rel Like rel, but for excluding relations.
-#' @param select  An expression to select specific parents/children. All columns in the tokens input for \link{find_nodes} can be used, 
-#'                as well as any column in the environment from which find_nodes is called. (similar to \link{subset.data.frame}).
+#' @param lemma   A character vector, specifying lemma
+#' @param not_lemma Like lemma, but for excluding lemma
+#' @param POS     A character vector, specifying part-of-speech tags
+#' @param not_POS Like POS, but for excluding part-of-speech tags
+#' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
+#'                This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
+#'                Also, it can be slower as it will not use binary search.
 #'                Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
 #'                absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.
 #' @param g_id    A numeric vector, to filter on global id (.G_ID). While this can also be done using 'select', this alternative uses fast binary search.
 #' @param NOT     If TRUE, exclude these children instead of adding them. The filter parameters still work to NOT select specific children.             
 #' @param depth   A positive integer, determining how deep parents/children are sought. The default, 1, 
 #'                means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
-#'                In all_children and all_parents, the depth is set to Inf (infinite)
 #'
 #' @details 
 #' Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
@@ -135,31 +136,18 @@ NULL
 
 #' @rdname find_nodes_functions
 #' @export
-children <- function(..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=NULL, NOT=F, depth=1) {
-  list(rel=rel, not_rel=not_rel, select = deparse(substitute(select)), g_id=g_id, save=save, nested = list(...),
+children <- function(..., save=NA, rel=NULL, not_rel=NULL, lemma=NULL, not_lemma=NULL, POS=NULL, not_POS=NULL, select=NULL, g_id=NULL, NOT=F, depth=1) {
+  list(rel=rel, not_rel=not_rel, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select = deparse(substitute(select)), g_id=g_id, save=save, nested = list(...),
        level = 'children', NOT=NOT, depth=depth)
 }
 
 #' @rdname find_nodes_functions
 #' @export
-all_children <- function(..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=NULL, NOT=F) {
-  list(rel=rel, not_rel=not_rel, select = deparse(substitute(select)), g_id=g_id, save=save, nested = list(...),
-       level = 'children', NOT=NOT, depth=Inf)
-}
-
-#' @rdname find_nodes_functions
-#' @export
-parents <- function(..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=NULL, NOT=F, depth=1) {
-  list(rel=rel, not_rel=not_rel, select = deparse(substitute(select)), g_id=g_id, save=save, nested = list(...),
+parents <- function(..., save=NA, rel=NULL, not_rel=NULL, lemma=NULL, not_lemma=NULL, POS=NULL, not_POS=NULL, select=NULL, g_id=NULL, NOT=F, depth=1) {
+  list(rel=rel, not_rel=not_rel, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select = deparse(substitute(select)), g_id=g_id, save=save, nested = list(...),
        level = 'parents', NOT=NOT, depth=depth)
 }
 
-#' @rdname find_nodes_functions
-#' @export
-all_parents <- function(..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=NULL, NOT=F) {
-  list(rel=rel, not_rel=not_rel, select = deparse(substitute(select)), g_id=g_id, save=save, nested = list(...),
-       level = 'parents', NOT=NOT, depth=Inf)
-}
 
 #' Get and/or merge ids for the block argument in \link{find_nodes}
 #'
@@ -167,7 +155,7 @@ all_parents <- function(..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=
 #'
 #' @return A data.table with the columns doc_id and token_id
 #' @export
-block_ids <- function(...) {
+block_ids <- function(..., names=NULL) {
   l = list(...)
   len = length(l)
   out = vector('list', len)
@@ -176,8 +164,14 @@ block_ids <- function(...) {
     if (is.null(d)) next
     if (is(d, 'data.table')) {
       if (!cname('token_id') %in% colnames(d)) {
-        d = d[,c(cname('doc_id'), '.KEY')]
-        data.table::setnames(d, '.KEY', cname('token_id'))
+        if (!is.null(names)) {
+          names = setdiff(names, '.RULE')
+          d = subset(d, select = union(cname('doc_id'), names))
+        } else {
+          d = subset(d, select = setdiff(colnames(d), '.RULE'))
+        }
+        d = data.table::melt(d, id.vars = cname('doc_id'), value.name=cname('token_id'))
+        d[,variable := NULL]
       } 
       out[[i]] = d[,c(cname('doc_id'),cname('token_id'))]
       next
@@ -185,7 +179,6 @@ block_ids <- function(...) {
     if (is(d, 'list')) {
       out[[i]] = block_ids(d)
     }
-    print(d)
     stop('Not a valid input for block_ids')
   }
   out = unique(data.table::rbindlist(out))
@@ -236,21 +229,34 @@ select_tokens <- function(tokens, ids, q, e, block=NULL) {
   selection = token_family(tokens, ids=ids, rel=q$rel, not_rel=q$not_rel, level=q$level, depth=q$depth, block=block, replace=T)
   
   if (!data.table::haskey(selection)) data.table::setkeyv(selection, c(cname('doc_id'),cname('token_id')))
-  selection = filter_tokens(selection, g_id = q$g_id, select=q$select)
+  selection = filter_tokens(selection, .LEMMA=q$lemma, .NOT_LEMMA=q$not_lemma, .POS=q$POS, .NOT_POS=q$not_POS, .G_ID = q$g_id, select=q$select)
   
   selection = subset(selection, select=c('.MATCH_ID', cname('doc_id'),cname('token_id')))
   data.table::setnames(selection, cname('token_id'), q$save)
   selection
 }
 
-
-filter_tokens <- function(tokens, rel=NULL, not_rel=NULL, select='NULL', g_id=NULL, g_parent=NULL, block=NULL, e=parent.env()) {
-  if (!is.null(rel)) tokens = tokens[list(rel), on=cname('relation'), nomatch=0]
-  if (!is.null(not_rel)) tokens = tokens[!list(not_rel), on=cname('relation')]
-  if (!is.null(g_id)) tokens = tokens[list(g_id[[1]], g_id[[2]]), on=c(cname('doc_id'),cname('token_id')), nomatch=0]
-  if (!is.null(g_parent)) tokens = tokens[list(g_parent[[1]], g_parent[[2]]), on=c(cname('doc_id'),cname('parent')), nomatch=0]
-  block = block_ids(block)
-  if (!is.null(block)) tokens = tokens[!list(block[[1]], block[[2]]), on=c(cname('doc_id'),cname('token_id'))]
+filter_tokens <- function(tokens, .REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_LEMMA=NULL, .POS=NULL, .NOT_POS=NULL, select='NULL', .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, e=parent.frame()) {
+  ## since indices reset after subsetting, first look up all subset indices, and then subset.
+  ## also, we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
+  i = NULL
+  null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) ## more effi
+  if (!is.null(.REL)) i = null_intersect(i, tokens[list(as.character(.REL)), on=cname('relation'), which=T])
+  if (!is.null(.NOT_REL)) i = null_intersect(i, tokens[!list(as.character(.NOT_REL)), on=cname('relation'), which=T])
+  if (!is.null(.LEMMA)) i = null_intersect(i, tokens[list(as.character(.LEMMA)), on=cname('lemma'), which=T])
+  if (!is.null(.NOT_LEMMA)) i = null_intersect(i, tokens[!list(as.character(.NOT_LEMMA)), on=cname('lemma'), which=T])
+  if (!is.null(.POS)) i = null_intersect(i, tokens[list(as.character(.POS)), on=cname('POS'), which=T])
+  if (!is.null(.NOT_POS)) i = null_intersect(i, tokens[!list(as.character(.NOT_POS)), on=cname('POS'), which=T])
+  if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
+  if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]]), on=c(cname('doc_id'),cname('parent')), which=T])
+  .BLOCK = block_ids(.BLOCK)
+  if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
+  
+  if (!is.null(i)) {
+    i = na.omit(i)
+    tokens = tokens[as.numeric(i),]  
+  }
+  
   if (!select == 'NULL' & !is.null(select)) tokens = tokens[eval(parse(text=select), tokens, e),]
   tokens
 }
@@ -262,16 +268,16 @@ token_family <- function(tokens, ids, rel=NULL, not_rel=NULL, level='children', 
 
   if (level == 'children') {
     id = tokens[list(ids[[1]], ids[[2]]), on=c(cname('doc_id'),cname('parent')), nomatch=0]
-    id = filter_tokens(id, rel=rel, not_rel=not_rel, block=block)
+    id = filter_tokens(id, .REL=rel, .NOT_REL=not_rel, .BLOCK=block)
     if (minimal) id = subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),cname('relation')))
     data.table::set(id, j = '.MATCH_ID', value = id[[cname('parent')]])
   }
   if (level == 'parents') {
-    .NODE = filter_tokens(tokens, g_id = ids, rel=rel, not_rel=not_rel)
+    .NODE = filter_tokens(tokens, .G_ID = ids, .REL=rel, .NOT_REL=not_rel)
     .NODE = subset(.NODE, select=c(cname('doc_id'),cname('parent'),cname('token_id')))
 
     data.table::setnames(.NODE, old=cname('token_id'), new='.MATCH_ID')
-    id = filter_tokens(tokens, g_id = .NODE[,c(cname('doc_id'),cname('parent'))], block=block)
+    id = filter_tokens(tokens, .G_ID = .NODE[,c(cname('doc_id'),cname('parent'))], .BLOCK=block)
     if (minimal) id = subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),cname('relation')))
     id = merge(id, .NODE, by.x=c(cname('doc_id'),cname('token_id')), by.y=c(cname('doc_id'),cname('parent')), allow.cartesian=T)
   }
@@ -289,13 +295,13 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
     if (!replace) block = block_ids(block, .NODE[,cname('doc_id','token_id'), with=F])
     
     if (level == 'children') {
-      id = filter_tokens(tokens, g_parent = .NODE[,c(cname('doc_id'),cname('token_id'))], block=block)
+      id = filter_tokens(tokens, .G_PARENT = .NODE[,c(cname('doc_id'),cname('token_id'))], .BLOCK=block)
       id = merge(id, subset(.NODE, select = c(cname('doc_id'),cname('token_id'),'.MATCH_ID')), by.x=c(cname('doc_id'),cname('parent')), by.y=c(cname('doc_id'),cname('token_id')), allow.cartesian=T)
       id_list[[i]] = if (minimal) subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),cname('relation'),'.MATCH_ID')) else id
     }
   
     if (level == 'parents') {
-      id = filter_tokens(tokens, g_id = .NODE[,c(cname('doc_id'),cname('parent'))], block=block)
+      id = filter_tokens(tokens, .G_ID = .NODE[,c(cname('doc_id'),cname('parent'))], .BLOCK=block)
       id = merge(id, subset(.NODE, select = c(cname('doc_id'),cname('parent'), '.MATCH_ID')), by.x=c(cname('doc_id'),cname('token_id')), by.y=c(cname('doc_id'),cname('parent')), allow.cartesian=T)
       id_list[[i]] = if (minimal) subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),cname('relation'),'.MATCH_ID')) else id
     }
@@ -318,7 +324,7 @@ function(){
   
 #find_nodes(tokens, id ~ lemma %in% .VIND_VERBS, 
 #           children(source ~ 'su' ~ ),
-#           children(quote ~ relation == tada & pos == 'comp',
+#           children(quote ~ relation == tada & POS == 'comp',
 #                    children(~ relation == 'body')))
   
 data("example_tokens_dutchquotes")
@@ -387,3 +393,5 @@ test <- function(tokens) {
 tokens = as_tokenindex(tokens_dutchquotes)
 
 }
+
+

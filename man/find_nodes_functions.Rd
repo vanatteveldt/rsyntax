@@ -3,25 +3,19 @@
 \name{find_nodes_functions}
 \alias{find_nodes_functions}
 \alias{children}
-\alias{all_children}
 \alias{parents}
-\alias{all_parents}
 \title{Search for parents or children in find_nodes}
 \usage{
-children(..., save = NA, rel = NULL, not_rel = NULL, select = NULL,
+children(..., save = NA, rel = NULL, not_rel = NULL, lemma = NULL,
+  not_lemma = NULL, POS = NULL, not_POS = NULL, select = NULL,
   g_id = NULL, NOT = F, depth = 1)
 
-all_children(..., save = NA, rel = NULL, not_rel = NULL, select = NULL,
-  g_id = NULL, NOT = F)
-
-parents(..., save = NA, rel = NULL, not_rel = NULL, select = NULL,
+parents(..., save = NA, rel = NULL, not_rel = NULL, lemma = NULL,
+  not_lemma = NULL, POS = NULL, not_POS = NULL, select = NULL,
   g_id = NULL, NOT = F, depth = 1)
-
-all_parents(..., save = NA, rel = NULL, not_rel = NULL, select = NULL,
-  g_id = NULL, NOT = F)
 }
 \arguments{
-\item{...}{can be used to nest other children, parents, all_children or all_parents functions, to look for grandchildren, 
+\item{...}{can be used to nest other children and parents functions, to look for grandchildren, 
 grandgrandchildren, etc. This is only the first argument for syntactic reasons (see details). Please see the examples for recommended syntax.}
 
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
@@ -31,14 +25,23 @@ If NA, the column is not returned.}
 If NULL, any relation is allowed. This is different from selecting on the relation column with the select argument, 
 because it take into account that when you look for parents, the relation column of the current node should be used 
 instead of the relation column of the parent node. In addition, use rel is faster because it uses binary search.
-Note that if depth > 1 (or if all_parents/all_children are used), rel is only used for the first parent/child.
+Note that if depth > 1, rel is only used for the first parent/child.
 In this case, it makes more sense for syntactical clarity to first look for only the direct parent/child and then nest 
 another (all_)parents/children search.}
 
 \item{not_rel}{Like rel, but for excluding relations.}
 
-\item{select}{An expression to select specific parents/children. All columns in the tokens input for \link{find_nodes} can be used, 
-as well as any column in the environment from which find_nodes is called. (similar to \link{subset.data.frame}).
+\item{lemma}{A character vector, specifying lemma}
+
+\item{not_lemma}{Like lemma, but for excluding lemma}
+
+\item{POS}{A character vector, specifying part-of-speech tags}
+
+\item{not_POS}{Like POS, but for excluding part-of-speech tags}
+
+\item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
+This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
+Also, it can be slower as it will not use binary search.
 Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
 absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.}
 
@@ -47,8 +50,7 @@ absolute positions. For instance, do not use a logical vector unless it is a col
 \item{NOT}{If TRUE, exclude these children instead of adding them. The filter parameters still work to NOT select specific children.}
 
 \item{depth}{A positive integer, determining how deep parents/children are sought. The default, 1, 
-means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
-In all_children and all_parents, the depth is set to Inf (infinite)}
+means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.}
 }
 \value{
 Should not be used outside of \link{find_nodes}
@@ -56,7 +58,6 @@ Should not be used outside of \link{find_nodes}
 \description{
 Can be used (and should only be used) inside of the \link{find_nodes} function.
 Enables searching for parents or children, either direct (depth = 1) or untill a given depth (depth 2 for children and grandchildren, etc.).
-The functions all_children and all_parents are shorthand for recursively retrieving all parents/children
 }
 \details{
 Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have parents/children.

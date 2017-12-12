@@ -15,7 +15,7 @@
 S3 print for rsyntaxRule class
 }
 \examples{
-rule = create_rule(select = lemma \%in\% .VIND_VERBS, 
+rule = rule(select = lemma \%in\% .VIND_VERBS, 
                    children(save = 'source', rel=.SUBJECT_REL),
                    children(rel='vc', select = POS \%in\% c('C', 'comp'),
                             children(save='quote', rel=.SUBJECT_BODY)))

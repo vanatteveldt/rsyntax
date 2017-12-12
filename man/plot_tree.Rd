@@ -4,19 +4,27 @@
 \alias{plot_tree}
 \title{Create an igraph tree from a sentence}
 \usage{
-plot_tree(tokens, root_i = 1, label_vars = c("token"),
-  quote_var = "quote", clause_var = "clause")
+plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
+  token_var = cname("lemma"), pos_var = cname("POS"), quote_var = "quote",
+  clause_var = "clause", label_size = 0.9, node_size = 35,
+  edge_label_size = 0.8)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
 
-\item{root_i}{By default, plot_tree uses the first root (i.e. token without parent) in the data. Change root_i to use the second (2), third (3), etc.}
+\item{sentence_i}{By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)}
 
-\item{label_vars}{A character vector, specifying the columns that will be used to label the nodes}
+\item{doc_id}{Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document.}
 
-\item{quote_var}{The name of the column with quote annotations (will be ignored if column is not available)}
+\item{sentence}{Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well.}
 
-\item{clause_var}{The name of the column with quote annotations (will be ignored if column is not available)}
+\item{pos_var}{The name of the column with the part-of-speech tag. Will be ignored if column is not available.}
+
+\item{quote_var}{The name of the column with quote annotations. Will be ignored if column is not available.}
+
+\item{clause_var}{The name of the column with quote annotations. Will be ignored if column is not available.}
+
+\item{label_var}{The name of the column with the token label (word or lemma). Will be ignored if column is not available.}
 }
 \value{
 an igraph graph

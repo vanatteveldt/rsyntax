@@ -1,3 +1,12 @@
+get_children_i <- function(tokens, i) {
+  tokens = as_tokenindex(tokens)
+  select = tokens[i,cname('doc_id','token_id'), with=F]
+  data.table::setnames(select, c('doc_id','parent'))
+  children = tokens[select, on=cname('doc_id','parent'), nomatch=0, which=T]
+  if (length(children) > 0) children = union(children, get_children_i(tokens, children)) 
+  union(i, children)
+}
+
 rm_nodes <- function(nodes, ids) {
   if (ncol(nodes) > 1) {
     drop = rep(T, nrow(nodes))

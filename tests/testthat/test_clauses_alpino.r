@@ -9,6 +9,16 @@
   }
 }
 
+get_quotes_alpino <- function(tokens, block=NULL) {
+  rules = alpino_quote_rules()
+  apply_rules(tokens, rules, as_chain=T, block = block, check = F)
+}
+
+get_clauses_alpino <- function(tokens, block=NULL){
+  rules = alpino_clause_rules()
+  apply_rules(tokens, rules, as_chain=T, block = block, check = F)
+}
+
 test_that("extracting clauses works", {
   tokens = as_tokenindex(tokens_dutchclauses)
   
@@ -41,12 +51,12 @@ test_that("extracting clauses works", {
   quotes = get_quotes_alpino(tokens[tokens$sentence == 5,])
   clauses = get_clauses_alpino(tokens[tokens$sentence == 5,], block = quotes)
   expect_equal(nrow(clauses), 1)
-  .check_clause(tokens, clauses, predicate = 'hebben', subject="Jantje")
+  .check_clause(tokens, clauses, predicate = 'slaan', subject="Jantje")
   
   # quote, clause and negation: subject says: subject -> dit not verb -> object
   quotes = get_quotes_alpino(tokens[tokens$sentence == 6,])
   clauses = get_clauses_alpino(tokens[tokens$sentence == 6,], block = quotes)
   expect_equal(nrow(clauses), 1)
-  .check_clause(tokens, clauses, predicate = 'hebben', subject="ik")
+  .check_clause(tokens, clauses, predicate = 'slaan', subject="ik")
 })
 

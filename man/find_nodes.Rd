@@ -5,7 +5,8 @@
 \title{Query parse trees by searching nodes and recursively searching their parents and/or children}
 \usage{
 find_nodes(tokens, ..., save = NA, rel = NULL, not_rel = NULL,
-  select = NULL, g_id = NULL, chain = NULL, block = NULL, check = T,
+  lemma = NULL, not_lemma = NULL, POS = NULL, not_POS = NULL,
+  select = NULL, g_id = NULL, block = NULL, check = T,
   e = parent.frame())
 }
 \arguments{
@@ -21,20 +22,28 @@ If NA, the column is not returned.}
 
 \item{not_rel}{Like rel, but for excluding relations}
 
-\item{select}{An expression to select specific parents/children. All columns in the tokens input for \link{find_nodes} can be used, 
-as well as any column in the environment from which find_nodes is called. (similar to \link{subset.data.frame}).
-Note (!!) that select should not rely on absolute positions (i.e. choosing rows with a logical vector or a numeric vector with indices).}
+\item{lemma}{A character vector, specifying lemma}
+
+\item{not_lemma}{Like lemma, but for excluding lemma}
+
+\item{POS}{A character vector, specifying part-of-speech tags}
+
+\item{not_POS}{Like POS, but for excluding part-of-speech tags}
+
+\item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
+This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed.
+Also, it can be slower as it will not use binary search.
+Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
+absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.}
 
 \item{g_id}{A data.frame or data.table with 2 columns: (1) doc_id and (2) token_id, indicating the global id. While this can also be done using 'select', this alternative uses fast binary search.}
-
-\item{chain}{The output of another find_nodes search, for chaining different queries (e.g., different ways of extracting quotes). Nodes already assigned earlier in the chain will be ignored (see 'block' argument) and results will combined (rbind) as a single data.table.}
 
 \item{block}{Optionally, specify ids (like g_id) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 Can also be a data.table returned by (a previous) find_nodes, in which case all ids are blocked.}
 
 \item{check}{If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.}
 
-\item{e}{environment used for evaluating select (used for chaining)}
+\item{e}{environment used for evaluating select.}
 }
 \value{
 A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
@@ -42,14 +51,11 @@ A data.table in which each row is a node for which all conditions are satisfied,
 }
 \description{
 This is the primary workhorse for writing rules for quote and clause extraction.
-Specific nodes can be selected using standard R expressions, such as: 
-\itemize{
-\item pos == "verb" & lemma \%in\% .SAY_VERBS
-}
+Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, rel)
 Then, from the position of these nodes, you can lookup children, optionally with 
 another select expression. This can be done recursively to find children of children etc.
 }
 \details{
-To look for parents or children, use the \link{parents} and \link{children} functions (and optionally \link{all_parents} or \link{all_children}).
+To look for parents or children, use the \link{parents} and \link{children} functions.
 Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
 }

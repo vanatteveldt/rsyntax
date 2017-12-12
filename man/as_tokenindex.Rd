@@ -11,12 +11,10 @@ as_tokenindex(tokens)
 }
 \description{
 Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
-Accepts any data.frame given that the required columns (doc_id, token_id, parent, relation) are present.
+Accepts any data.frame given that the required columns (doc_id, token_id, parent, relation, lemma, POS) are present.
 }
 \details{
-The default column names can be changed with \link{tokenindex_columns}. Note, however, that you can only change
-the special columns used in the functions for finding and annotating nodes (doc_id, token_id, relation, parent). If you want to use specific rules,
-such as for quote or clause extraction, other specific columns might be required (e.g., POS, lemma).
+The default column names can be changed with \link{tokenindex_columns}.
 
 The data will be sorted by the doc_id and token_id columns (or aliases specified in \link{tokenindex_columns}).
 Accordingly, it is recommended to use numeric token_id's. 

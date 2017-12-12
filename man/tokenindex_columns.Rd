@@ -4,8 +4,9 @@
 \alias{tokenindex_columns}
 \title{Specify the column names used in rsyntax.}
 \usage{
-tokenindex_columns(doc_id = "doc_id", token_id = "token_id",
-  parent = "parent", relation = "relation")
+tokenindex_columns(doc_id = "doc_id", sentence = "sentence",
+  token_id = "token_id", parent = "parent", relation = "relation",
+  POS = "POS", lemma = "lemma")
 }
 \arguments{
 \item{doc_id}{document id}

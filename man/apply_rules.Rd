@@ -2,14 +2,14 @@
 % Please edit documentation in R/syntax_rules.r
 \name{apply_rules}
 \alias{apply_rules}
-\title{Apply rules created with \link{create_rule}}
+\title{Apply rules created with \link{rule}}
 \usage{
 apply_rules(tokens, ..., as_chain = T, block = NULL, check = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
 
-\item{...}{rule functions, as created with \link{create_rule}. Can also be a list with rule functions.}
+\item{...}{rule functions, as created with \link{rule}. Can also be a list with rule functions.}
 
 \item{as_chain}{If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument).}
 
@@ -23,15 +23,15 @@ A data.table in which each row is a node for which all conditions are satisfied,
                (parents / children) with names as specified in the save argument.
 }
 \description{
-Apply rules created with \link{create_rule}
+Apply rules created with \link{rule}
 }
 \examples{
-## it is convenient to first prepare vectors with relevant words/pos-tags/relations
+## it's convenient to first prepare vectors with relevant words/pos-tags/relations
 .SAY_VERBS = c("tell", "show","say", "speak") ## etc.
 .QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
 .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 
-quotes_direct = create_rule(select = lemma \%in\% .SAY_VERBS,
+quotes_direct = rule(select = lemma \%in\% .SAY_VERBS,
                          children(save = 'source', rel = .SUBJECT_RELS),
                          children(save = 'quote', rel = .QUOTE_RELS))
 quotes_direct ## print shows rule
