@@ -18,7 +18,8 @@ functions for details.}
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
-\item{rel}{A character vector, specifying the relation of the node to its parent.}
+\item{rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+you should nest a children() search and specify rel there.}
 
 \item{not_rel}{Like rel, but for excluding relations}
 

@@ -190,7 +190,7 @@ options(nlpiper.server=&quot;https://nlpipe.amcat.nl&quot;)</code></pre>
 <li><code>select</code>: an R expression that can use any column in the token data. This is supported for versatility.</li>
 <li><code>NOT_*</code>: for <code>lemma</code>, <code>POS</code> and <code>rel</code>, you can also use <code>not_lemma</code>, <code>not_POS</code> and <code>not_rel</code> for negative selection.</li>
 </ul>
-<p>In this case, the only selection criterion is that the key should be a verb (POS == ‘verb’).</p>
+<p>In this case, the only selection criterion is that the key should be a verb (POS = ‘verb’).</p>
 <p>On the second line, we see a nested <code>parents()</code> function. This means that we will now look for parents of the key node. We can use the same selection parameters, which in this case is used to look for the lemma in .ALPINO.PASSIVE_VC. Here we also see the “save” parameter, by which we specify that we consider this node to be the root of the predicate.</p>
 <p>On the third line, we see a <code>children()</code> function, that is nested in <code>rule()</code>, but not in <code>parents()</code>. This means that we are looking for children of the key node.</p>
 <p>On the fourth line, we see another <code>children()</code> function, but this time it is nested in the previous <code>children()</code> function. This means that here, we are looking for children of children (i.e. the grandchildren of the key node).</p>

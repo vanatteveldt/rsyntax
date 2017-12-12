@@ -143,7 +143,7 @@ prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, check=T, fill_bl
   }
   
   if (fill) {
-    add = token_family(tokens, ids=.NODES[,c(cname('doc_id'),cname('token_id'))], rel=NULL, not_rel=NULL, level='children', depth=Inf, minimal=T, block=fill_block, replace = F)
+    add = token_family(tokens, ids=.NODES[,c(cname('doc_id'),cname('token_id'))], level='children', depth=Inf, minimal=T, block=fill_block, replace = F)
     add = merge(add, .NODES, by.x=c(cname('doc_id'),'.MATCH_ID'), by.y=c(cname('doc_id'),cname('token_id')), allow.cartesian = T)
     .NODES = rbind(.NODES, add[,colnames(.NODES), with=F])
   }

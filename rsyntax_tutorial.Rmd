@@ -51,8 +51,7 @@ library(rsyntax)
 
 The input for rsyntax is a data.frame with the output of a dependency parser.
 This data.frame needs to have certain columnnames.
-We can test whether this is the case by converting the token data.frame with `as_tokenindex()`, which also prepare the data for more efficient processing.
-
+We can test whether this is the case by converting the token data.frame with `as_tokenindex()`, which also prepares the data for more efficient processing.
 
 ```{r}
 tokens = as_tokenindex(tokens)
@@ -111,12 +110,12 @@ For selecting, you can use
 
 * `lemma`: lemmatized token
 * `POS`: part-of-speech tag
-* `rel`: dependency relation of node to parent
+* `rel`: dependency relation.
 * `g_id`: "global id", given as a data.frame or data.table with two columns: doc_id and token_id
 * `select`: an R expression that can use any column in the token data. This is supported for versatility.
 * `NOT_*`: for `lemma`, `POS` and `rel`, you can also use `not_lemma`, `not_POS` and `not_rel` for negative selection.
 
-In this case, the only selection criterion is that the key should be a verb (POS == 'verb').
+In this case, the only selection criterion is that the key should be a verb (POS = 'verb').
 
 On the second line, we see a nested `parents()` function.
 This means that we will now look for parents of the key node. 

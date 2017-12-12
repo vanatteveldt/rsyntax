@@ -13,7 +13,8 @@
 #'                functions for details.
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
-#' @param rel     A character vector, specifying the relation of the node to its parent. 
+#' @param rel     A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+#'                you should nest a children() search and specify rel there.
 #' @param not_rel Like rel, but for excluding relations
 #' @param lemma   A character vector, specifying lemma
 #' @param not_lemma Like lemma, but for excluding lemma
@@ -101,13 +102,8 @@ find_nodes <- function(tokens, ..., save=NA, rel=NULL, not_rel=NULL, lemma=NULL,
 #'                grandgrandchildren, etc. This is only the first argument for syntactic reasons (see details). Please see the examples for recommended syntax. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
-#' @param rel     A character vector, specifying the allowed relations between the node and the parent/child. 
-#'                If NULL, any relation is allowed. This is different from selecting on the relation column with the select argument, 
-#'                because it take into account that when you look for parents, the relation column of the current node should be used 
-#'                instead of the relation column of the parent node. In addition, use rel is faster because it uses binary search.
-#'                Note that if depth > 1, rel is only used for the first parent/child.
-#'                In this case, it makes more sense for syntactical clarity to first look for only the direct parent/child and then nest 
-#'                another (all_)parents/children search. 
+#' @param rel     A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+#'                you should nest a children() search and specify rel there.
 #' @param not_rel Like rel, but for excluding relations.
 #' @param lemma   A character vector, specifying lemma
 #' @param not_lemma Like lemma, but for excluding lemma
@@ -226,20 +222,22 @@ rec_find <- function(tokens, ids, ql, e=parent.frame(), block=NULL) {
 select_tokens <- function(tokens, ids, q, e, block=NULL) {
   .MATCH_ID = NULL ## bindings for data.table
 
-  selection = token_family(tokens, ids=ids, rel=q$rel, not_rel=q$not_rel, level=q$level, depth=q$depth, block=block, replace=T)
+  selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=T)
   
   if (!data.table::haskey(selection)) data.table::setkeyv(selection, c(cname('doc_id'),cname('token_id')))
-  selection = filter_tokens(selection, .LEMMA=q$lemma, .NOT_LEMMA=q$not_lemma, .POS=q$POS, .NOT_POS=q$not_POS, .G_ID = q$g_id, select=q$select)
+  selection = filter_tokens(selection, .REL=q$rel, .NOT_REL=q$not_rel, .LEMMA=q$lemma, .NOT_LEMMA=q$not_lemma, .POS=q$POS, .NOT_POS=q$not_POS, .G_ID = q$g_id, select=q$select)
   
   selection = subset(selection, select=c('.MATCH_ID', cname('doc_id'),cname('token_id')))
   data.table::setnames(selection, cname('token_id'), q$save)
   selection
 }
 
-filter_tokens <- function(tokens, .REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_LEMMA=NULL, .POS=NULL, .NOT_POS=NULL, select='NULL', .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, e=parent.frame()) {
+filter_tokens <- function(tokens, .REL=NULL, .NOT_REL=NULL, .C_REL=NULL, .NOT_C_REL=NULL, .LEMMA=NULL, .NOT_LEMMA=NULL, .POS=NULL, .NOT_POS=NULL, select='NULL', .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, e=parent.frame()) {
   ## since indices reset after subsetting, first look up all subset indices, and then subset.
   ## also, we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
   i = NULL
+  is.null(.REL)
+  if (!is.null())
   null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) ## more effi
   if (!is.null(.REL)) i = null_intersect(i, tokens[list(as.character(.REL)), on=cname('relation'), which=T])
   if (!is.null(.NOT_REL)) i = null_intersect(i, tokens[!list(as.character(.NOT_REL)), on=cname('relation'), which=T])
@@ -249,8 +247,13 @@ filter_tokens <- function(tokens, .REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_LE
   if (!is.null(.NOT_POS)) i = null_intersect(i, tokens[!list(as.character(.NOT_POS)), on=cname('POS'), which=T])
   if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
   if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]]), on=c(cname('doc_id'),cname('parent')), which=T])
+  
   .BLOCK = block_ids(.BLOCK)
   if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
+  
+  if (!is.null(.C_REL)) {
+    tokens
+  }
   
   if (!is.null(i)) {
     i = na.omit(i)
@@ -261,19 +264,19 @@ filter_tokens <- function(tokens, .REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_LE
   tokens
 }
 
-token_family <- function(tokens, ids, rel=NULL, not_rel=NULL, level='children', depth=Inf, minimal=F, block=NULL, replace=F) {
+token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F) {
   .MATCH_ID = NULL
   if (!replace) block = block_ids(ids, block)
   if ('.MATCH_ID' %in% colnames(tokens)) tokens[, .MATCH_ID := NULL]
 
   if (level == 'children') {
     id = tokens[list(ids[[1]], ids[[2]]), on=c(cname('doc_id'),cname('parent')), nomatch=0]
-    id = filter_tokens(id, .REL=rel, .NOT_REL=not_rel, .BLOCK=block)
+    id = filter_tokens(id, .BLOCK=block)
     if (minimal) id = subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),cname('relation')))
     data.table::set(id, j = '.MATCH_ID', value = id[[cname('parent')]])
   }
   if (level == 'parents') {
-    .NODE = filter_tokens(tokens, .G_ID = ids, .REL=rel, .NOT_REL=not_rel)
+    .NODE = filter_tokens(tokens, .G_ID = ids)
     .NODE = subset(.NODE, select=c(cname('doc_id'),cname('parent'),cname('token_id')))
 
     data.table::setnames(.NODE, old=cname('token_id'), new='.MATCH_ID')

@@ -21,13 +21,8 @@ grandgrandchildren, etc. This is only the first argument for syntactic reasons (
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
-\item{rel}{A character vector, specifying the allowed relations between the node and the parent/child. 
-If NULL, any relation is allowed. This is different from selecting on the relation column with the select argument, 
-because it take into account that when you look for parents, the relation column of the current node should be used 
-instead of the relation column of the parent node. In addition, use rel is faster because it uses binary search.
-Note that if depth > 1, rel is only used for the first parent/child.
-In this case, it makes more sense for syntactical clarity to first look for only the direct parent/child and then nest 
-another (all_)parents/children search.}
+\item{rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+you should nest a children() search and specify rel there.}
 
 \item{not_rel}{Like rel, but for excluding relations.}
 

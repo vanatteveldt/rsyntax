@@ -60,8 +60,8 @@ apply_rules <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
 #'                functions for details.
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
-#' @param rel     A character vector, specifying the relation of the node to its parent. 
-#' @param not_rel Like rel, but for excluding relations
+#' @param rel     A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
+#'                you should nest a children() search and specify rel there.#' @param not_rel Like rel, but for excluding relations
 #' @param lemma   A character vector, specifying lemma
 #' @param not_lemma Like lemma, but for excluding lemma
 #' @param POS     A character vector, specifying part-of-speech tags
@@ -86,7 +86,7 @@ apply_rules <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
 #'                          children(save = 'quote', rel = .QUOTE_RELS))
 #' quotes_direct ## print shows rule
 #' @export
-rule <- function(..., save=NA, rel=NULL, not_rel=NULL, select=NULL, g_id=NULL) {
+rule <- function(..., save=NA, rel=NULL, not_rel=NULL, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select=NULL, g_id=NULL) {
   select = deparse(substitute(select))
   f <- function(tokens, block=NULL, check=T, e=parent.frame()) {
     find_nodes(tokens, ..., save=save, rel=rel, not_rel=not_rel, select=select, g_id=g_id, block=block, check=check, e=e)
