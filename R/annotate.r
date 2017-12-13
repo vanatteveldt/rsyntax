@@ -74,11 +74,19 @@ annotate <- function(tokens, rules, column, use=NULL, fill=T, block=NULL, check=
 #' @param with_rule  For testing rules. If TRUE, add a column that shows the name of the specific rule that was used. This only works if 'rules' is a named list.
 #'
 #' @export
-annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=NULL, check=T, with_rule=F) {
+annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=NULL, check=T, with_rule=F, show_fill=F) {
+  id_column = paste0(column, '_id')
+  if (column %in% colnames(tokens)) tokens[, (column) := NULL]
+  if (id_column %in% colnames(tokens)) tokens[, (id_column) := NULL]
+  
+  if (nrow(nodes) == 0) {
+    tokens[,(column) := factor()]
+    tokens[,(id_column) := numeric()]
+    return(tokens)
+  }
+    
   tokens = as_tokenindex(tokens)
   .NODES = prepare_long_nodes(tokens, nodes, use=use, fill=fill, check=check, fill_block=fill_block)
-  
-  id_column = paste0(column, '_id')
   data.table::setnames(.NODES, c('.ROLE','.KEY'), c(column, id_column))
   
   if (with_rule) {
@@ -87,11 +95,9 @@ annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=N
     .NODES[,.RULE := NULL]
   }
   
-  if (column %in% colnames(tokens)) tokens[, (column) := NULL]
-  if (id_column %in% colnames(tokens)) tokens[, (id_column) := NULL]
-  
   tokens = merge(tokens, .NODES, by=c(cname('doc_id'),cname('token_id')), all.x=T)
   as_tokenindex(tokens)
+ 
 }
 
 #' Transform the nodes to long format and match with token data
@@ -106,22 +112,26 @@ annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=N
 #'                   For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only added as a child of 2. 
 #' @param token_cols A character vector, specifying which columns from tokens to include in the output
 #' @param block      Optionally, another set of nodes, of which the .KEY values will be blocked for annotations
+#' @param show_fill  If TRUE, add a .FILL column that indicates which tokens were added with fill
 #'
 #' @return A data.table with the nodes in long format, and the specified token_cols attached 
 #' @export
-get_nodes <- function(tokens, nodes, use=NULL, fill=T, token_cols=c('token'), block=NULL) {
+get_nodes <- function(tokens, nodes, use=NULL, fill=T, token_cols=c('token'), block=NULL, show_fill=F) {
   tokens = as_tokenindex(tokens)
 
   missing_col = setdiff(token_cols, colnames(tokens))
   if (length(missing_col) > 0) stop(sprintf('columns specified in token_cols arguments not found: %s', paste(missing_col, collapse=', ')))
-
-  .NODES = prepare_long_nodes(tokens, nodes, use=use, fill=fill, check=F, fill_block=block)
-
+  .NODES = prepare_long_nodes(tokens, nodes, use=use, fill=fill, check=F, fill_block=block, show_fill=show_fill)
+  
   out = merge(.NODES, tokens, by=c(cname('doc_id'),cname('token_id')))
-  subset(out, select = c(cname('doc_id'),cname('token_id'),'.KEY','.ROLE', token_cols))
+  if (show_fill) {
+    subset(out, select = c(cname('doc_id'),cname('token_id'),'.KEY','.ROLE', '.FILL', token_cols))
+  } else {
+    subset(out, select = c(cname('doc_id'),cname('token_id'),'.KEY','.ROLE', token_cols))
+  }
 }
   
-prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, check=T, fill_block=NULL) {
+prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, rm_dup=T, check=T, fill_block=NULL, show_fill=F) {
   use = if (is.null(use)) colnames(nodes) else union(c(cname('doc_id'), '.KEY'), use)
   if (!all(use %in% colnames(nodes))) stop('Invalid column names (for the nodes data.table) in the use argument')
 
@@ -129,7 +139,7 @@ prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, check=T, fill_bl
   .NODES = unique(data.table::melt(.NODES, id.vars=c(cname('doc_id'),'.KEY','.RULE'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T))
   
   has_duplicates = anyDuplicated(.NODES, by=c(cname('doc_id'),cname('token_id')))
-  if (has_duplicates) {
+  if (has_duplicates & rm_dup) {
     if (check) {
       warning("DUPLICATE NODES: Some tokens occur multiple times as nodes (either in different patterns or the same pattern). 
       Duplicates have now been deleted, but it's better (less ambiguous) to prevent duplicates by making the rules more specific")
@@ -145,6 +155,10 @@ prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, check=T, fill_bl
   if (fill) {
     add = token_family(tokens, ids=.NODES[,c(cname('doc_id'),cname('token_id'))], level='children', depth=Inf, minimal=T, block=fill_block, replace = F)
     add = merge(add, .NODES, by.x=c(cname('doc_id'),'.MATCH_ID'), by.y=c(cname('doc_id'),cname('token_id')), allow.cartesian = T)
+    if (show_fill) {
+      .NODES[,.FILL := F]
+      add[,.FILL := T]
+    } 
     .NODES = rbind(.NODES, add[,colnames(.NODES), with=F])
   }
   data.table::setkeyv(.NODES, c(cname('doc_id'),cname('token_id')))

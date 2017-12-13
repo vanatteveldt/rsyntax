@@ -151,6 +151,7 @@ parents <- function(..., save=NA, p_rel=NULL, not_p_rel=NULL, lemma=NULL, not_le
 #' @export
 block_ids <- function(..., names=NULL) {
   l = list(...)
+
   len = length(l)
   out = vector('list', len)
   for (i in 1:len) {
@@ -167,6 +168,7 @@ block_ids <- function(..., names=NULL) {
         d = data.table::melt(d, id.vars = cname('doc_id'), value.name=cname('token_id'))
         d[,variable := NULL]
       } 
+     
       out[[i]] = d[,c(cname('doc_id'),cname('token_id'))]
       next
     }
@@ -265,7 +267,9 @@ filter_tokens <- function(tokens, .P_REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_
 
 token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F) {
   .MATCH_ID = NULL
+
   if (!replace) block = block_ids(ids, block)
+  
   if ('.MATCH_ID' %in% colnames(tokens)) tokens[, .MATCH_ID := NULL]
 
   if (level == 'children') {

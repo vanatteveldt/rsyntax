@@ -36,25 +36,24 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' 
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, token_var = cname('lemma'), pos_var = cname('POS'), quote_var='quote', clause_var='clause', label_size=0.9, node_size=35, edge_label_size=0.8) {  
+plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var='quote', clause_var='clause', label_size=0.9, node_size=35, edge_label_size=0.8) {  
   tokens = as_tokenindex(tokens)  
-  tree = get_sentence(tokens, doc_id, sentence, sentence_i)
-  
-  # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
-  edges = tree[!is.na(tree[[cname('parent')]]), cname('parent', 'token_id', 'relation'), with=F]
-  
   if (!quote_var %in% colnames(tokens)) quote_var = NULL
   if (!clause_var %in% colnames(tokens)) clause_var = NULL
-  label_vars = setdiff(c(token_var, pos_var), colnames(tokens))
-  nodes = subset(tree, select = c(cname('token_id'),label_vars,quote_var,clause_var))
   
-  label = tokens[[cname('token_id')]]
-  if (token_var %in% colnames(tokens)) label = paste0(label, '. ', tokens[[token_var]])
-  if (pos_var %in% colnames(tokens)) label = paste0(label, '\n', '(', tokens[[pos_var]], ')')
+  nodes = get_sentence(tokens, doc_id, sentence, sentence_i)
+  data.table::setcolorder(nodes, union(cname('token_id'), colnames(nodes))) ## set token_id first for matching with edges
+  
+  # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
+  edges = nodes[!is.na(nodes[[cname('parent')]]), cname('parent', 'token_id', 'relation'), with=F]
+  
+  label = nodes[[cname('token_id')]]
+  label = paste0(label, '\n', nodes[[cname('lemma')]])
+  label = paste0(label, '\n', '(', nodes[[cname('POS')]], ')')
   nodes$label = label 
   
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
-  root = tree[[cname('token_id')]][is.na(tree[['parent']])]
+  root = nodes[[cname('token_id')]][is.na(nodes[['parent']])]
   
   plot.new()
   par(mar=c(0,0,0,0))
@@ -88,8 +87,8 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, token_var
   igraph::V(g)$shape = 'none'
   igraph::V(g)$frame.size=20
   
-  if (!is.null(quote_var)) {
-    quote = igraph::get.vertex.attribute(g, quote_var)
+  quote = igraph::get.vertex.attribute(g, quote_var)
+  if (!is.null(quote)) {
     is_source = quote == 'source' & !is.na(quote)
     is_quote = quote == 'quote' & !is.na(quote)
     V(g)$shape[is_source] = 'rectangle'
@@ -97,27 +96,24 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, token_var
     V(g)$frame.color[is_source | is_quote] = 'tomato'
     V(g)$color[is_source] = 'tomato1'
     V(g)$color[is_quote] = 'tomato3'
-    
   } else {
     is_source = rep(F, vcount(g))
     is_quote = rep(F, vcount(g))
   }
-  
-  if (!is.null(clause_var)) {
-    clause = igraph::get.vertex.attribute(g, clause_var)
+
+  clause = igraph::get.vertex.attribute(g, clause_var)
+  if (!is.null(clause)) {
     is_subject = clause == 'subject' & !is.na(clause)
     is_predicate = clause == 'predicate' & !is.na(clause)
     V(g)$shape[is_subject] = 'rectangle'
     V(g)$shape[is_predicate] = 'circle'
     V(g)$color[is_subject] = 'lightblue1'
     V(g)$color[is_predicate] = 'lightblue3'
-    
   }
   plot(g)
   par(mar=c(4,4,4,4))
   invisible(g)
 }
-
 
 
 function() {
