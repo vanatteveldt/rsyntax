@@ -21,6 +21,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
   sent
 }
 
+
 #' Create an igraph tree from a sentence
 #' 
 #' Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
@@ -36,7 +37,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' 
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var='quote', clause_var='clause', label_size=0.9, node_size=35, edge_label_size=0.8) {  
+plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var='quote', clause_var='clause', coref='coref_id', label_size=0.9, node_size=30, edge_label_size=0.8) {  
   tokens = as_tokenindex(tokens)  
   if (!quote_var %in% colnames(tokens)) quote_var = NULL
   if (!clause_var %in% colnames(tokens)) clause_var = NULL
@@ -48,8 +49,14 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var
   edges = nodes[!is.na(nodes[[cname('parent')]]), cname('parent', 'token_id', 'relation'), with=F]
   
   label = nodes[[cname('token_id')]]
+  if (coref %in% colnames(tokens)) {
+    has_coref = !is.na(nodes[[coref]]) & !nodes[[coref]] == ''
+    label = ifelse(has_coref, paste0(label, ' - ', nodes[[coref]]), label)
+  }
   label = paste0(label, '\n', nodes[[cname('lemma')]])
-  label = paste0(label, '\n', '(', nodes[[cname('POS')]], ')')
+  label = paste0(label, '\n', '(', nodes[[cname('POS')]])
+  label = paste0(label, ')')
+  
   nodes$label = label 
   
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
@@ -57,9 +64,10 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var
   
   plot.new()
   par(mar=c(0,0,0,0))
-  
-  g$layout = igraph::layout_as_tree(g)
-  
+
+  root = find_roots(g)
+  g$layout = igraph::layout_as_tree(g, root = root)
+
   ## make childen line out in circle, preventing (most) label overlap
   ei = get.edgelist(g, names = F)
   parent.x = g$layout[ei[match(1:nrow(g$layout), ei[,2]),1],1]
@@ -115,7 +123,6 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var
   invisible(g)
 }
 
-
 function() {
   tokens = as_tokenindex(tokens)
   tokens = as_tokenindex(tokens_dutchquotes)
@@ -123,3 +130,21 @@ function() {
   g =  plot_tree(tokens, label_vars=c('token'), sentence_i = 2)
 }
 
+find_roots <- function(g) {
+  comps = igraph::decompose(g)
+  roots = c()
+  for (i in 1:length(comps)) {
+    comp = comps[[i]]
+    root = names(which.min(igraph::degree(comp, mode = 'in')))
+    if (length(root) > 1) {
+      out = igraph::degree(comp, mode='out')
+      out = out[match(root, names(out))]
+      root = names(out)[which.max(out)]
+    } 
+    if (length(root) > 1) {
+      root = root[1]
+    }
+    roots = union(roots, root)
+  }
+  roots
+}

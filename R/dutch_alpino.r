@@ -52,6 +52,11 @@ alpino_quote_rules <- function() {
 #' @export
 alpino_clause_rules <- function(){
   ## [passive subject as object] [passive verb with modifier] [object as subject] 
+  #passive_conj = rule(POS = 'verb', 
+  #               parents(save='predicate', lemma = dutch$passive_vc),
+  #               children(lemma = dutch$passive_mod, 
+  #                        children(save='subject', p_rel='obj1')))
+  
   passive = rule(POS = 'verb', 
                         parents(save='predicate', lemma = dutch$passive_vc),
                         children(lemma = dutch$passive_mod, 
@@ -64,11 +69,15 @@ alpino_clause_rules <- function(){
   
   ## [subject] [verb] [object]
   active = rule(save='predicate', POS = 'verb',
-                         children(save='subject', p_rel=c('su')))
-    
+                         children(save='subject', p_rel=c('su')),
+                         children(NOT=T, POS = 'adj',                 ## cannot have children that are adj if the key (parent of child)
+                                  parents(lemma = dutch$passive_vc))) ## is a passive verb. Excludes reality (e.g., "Joe was defeated") 
   
-  ## order matters
-  list(passive=passive, perfect=perfect, active=active)
+  ## [subject] [verb] 
+  no_object = rule(save='predicate', POS = 'verb',
+                children(save='subject', p_rel=c('su')))
+                         
+  list(passive=passive, perfect=perfect, active=active, no_object)
 }
 
 

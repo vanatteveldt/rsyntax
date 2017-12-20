@@ -4,8 +4,8 @@
 \alias{rule}
 \title{Write rules for extracting syntactic elements from tokens with dependency relations.}
 \usage{
-rule(..., save = NA, p_rel = NULL, not_p_rel = NULL, lemma = lemma,
-  not_lemma = not_lemma, POS = POS, not_POS = not_POS, select = NULL,
+rule(..., save = NA, p_rel = NULL, not_p_rel = NULL, lemma = NULL,
+  not_lemma = NULL, POS = NULL, not_POS = NULL, select = NULL,
   g_id = NULL)
 }
 \arguments{

@@ -5,9 +5,8 @@
 \title{Create an igraph tree from a sentence}
 \usage{
 plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
-  token_var = cname("lemma"), pos_var = cname("POS"), quote_var = "quote",
-  clause_var = "clause", label_size = 0.9, node_size = 35,
-  edge_label_size = 0.8)
+  quote_var = "quote", clause_var = "clause", coref = "coref_id",
+  label_size = 0.9, node_size = 30, edge_label_size = 0.8)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
@@ -18,13 +17,13 @@ plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
 
 \item{sentence}{Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well.}
 
-\item{pos_var}{The name of the column with the part-of-speech tag. Will be ignored if column is not available.}
-
 \item{quote_var}{The name of the column with quote annotations. Will be ignored if column is not available.}
 
 \item{clause_var}{The name of the column with quote annotations. Will be ignored if column is not available.}
 
 \item{label_var}{The name of the column with the token label (word or lemma). Will be ignored if column is not available.}
+
+\item{pos_var}{The name of the column with the part-of-speech tag. Will be ignored if column is not available.}
 }
 \value{
 an igraph graph

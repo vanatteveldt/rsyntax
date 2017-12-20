@@ -40,7 +40,7 @@ annotate_qc <- function(tokens, quote_rules, clause_rules, check=F, with_rule=F)
 #' @param with_rule  For testing rules. If TRUE, add a column that shows the name of the specific rule that was used. This only works if 'rules' is a named list.
 #'
 #' @export
-annotate <- function(tokens, rules, column, use=NULL, fill=T, block=NULL, check=T, with_rule=F) {
+annotate <- function(tokens, rules, column, use=NULL, fill=T, block=NULL, check=T, with_rule=F, show_fill=F) {
   tokens = as_tokenindex(tokens)
   
   if (!is.null(substitute(block))) {
@@ -50,7 +50,7 @@ annotate <- function(tokens, rules, column, use=NULL, fill=T, block=NULL, check=
   }
   
   nodes = apply_rules(tokens, rules, as_chain=T, block=block, check=F) ## check is F, because check in annotate_nodes is broader
-  annotate_nodes(tokens, nodes, column=column, use=use, fill=fill, fill_block=block, check=check, with_rule=with_rule) 
+  annotate_nodes(tokens, nodes, column=column, use=use, fill=fill, fill_block=block, check=check, with_rule=with_rule, show_fill=show_fill) 
 }
 
 
@@ -86,7 +86,7 @@ annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=N
   }
     
   tokens = as_tokenindex(tokens)
-  .NODES = prepare_long_nodes(tokens, nodes, use=use, fill=fill, check=check, fill_block=fill_block)
+  .NODES = prepare_long_nodes(tokens, nodes, use=use, fill=fill, check=check, fill_block=fill_block, show_fill=show_fill)
   data.table::setnames(.NODES, c('.ROLE','.KEY'), c(column, id_column))
   
   if (with_rule) {
@@ -94,6 +94,10 @@ annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=N
   } else {
     .NODES[,.RULE := NULL]
   }
+  
+  if (show_fill) {
+    data.table::setnames(.NODES, c('.FILL'), paste0(column, '_rule'))
+  } 
   
   tokens = merge(tokens, .NODES, by=c(cname('doc_id'),cname('token_id')), all.x=T)
   as_tokenindex(tokens)

@@ -86,10 +86,10 @@ apply_rules <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows rule
 #' @export
-rule <- function(..., save=NA, p_rel=NULL, not_p_rel=NULL, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select=NULL, g_id=NULL) {
+rule <- function(..., save=NA, p_rel=NULL, not_p_rel=NULL, lemma=NULL, not_lemma=NULL, POS=NULL, not_POS=NULL, select=NULL, g_id=NULL) {
   select = deparse(substitute(select))
   f <- function(tokens, block=NULL, check=T, e=parent.frame()) {
-    find_nodes(tokens, ..., save=save, p_rel=p_rel, not_p_rel=not_p_rel, select=select, g_id=g_id, block=block, check=check, e=e)
+    find_nodes(tokens, ..., save=save, p_rel=p_rel, not_p_rel=not_p_rel, lemma=lemma, not_lemma=not_lemma, POS=POS, not_POS=not_POS, select=select, g_id=g_id, block=block, check=check, e=e)
   }
   class(f) = c('rsyntaxRule', class(f))
   attr(f, 'print') = format_syscall(sys.call()) 
@@ -100,8 +100,6 @@ format_syscall <- function(sc) {
   ## given the output of sys.call(), create a string with suitable indentation
   sc = deparse(sc)                               ## create string
   sc = paste(sc, collapse='')                    ## unsplit width based linebreaks
-  #sc = gsub('rule\\(', '', sc)                  ## remove rule()
-  sc = gsub('\\)$', '', sc)
   sc = gsub(' +', ' ', sc)                       ## drop previous indentation
   sc = gsub('(children\\()', '\n\\1', sc)        ## add level based linebreaks
   sc = gsub('(parents\\()', '\n\\1', sc)         ## ...
@@ -130,4 +128,3 @@ format_syscall <- function(sc) {
 #' rule 
 #' @export
 print.rsyntaxRule <- function(x, ...) cat(attr(x, 'print'))
-

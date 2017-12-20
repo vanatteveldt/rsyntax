@@ -41,7 +41,6 @@ find_nodes <- function(tokens, ..., save=NA, p_rel=NULL, not_p_rel=NULL, lemma=N
 
   if (!class(substitute(select)) == 'name') select = deparse(substitute(select))
   
-  
   ids = filter_tokens(tokens, .P_REL=p_rel, .NOT_REL=not_p_rel, .LEMMA=lemma, .NOT_LEMMA=not_lemma, .POS=POS, .NOT_POS=not_POS, select=select, .G_ID=g_id, .BLOCK=block, e=e)
   ids = subset(ids, select = c(cname('doc_id'),cname('token_id')))
   if (length(ids) == 0) return(NULL)
@@ -196,9 +195,7 @@ rec_find <- function(tokens, ids, ql, e=parent.frame(), block=NULL) {
     selection = select_tokens(tokens, ids=ids, q=q, e=e, block=block)
     if (length(q$nested) > 0 & length(selection) > 0) {
       nested = rec_find(tokens, ids=selection[,c(cname('doc_id'),q$save),with=F], ql=q$nested, e=e, block=block)  
-      ## The match_id column in nested (y) is used to match nested results to the current level
-      ## after merging, the .MATCH_ID column in selection (x) remains, so we can use this to match
-      ## selection to other selections at the same level (merge with out) and the higher level
+      ## The match_id column in 'nested' is used to match nested results to the current level
       if (nrow(nested) > 0) {
         selection = merge(selection, nested, by.x=c(cname('doc_id'),q$save), by.y=c(cname('doc_id'),'.MATCH_ID'), allow.cartesian=T) 
       } else {
@@ -209,7 +206,9 @@ rec_find <- function(tokens, ids, ql, e=parent.frame(), block=NULL) {
     data.table::setkeyv(selection, c(cname('doc_id'),'.MATCH_ID'))
   
     if (q$NOT) {
-      selection = data.table::fsetdiff(data.table(ids[,1], .MATCH_ID=ids[[2]]), selection[,c(cname('doc_id'),'.MATCH_ID')])
+      if (nrow(selection) > 0) {
+        selection = data.table::fsetdiff(data.table(ids[,1], .MATCH_ID=ids[[2]]), selection[,c(cname('doc_id'),'.MATCH_ID')])
+      } else selection = data.table(ids[,1], .MATCH_ID=ids[[2]])
       selection[,.DROP := NA]
     }
     if (nrow(selection) == 0) return(selection)
@@ -243,6 +242,7 @@ filter_tokens <- function(tokens, .P_REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_
   ## since indices reset after subsetting, first look up all subset indices, and then subset.
   ## also, we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
   i = NULL
+
   null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) ## more effi
   if (!is.null(.P_REL)) i = null_intersect(i, tokens[list(as.character(.P_REL)), on=cname('relation'), which=T])
   if (!is.null(.NOT_REL)) i = null_intersect(i, tokens[!list(as.character(.NOT_REL)), on=cname('relation'), which=T])
@@ -252,7 +252,7 @@ filter_tokens <- function(tokens, .P_REL=NULL, .NOT_REL=NULL, .LEMMA=NULL, .NOT_
   if (!is.null(.NOT_POS)) i = null_intersect(i, tokens[!list(as.character(.NOT_POS)), on=cname('POS'), which=T])
   if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
   if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]]), on=c(cname('doc_id'),cname('parent')), which=T])
-  
+
   .BLOCK = block_ids(.BLOCK)
   if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
   

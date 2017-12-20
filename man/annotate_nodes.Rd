@@ -5,7 +5,7 @@
 \title{Annotate a tokenlist based on rsyntax rules}
 \usage{
 annotate_nodes(tokens, nodes, column, use = NULL, fill = T,
-  fill_block = NULL, check = T, with_rule = F)
+  fill_block = NULL, check = T, with_rule = F, show_fill = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}

@@ -5,7 +5,7 @@
 \title{Transform the nodes to long format and match with token data}
 \usage{
 get_nodes(tokens, nodes, use = NULL, fill = T, token_cols = c("token"),
-  block = NULL)
+  block = NULL, show_fill = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
@@ -23,6 +23,8 @@ For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only add
 \item{token_cols}{A character vector, specifying which columns from tokens to include in the output}
 
 \item{block}{Optionally, another set of nodes, of which the .KEY values will be blocked for annotations}
+
+\item{show_fill}{If TRUE, add a .FILL column that indicates which tokens were added with fill}
 }
 \value{
 A data.table with the nodes in long format, and the specified token_cols attached
