@@ -34,6 +34,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' @param pos_var     The name of the column with the part-of-speech tag. Will be ignored if column is not available.
 #' @param quote_var   The name of the column with quote annotations. Will be ignored if column is not available.
 #' @param clause_var  The name of the column with quote annotations. Will be ignored if column is not available.
+#' @param relation_var The name of the column with the dependency relation. Will be ignored if column is not available.
 #' 
 #' @return an igraph graph
 #' @export
@@ -41,6 +42,7 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var
   tokens = as_tokenindex(tokens)  
   if (!quote_var %in% colnames(tokens)) quote_var = NULL
   if (!clause_var %in% colnames(tokens)) clause_var = NULL
+  if (!relation_var %in% colnames(tokens)) relation_var = NULL
   
   nodes = get_sentence(tokens, doc_id, sentence, sentence_i)
   data.table::setcolorder(nodes, union(cname('token_id'), colnames(nodes))) ## set token_id first for matching with edges
@@ -82,8 +84,10 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var
   igraph::V(g)$label.cex = label_size - (lsize^2.2)
   
   # style defaults
-  igraph::E(g)$label = igraph::get.edge.attribute(g, cname('relation'))
-  igraph::E(g)$label.cex= edge_label_size
+  if (!is.null(relation_var)) {
+    igraph::E(g)$label = igraph::get.edge.attribute(g, relation_var)
+    igraph::E(g)$label.cex= edge_label_size
+  }
   igraph::E(g)$color = 'grey'
   igraph::E(g)$label.color = 'blue'
   igraph::E(g)$arrow.size=.3

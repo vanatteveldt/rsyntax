@@ -2,41 +2,31 @@
 % Please edit documentation in R/find_nodes.r
 \name{find_nodes}
 \alias{find_nodes}
-\title{Query parse trees by searching nodes and recursively searching their parents and/or children}
+\title{There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
+queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
+The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).}
 \usage{
-find_nodes(tokens, ..., save = NA, p_rel = NULL, not_p_rel = NULL,
-  lemma = NULL, not_lemma = NULL, POS = NULL, not_POS = NULL,
-  select = NULL, g_id = NULL, block = NULL, check = T,
-  e = parent.frame())
+find_nodes(tokens, ..., select = NULL, g_id = NULL, save = NA,
+  block = NULL, check = T, e = parent.frame())
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
 
-\item{...}{used to nest the \link{parents} and \link{children} functions as unnamed arguments. See the documentation of these
-functions for details.}
+\item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 
-\item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
-If NA, the column is not returned.}
+The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
+Only rows with an exact match to one of the values are found. If multiple name-value pairs are given, they are considered as AND statements. 
+If the name is given the suffix __NOT (double underscore), only rows without an exact match are found. (so, lemma__NOT = "fish" look for all rows in which the lemma is not "fish")
 
-\item{p_rel}{A character vector, specifying the relation of the node to its parent. Note that if you want to filter on the relation of a node to its child,
-you should nest a children() search and specify p_rel there.}
+To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
+These functions have the same query arguments as tquery, but with some additional arguments.}
 
-\item{not_p_rel}{Like p_rel, but for excluding relations}
+\item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
+Note, however, that select should not rely on absolute positions (a logical vector or indices).}
 
-\item{lemma}{A character vector, specifying lemma}
+\item{g_id}{Find nodes by global id, which is the combination of the doc_id and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id and (2) token_id.}
 
-\item{not_lemma}{Like lemma, but for excluding lemma}
-
-\item{POS}{A character vector, specifying part-of-speech tags}
-
-\item{not_POS}{Like POS, but for excluding part-of-speech tags}
-
-\item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to \link{subset.data.frame}).
-This should (preferably) not be used for defining rules included in rsyntax, because the column names used will be fixed (p_rel, lemma, pos and g_id use will use the \link{tokenindex_columns} aliases).
-Note (!!) that select will be performed on the children only (i.e. a subset of the tokenIndex) and thus should not rely on
-absolute positions. For instance, do not use a logical vector unless it is a column in the tokenIndex.}
-
-\item{g_id}{A data.frame or data.table with 2 columns: (1) doc_id and (2) token_id, indicating the global id. While this can also be done using 'select', this alternative uses fast binary search.}
+\item{save}{A character vector, specifying the column name under which the selected tokens are returned.}
 
 \item{block}{Optionally, specify ids (like g_id) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 Can also be a data.table returned by (a previous) find_nodes, in which case all ids are blocked.}
@@ -50,12 +40,9 @@ A data.table in which each row is a node for which all conditions are satisfied,
                (parents / children) with names as specified in the save argument.
 }
 \description{
-This is the primary workhorse for writing rules for quote and clause extraction.
-Specific nodes can be selected using the various selection parameters (e.g., lemma, pos, p_rel)
-Then, from the position of these nodes, you can lookup children, optionally with 
-another select expression. This can be done recursively to find children of children etc.
+Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
+These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc.
 }
 \details{
-To look for parents or children, use the \link{parents} and \link{children} functions.
 Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
 }

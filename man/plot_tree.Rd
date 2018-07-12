@@ -24,6 +24,8 @@ plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
 \item{label_var}{The name of the column with the token label (word or lemma). Will be ignored if column is not available.}
 
 \item{pos_var}{The name of the column with the part-of-speech tag. Will be ignored if column is not available.}
+
+\item{relation_var}{The name of the column with the dependency relation. Will be ignored if column is not available.}
 }
 \value{
 an igraph graph

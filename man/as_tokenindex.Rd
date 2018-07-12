@@ -11,7 +11,7 @@ as_tokenindex(tokens)
 }
 \description{
 Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
-Accepts any data.frame given that the required columns (doc_id, token_id, parent, relation, lemma, POS) are present.
+Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent) are present.
 }
 \details{
 The default column names can be changed with \link{tokenindex_columns}.

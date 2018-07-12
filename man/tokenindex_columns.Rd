@@ -4,26 +4,23 @@
 \alias{tokenindex_columns}
 \title{Specify the column names used in rsyntax.}
 \usage{
-tokenindex_columns(doc_id = "doc_id", sentence = "sentence",
-  token_id = "token_id", parent = "parent", relation = "relation",
-  POS = "POS", lemma = "lemma")
+tokenindex_columns(doc_id = "doc_id", sentence_id = "sentence_id",
+  token_id = "token_id", parent = "parent")
 }
 \arguments{
 \item{doc_id}{document id}
 
-\item{token_id}{position or id of the token}
+\item{sentence_id}{position or id of sentence (in document)}
+
+\item{token_id}{position or id of the token (document-sentence-token must be unique)}
 
 \item{parent}{the token id of the parent}
-
-\item{relation}{dependency relation of token to it's parent}
 }
 \description{
 Certain columns are required for applying (or writing) rsyntax rules. With the default column names, these are:
 document id ("doc_id"), position or id of the token ("token_id"), 
-the token id of the parent ("parent") and the dependency relation to this parent ("relation")
+and the token id of the parent ("parent").
 }
 \details{
-With this function, you can specify aliases instead of these default names. Note, however, that this is only possible for
-the special columns used in the functions for finding and annotating nodes (doc_id, token_id, relation, parent). If you want to use specific rules,
-such as for quote or clause extraction, other specific columns might be required (e.g., POS, lemma).
+With this function, you can specify aliases instead of these default names.
 }

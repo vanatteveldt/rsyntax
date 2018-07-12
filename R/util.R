@@ -7,7 +7,17 @@ get_children_i <- function(tokens, i) {
   union(i, children)
 }
 
-
+bquote_s <- function(expr, where=parent.frame()) {
+  ## bquote, but for an expression that is already substituted
+  unquote <- function(e) if (is.pairlist(e)) 
+    as.pairlist(lapply(e, unquote))
+  else if (length(e) <= 1L) 
+    e
+  else if (e[[1L]] == as.name(".")) 
+    eval(e[[2L]], where)
+  else as.call(lapply(e, unquote))
+  unquote(expr)
+}
 
 rm_nodes <- function(nodes, ids) {
   if (ncol(nodes) > 1) {

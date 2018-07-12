@@ -26,8 +26,8 @@ test_that("Aliases", {
   
   ## not with aliases
   tokens = as_tokenindex(tokens_dutchquotes)
-  tokenindex_columns(doc_id = 'test', token_id = 'alternative', parent = 'column', relation = 'names')
-  data.table::setnames(tokens, c('doc_id','token_id','parent','relation'), c('test','alternative','column','names'))
+  tokenindex_columns(doc_id = 'test', token_id = 'alternative', parent = 'columnnames')
+  data.table::setnames(tokens, c('doc_id','token_id','parent'), c('test','alternative','columnnames'))
   
   quotes2 = get_quotes_alpino(tokens)
   clauses2 = get_clauses_alpino(tokens)
