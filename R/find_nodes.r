@@ -11,24 +11,37 @@
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
 #'                The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
-#'                Only rows with an exact match to one of the values are found. If multiple name-value pairs are given, they are considered as AND statements. 
-#'                If the name is given the suffix __NOT (double underscore), only rows without an exact match are found. (so, lemma__NOT = "fish" look for all rows in which the lemma is not "fish")
+#'                By default, search uses case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character).
+#'                Alternatively, flags can be used to to change this behavior to 'fixed' (__F), 'igoring case' (__I) or 'regex' (__R). See details for more information. 
+#'                
+#'                If multiple name-value pairs are given, they are considered as AND statements, but see details for syntax on using OR statements, and combinations.
 #'                
 #'                To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 #'                These functions have the same query arguments as tquery, but with some additional arguments. 
 #' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
 #'                Note, however, that select should not rely on absolute positions (a logical vector or indices). 
-#' @param g_id    Find nodes by global id, which is the combination of the doc_id and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id and (2) token_id. 
+#' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #' @param block   Optionally, specify ids (like g_id) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 #'                Can also be a data.table returned by (a previous) find_nodes, in which case all ids are blocked. 
 #' @param check   If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
+#' @param use_index if TRUE, index column before lookup
 #' @param e       environment used for evaluating select.
 #'
 #' @return        A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
 #'                (parents / children) with names as specified in the save argument.
+#'
+#' @details 
+#' 
+#' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
+#' If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
+#' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
+#' If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
+#' Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
+#' 
+#'                
 #' @export
-find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL, check=T, e=parent.frame()) {
+find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL, check=T, use_index=T, e=parent.frame()) {
   .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
   safe_save_name(save)
   tokens = as_tokenindex(tokens)  
@@ -46,8 +59,8 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   
   if (!class(substitute(select)) %in% c('name','character')) select = deparse(substitute(select))
   
-  ids = filter_tokens(tokens, lookup, select=select, .G_ID=g_id, .BLOCK=block, e=e)
-  ids = subset(ids, select = c(cname('doc_id'),cname('token_id')))
+  ids = filter_tokens(tokens, lookup, select=select, .G_ID=g_id, .BLOCK=block, e=e, use_index = use_index)
+  ids = subset(ids, select = c(cname('doc_id'),cname('sentence'),cname('token_id')))
   if (length(ids) == 0) return(NULL)
   if (length(nested) > 0) {
     nodes = rec_find(tokens, ids=ids, ql=nested, e=e, block=block)
@@ -64,14 +77,14 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   
   if (is.na(save)) {
     nodes[,.MATCH_ID := NULL]
-    data.table::setcolorder(nodes, c(cname('doc_id'),'.KEY', setdiff(colnames(nodes), c('.KEY',cname('doc_id')))))
+    data.table::setcolorder(nodes, c(cname('doc_id'),cname('sentence'),'.KEY', setdiff(colnames(nodes), c('.KEY',cname('doc_id'),cname('sentence')))))
   } else {
     if (save %in% colnames(nodes)) {
       data.table::setnames(nodes, save, paste0(save,'.y'))
       save = paste0(save,'.x')
     }
     data.table::setnames(nodes, '.MATCH_ID', save)
-    data.table::setcolorder(nodes, c(cname('doc_id'),'.KEY', save, setdiff(colnames(nodes), c('.KEY',cname('doc_id'),save))))
+    data.table::setcolorder(nodes, c(cname('doc_id'),cname('sentence'),'.KEY', save, setdiff(colnames(nodes), c('.KEY',cname('doc_id'),cname('sentence'),save))))
   }
   if ('.DROP' %in% colnames(nodes)) {
     nodes[, .DROP := NULL]
@@ -80,8 +93,8 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   nodes = unique(nodes)
   
   if (check) {
-    lnodes = unique(melt(nodes, id.vars=c(cname('doc_id'),'.KEY'), variable.name = '.ROLE', value.name = cname('token_id')))
-    if (anyDuplicated(lnodes, by=c(cname('doc_id'),cname('token_id')))) {
+    lnodes = unique(melt(nodes, id.vars=c(cname('doc_id'),cname('sentence'),'.KEY'), variable.name = '.ROLE', value.name = cname('token_id')))
+    if (anyDuplicated(lnodes, by=c(cname('doc_id'),cname('sentence'),cname('token_id')))) {
       warning('DUPLICATE NODES: Some tokens occur multiple times as nodes (either in different patterns or the same pattern). 
               This should be preventable by making patterns more specific. You can turn off this duplicate check by setting check to FALSE')
     }
@@ -94,9 +107,9 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
 
 #' Get and/or merge ids for the block argument in \link{find_nodes}
 #'
-#' @param ... Either a data.table with the columns doc_id and token_id, or the output of \link{find_nodes}
+#' @param ... Either a data.table with the columns doc_id, sentence and token_id, or the output of \link{find_nodes}
 #'
-#' @return A data.table with the columns doc_id and token_id
+#' @return A data.table with the columns doc_id, sentence and token_id
 #' @export
 block_ids <- function(..., names=NULL) {
   l = list(...)
@@ -109,16 +122,16 @@ block_ids <- function(..., names=NULL) {
     if (is(d, 'data.table')) {
       if (!cname('token_id') %in% colnames(d)) {
         if (!is.null(names)) {
-          names = setdiff(names, '.RULE')
-          d = subset(d, select = union(cname('doc_id'), names))
+          names = setdiff(names, '.TQUERY')
+          d = subset(d, select = union(cname('doc_id'), cname('sentence'), names))
         } else {
-          d = subset(d, select = setdiff(colnames(d), '.RULE'))
+          d = subset(d, select = setdiff(colnames(d), '.TQUERY'))
         }
-        d = data.table::melt(d, id.vars = cname('doc_id'), value.name=cname('token_id'))
+        d = data.table::melt(d, id.vars = c(cname('doc_id'), cname('sentence')), value.name=cname('token_id'))
         d[,variable := NULL]
       } 
      
-      out[[i]] = d[,c(cname('doc_id'),cname('token_id'))]
+      out[[i]] = d[,c(cname('doc_id'),cname('sentence'),cname('token_id'))]
       next
     }
     if (is(d, 'list')) {
@@ -144,25 +157,26 @@ rec_find <- function(tokens, ids, ql, e=parent.frame(), block=NULL) {
     
     selection = select_tokens(tokens, ids=ids, q=q, e=e, block=block)
     if (length(q$nested) > 0 & length(selection) > 0) {
-      nested = rec_find(tokens, ids=selection[,c(cname('doc_id'),q$save),with=F], ql=q$nested, e=e, block=block)  
+      nested = rec_find(tokens, ids=selection[,c(cname('doc_id'),cname('sentence'),q$save),with=F], ql=q$nested, e=e, block=block)  
       ## The match_id column in 'nested' is used to match nested results to the current level
       if (nrow(nested) > 0) {
-        selection = merge(selection, nested, by.x=c(cname('doc_id'),q$save), by.y=c(cname('doc_id'),'.MATCH_ID'), allow.cartesian=T) 
+        selection = merge(selection, nested, by.x=c(cname('doc_id'),cname('sentence'),q$save), by.y=c(cname('doc_id'),cname('sentence'),'.MATCH_ID'), allow.cartesian=T) 
       } else {
-        selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), .DROP = numeric())
+        selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), sentence=numeric(), .DROP = numeric())
         data.table::setnames(selection, 'doc_id', cname('doc_id'))
+        data.table::setnames(selection, 'sentence', cname('sentence'))
       }
     } 
-    data.table::setkeyv(selection, c(cname('doc_id'),'.MATCH_ID'))
+    data.table::setkeyv(selection, c(cname('doc_id'),cname('sentence'),'.MATCH_ID'))
   
     if (q$NOT) {
       if (nrow(selection) > 0) {
-        selection = data.table::fsetdiff(data.table(ids[,1], .MATCH_ID=ids[[2]]), selection[,c(cname('doc_id'),'.MATCH_ID')])
-      } else selection = data.table(ids[,1], .MATCH_ID=ids[[2]])
+        selection = data.table::fsetdiff(data.table::data.table(ids[,1],ids[,2], .MATCH_ID=ids[[3]]), selection[,c(cname('doc_id'),cname('sentence'),'.MATCH_ID')])
+      } else selection = data.table::data.table(ids[,1], ids[,2], .MATCH_ID=ids[[3]])
       selection[,.DROP := NA]
     }
     if (nrow(selection) == 0) return(selection)
-    out = if(nrow(out) > 0) merge(out, selection, by=c(cname('doc_id'),'.MATCH_ID'), allow.cartesian=T) else selection
+    out = if(nrow(out) > 0) merge(out, selection, by=c(cname('doc_id'),cname('sentence'),'.MATCH_ID'), allow.cartesian=T) else selection
   }
   out
 }
@@ -172,54 +186,23 @@ select_tokens <- function(tokens, ids, q, e, block=NULL) {
   .MATCH_ID = NULL ## bindings for data.table
   
   selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=T)
-  if (!data.table::haskey(selection)) data.table::setkeyv(selection, c(cname('doc_id'),cname('token_id')))
+  if (!data.table::haskey(selection)) data.table::setkeyv(selection, c(cname('doc_id'),cname('sentence'),cname('token_id')))
   
   ## for the indexed columns, use the full tokens data, because in selection the indices are gone.
-  filter_ids = filter_tokens(tokens, q$lookup, .G_ID = q$g_id)
-  if (nrow(filter_ids) < nrow(tokens)) {
-    selection = selection[filter_ids, on=cname('doc_id','token_id'), nomatch=0]
-  }
-
+  #filter_ids = filter_tokens(tokens, q$lookup, .G_ID = q$g_id)
+  #if (nrow(filter_ids) < nrow(tokens)) {
+  #  selection = selection[filter_ids, on=cname('doc_id','sentence','token_id'), nomatch=0]
+  #}
   ## for 'select', only use the selected and filtered tokens, because this is a vector search
-  if (!is.null(q$select)) selection = filter_tokens(selection, select=q$select, e=e)
+  #if (!is.null(q$select)) selection = filter_tokens(selection, select=q$select, e=e)
+  
+  selection = filter_tokens(selection, q$lookup, select = q$select, .G_ID = q$g_id)
 
-  selection = subset(selection, select=c('.MATCH_ID', cname('doc_id'),cname('token_id')))
+  selection = subset(selection, select=c('.MATCH_ID', cname('doc_id'),cname('sentence'),cname('token_id')))
   data.table::setnames(selection, cname('token_id'), q$save)
   selection
 }
 
-filter_tokens <- function(tokens, lookup=list(), select='NULL', .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, e=parent.frame()) {
-  ## since indices reset after subsetting, first look up all subset indices, and then subset.
-  ## also, we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
-  i = NULL
-  
-  null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) 
-  for (lookup_i in seq_along(lookup)) {
-    .N = names(lookup)[lookup_i]
-    .V = lookup[[lookup_i]]
-    if (is.null(.V)) next
-    if (!.N %in% colnames(tokens)) stop(sprintf('%s is not a valid column name in tokens', .N))
-    if (!.N %in% data.table::indices(tokens)) data.table::setindexv(tokens, .N)
-    if (!grepl('__NOT$', .N)) {
-      i = null_intersect(i, tokens[list(.V), on=(.N), which=T])
-    } else {
-      i = null_intersect(i, tokens[!list(.V), on=(.N), which=T])
-    }
-  }
-  
-  if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
-  if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]]), on=c(cname('doc_id'),cname('parent')), which=T])
-
-  .BLOCK = block_ids(.BLOCK)
-  if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]]), on=c(cname('doc_id'),cname('token_id')), which=T])
-  
-  if (!is.null(i)) {
-    i = na.omit(i)
-    tokens = tokens[as.numeric(i),]  
-  }
-  if (!select == 'NULL' & !is.null(select)) tokens = tokens[eval(parse(text=select), tokens, e),]
-  tokens
-}
 
 token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F) {
   .MATCH_ID = NULL
@@ -229,19 +212,19 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
   if ('.MATCH_ID' %in% colnames(tokens)) tokens[, .MATCH_ID := NULL]
 
   if (level == 'children') {
-    id = tokens[list(ids[[1]], ids[[2]]), on=c(cname('doc_id'),cname('parent')), nomatch=0]
+    id = tokens[list(ids[[1]], ids[[2]], ids[[3]]), on=c(cname('doc_id'),cname('sentence'),cname('parent')), nomatch=0]
     id = filter_tokens(id, .BLOCK=block)
-    if (minimal) id = subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent')))
+    if (minimal) id = subset(id, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),cname('parent')))
     data.table::set(id, j = '.MATCH_ID', value = id[[cname('parent')]])
   }
   if (level == 'parents') {
     .NODE = filter_tokens(tokens, .G_ID = ids)
-    .NODE = subset(.NODE, select=c(cname('doc_id'),cname('parent'),cname('token_id')))
+    .NODE = subset(.NODE, select=c(cname('doc_id'),cname('sentence'),cname('parent'),cname('token_id')))
 
     data.table::setnames(.NODE, old=cname('token_id'), new='.MATCH_ID')
-    id = filter_tokens(tokens, .G_ID = .NODE[,c(cname('doc_id'),cname('parent'))], .BLOCK=block)
-    if (minimal) id = subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent')))
-    id = merge(id, .NODE, by.x=c(cname('doc_id'),cname('token_id')), by.y=c(cname('doc_id'),cname('parent')), allow.cartesian=T)
+    id = filter_tokens(tokens, .G_ID = .NODE[,c(cname('doc_id'),cname('sentence'),cname('parent'))], .BLOCK=block)
+    if (minimal) id = subset(id, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),cname('parent')))
+    id = merge(id, .NODE, by.x=c(cname('doc_id'),cname('sentence'),cname('token_id')), by.y=c(cname('doc_id'),cname('sentence'),cname('parent')), allow.cartesian=T)
   }
   
   if (depth > 1) id = deep_family(tokens, id, level, depth, minimal=minimal, block=block, replace=replace) 
@@ -249,23 +232,23 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
 }
 
 deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F) {
-  id_list = vector('list', 20) 
+  id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed.
   id_list[[1]] = id
   i = 2
   while (i <= depth) {
     .NODE = id_list[[i-1]]
-    if (!replace) block = block_ids(block, .NODE[,cname('doc_id','token_id'), with=F])
+    if (!replace) block = block_ids(block, .NODE[,cname('doc_id','sentence','token_id'), with=F])
     
     if (level == 'children') {
-      id = filter_tokens(tokens, .G_PARENT = .NODE[,c(cname('doc_id'),cname('token_id'))], .BLOCK=block)
-      id = merge(id, subset(.NODE, select = c(cname('doc_id'),cname('token_id'),'.MATCH_ID')), by.x=c(cname('doc_id'),cname('parent')), by.y=c(cname('doc_id'),cname('token_id')), allow.cartesian=T)
-      id_list[[i]] = if (minimal) subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),'.MATCH_ID')) else id
+      id = filter_tokens(tokens, .G_PARENT = .NODE[,c(cname('doc_id'),cname('sentence'),cname('token_id'))], .BLOCK=block)
+      id = merge(id, subset(.NODE, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),'.MATCH_ID')), by.x=c(cname('doc_id'),cname('sentence'),cname('parent')), by.y=c(cname('doc_id'),cname('sentence'),cname('token_id')), allow.cartesian=T)
+      id_list[[i]] = if (minimal) subset(id, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),cname('parent'),'.MATCH_ID')) else id
     }
   
     if (level == 'parents') {
-      id = filter_tokens(tokens, .G_ID = .NODE[,c(cname('doc_id'),cname('parent'))], .BLOCK=block)
-      id = merge(id, subset(.NODE, select = c(cname('doc_id'),cname('parent'), '.MATCH_ID')), by.x=c(cname('doc_id'),cname('token_id')), by.y=c(cname('doc_id'),cname('parent')), allow.cartesian=T)
-      id_list[[i]] = if (minimal) subset(id, select = c(cname('doc_id'),cname('token_id'),cname('parent'),'.MATCH_ID')) else id
+      id = filter_tokens(tokens, .G_ID = .NODE[,c(cname('doc_id'),cname('sentence'),cname('parent'))], .BLOCK=block)
+      id = merge(id, subset(.NODE, select = c(cname('doc_id'),cname('sentence'),cname('parent'), '.MATCH_ID')), by.x=c(cname('doc_id'),cname('sentence'),cname('token_id')), by.y=c(cname('doc_id'),cname('sentence'),cname('parent')), allow.cartesian=T)
+      id_list[[i]] = if (minimal) subset(id, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),cname('parent'),'.MATCH_ID')) else id
     }
     if (nrow(id_list[[i]]) == 0) break
     i = i + 1

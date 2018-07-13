@@ -15,7 +15,7 @@ test_that("find_nodes works", {
   body = find_nodes(tokens, save='id', relation="vc", 
                     children(save='b', relation='body'))
   expect_equal(nrow(body), 1)
-  expect_equal(colnames(body), c('doc_id','.KEY', "id", "b"))
+  expect_equal(colnames(body), c('doc_id','sentence','.KEY', "id", "b"))
   expect_equal(body$b, 53)
   
   # can we get_children with children?
@@ -23,7 +23,7 @@ test_that("find_nodes works", {
                         children(save='child', relation="body",
                                  children(save='grandchild', relation='vc')))
   expect_equal(nrow(children), 1)
-  expect_equal(colnames(children), c('doc_id',".KEY", "child", "grandchild"))
+  expect_equal(colnames(children), c('doc_id','sentence',".KEY", "child", "grandchild"))
   
   nodes = find_nodes(tokens, save='test', relation='su',
                 children(save='child'))
@@ -44,5 +44,5 @@ test_that("find_nodes works", {
                                   children(save='grandchild', relation='mod')))
   
   expect_equal(nrow(family), 1)
-  expect_equal(colnames(family), c('doc_id','.KEY','parent','grandparent','child','grandchild'))
+  expect_equal(colnames(family), c('doc_id','sentence','.KEY','parent','grandparent','child','grandchild'))
 })

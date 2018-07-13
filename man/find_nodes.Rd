@@ -7,7 +7,7 @@ queries will be used) and the values are vectors with lookup values. Secondly, y
 The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).}
 \usage{
 find_nodes(tokens, ..., select = NULL, g_id = NULL, save = NA,
-  block = NULL, check = T, e = parent.frame())
+  block = NULL, check = T, use_index = T, e = parent.frame())
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
@@ -15,8 +15,10 @@ find_nodes(tokens, ..., select = NULL, g_id = NULL, save = NA,
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 
 The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
-Only rows with an exact match to one of the values are found. If multiple name-value pairs are given, they are considered as AND statements. 
-If the name is given the suffix __NOT (double underscore), only rows without an exact match are found. (so, lemma__NOT = "fish" look for all rows in which the lemma is not "fish")
+By default, search uses case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character).
+Alternatively, flags can be used to to change this behavior to 'fixed' (__F), 'igoring case' (__I) or 'regex' (__R). See details for more information. 
+
+If multiple name-value pairs are given, they are considered as AND statements, but see details for syntax on using OR statements, and combinations.
 
 To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 These functions have the same query arguments as tquery, but with some additional arguments.}
@@ -24,7 +26,7 @@ These functions have the same query arguments as tquery, but with some additiona
 \item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
 Note, however, that select should not rely on absolute positions (a logical vector or indices).}
 
-\item{g_id}{Find nodes by global id, which is the combination of the doc_id and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id and (2) token_id.}
+\item{g_id}{Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id, (2) sentence and (3) token_id.}
 
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned.}
 
@@ -32,6 +34,8 @@ Note, however, that select should not rely on absolute positions (a logical vect
 Can also be a data.table returned by (a previous) find_nodes, in which case all ids are blocked.}
 
 \item{check}{If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.}
+
+\item{use_index}{if TRUE, index column before lookup}
 
 \item{e}{environment used for evaluating select.}
 }
@@ -45,4 +49,12 @@ These functions use the same query format as the tquery function, and children a
 }
 \details{
 Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
+
+
+
+There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
+If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
+By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
+If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
+Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
 }

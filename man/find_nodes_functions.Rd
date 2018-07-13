@@ -16,8 +16,10 @@ parents(..., select = NULL, g_id = NULL, save = NA, NOT = F,
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 
 The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
-Only rows with an exact match to one of the values are found. If multiple name-value pairs are given, they are considered as AND statements. 
-If the name is given the suffix __NOT (double underscore), only rows without an exact match are found. (so, lemma__NOT = "fish" look for all rows in which the lemma is not "fish")
+By default, search uses case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character).
+Alternatively, flags can be used to to change this behavior to 'fixed' (__F), 'igoring case' (__I) or 'regex' (__R). See details for more information. 
+
+If multiple name-value pairs are given, they are considered as AND statements, but see details for syntax on using OR statements, and combinations.
 
 To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 These functions have the same query arguments as tquery, but with some additional arguments.}
@@ -28,7 +30,7 @@ when the query is performed, any names used in the expression that are not colum
 A solution for the second limitation is to explicitly tell tquery to evalute these names immediately, by marking them as .(name). For example, if the name VERBS refers 
 to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.}
 
-\item{g_id}{Find nodes by global id, which is the combination of the doc_id and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id and (2) token_id.}
+\item{g_id}{Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id.}
 
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
@@ -54,5 +56,11 @@ The save argument can be used to remember the global token ids (.G_ID) of the pa
 Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
 that clearly shows the different levels. As shown in the examples, the idea is that each line is a node, and to look for parents
 or children, we put them on the next line with indentation (in RStudio, it should automatically allign correctly when you press enter inside
-of the children() or parents() functions).
+of the children() or parents() functions). 
+
+There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
+If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
+By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
+If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
+Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
 }

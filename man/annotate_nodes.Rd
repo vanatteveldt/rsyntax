@@ -2,15 +2,15 @@
 % Please edit documentation in R/annotate.r
 \name{annotate_nodes}
 \alias{annotate_nodes}
-\title{Annotate a tokenlist based on rsyntax rules}
+\title{Annotate a tokenlist based on rsyntax queries}
 \usage{
 annotate_nodes(tokens, nodes, column, use = NULL, fill = T,
-  fill_block = NULL, check = T, with_rule = F, show_fill = F)
+  fill_block = NULL, check = T, with_tquery = F, show_fill = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
 
-\item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_rules}. Can be a list of multiple data.tables.}
+\item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
 
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id}
 
@@ -20,16 +20,16 @@ For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only add
 
 \item{fill_block}{Optionally, another data.table of nodes (as created with \link{find_nodes}) or a list of data.tables, used to block the fill process. That is, the nodes in block and all their descendants are not used in fill.}
 
-\item{check}{For testing rules. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)}
+\item{check}{For testing queries. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)}
 
-\item{with_rule}{For testing rules. If TRUE, add a column that shows the name of the specific rule that was used. This only works if 'rules' is a named list.}
+\item{with_tquery}{For testing queries. If TRUE, add a column that shows the name of the specific tquery that was used. This only works if 'queries' is a named list.}
 }
 \description{
-Apply rules to extract syntax patterns, and add the results as two columns to a tokenlist.
+Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
 One column contains the ids for each hit. The other column contains the annotations.
-Only nodes that are given a name in the rule (using the 'save' parameter) will be added as annotation.
+Only nodes that are given a name in the tquery (using the 'save' parameter) will be added as annotation.
 }
 \details{
-Note that while rules only find 1 node for each saved component of a pattern (e.g., quote rules have 1 node for "source" and 1 node for "quote"), 
+Note that while queries only find 1 node for each saved component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
 all children of these nodes are also annotated (if fill is TRUE). If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 }

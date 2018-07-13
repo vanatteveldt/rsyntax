@@ -22,7 +22,7 @@
 
 #' Dutch lemma
 #'
-#' Various categories of lemma, for use in syntax rules
+#' Various categories of lemma, for use in syntax queries
 #'
 #' @docType data
 #' @usage data(dutch)
@@ -31,7 +31,7 @@
 
 #' Quote punctuation
 #' 
-#' Punctuation used in quotes, for use in syntax rules.
+#' Punctuation used in quotes, for use in syntax queries
 #'
 #' @docType data
 #' @usage data(quote_punctuation)

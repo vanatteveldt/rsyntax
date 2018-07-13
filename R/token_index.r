@@ -32,7 +32,7 @@ as_tokenindex <- function(tokens) {
 
 #' Specify the column names used in rsyntax.
 #' 
-#' Certain columns are required for applying (or writing) rsyntax rules. With the default column names, these are:
+#' Certain columns are required for applying (or writing) rsyntax queries. With the default column names, these are:
 #' document id ("doc_id"), position or id of the token ("token_id"), 
 #' and the token id of the parent ("parent").
 #'
@@ -44,9 +44,9 @@ as_tokenindex <- function(tokens) {
 #' @param parent the token id of the parent
 #'
 #' @export
-tokenindex_columns <- function(doc_id='doc_id', sentence_id='sentence_id', token_id='token_id', parent='parent') {
+tokenindex_columns <- function(doc_id='doc_id', sentence='sentence', token_id='token_id', parent='parent') {
   options(TOKENINDEX_doc_id = doc_id)
-  options(TOKENINDEX_sentence_id = sentence_id)
+  options(TOKENINDEX_sentence = sentence)
   options(TOKENINDEX_token_id = token_id)
   options(TOKENINDEX_parent = parent)
 }

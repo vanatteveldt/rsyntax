@@ -4,23 +4,24 @@
 \alias{annotate_qc}
 \title{Annotate quotes and clauses}
 \usage{
-annotate_qc(tokens, quote_rules, clause_rules, check = F, with_rule = F)
+annotate_qc(tokens, quote_queries, clause_queries, check = F,
+  with_tquery = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
 
-\item{quote_rules}{A list with rules for extracting quotes, as created with \link{rule}. For example, see \link{alpino_quote_rules}.}
+\item{quote_queries}{A list with queries for extracting quotes, as created with \link{tquery}. For example, see \link{alpino_quote_queries}.}
 
-\item{clause_rules}{A list with rules for extracting clauses, as created with \link{rule}. For example, see \link{alpino_clause_rules}.}
+\item{clause_queries}{A list with queries for extracting clauses, as created with \link{tquery}. For example, see \link{alpino_clause_queries}.}
 
-\item{check}{For testing rules. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)}
+\item{check}{For testing queries. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)}
 
-\item{with_rule}{For testing rules. If TRUE, add a column that shows the name of the specific rule that was used. This only works if the rules are passed as a named list.}
+\item{with_tquery}{For testing queries. If TRUE, add a column that shows the name of the specific tquery that was used. This only works if the queries are passed as a named list.}
 }
 \description{
-A convenience function that calls the \link{annotate} function for a list of quote and clause rules.
+A convenience function that calls the \link{annotate} function for a list of quote and clause queries.
 }
 \details{
-This function assumes that sources (of quotes) cannot also be subjects (of clauses). Therefore, the quote rules are applied first,
-and source nodes are blocked when applying the clause rules.
+This function assumes that sources (of quotes) cannot also be subjects (of clauses). Therefore, the quote queries are applied first,
+and source nodes are blocked when applying the clause queries.
 }

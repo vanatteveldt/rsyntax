@@ -9,6 +9,6 @@
 data(quote_punctuation)
 }
 \description{
-Punctuation used in quotes, for use in syntax rules.
+Punctuation used in quotes, for use in syntax queries
 }
 \keyword{datasets}

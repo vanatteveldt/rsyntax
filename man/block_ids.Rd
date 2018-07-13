@@ -7,10 +7,10 @@
 block_ids(..., names = NULL)
 }
 \arguments{
-\item{...}{Either a data.table with the columns doc_id and token_id, or the output of \link{find_nodes}}
+\item{...}{Either a data.table with the columns doc_id, sentence and token_id, or the output of \link{find_nodes}}
 }
 \value{
-A data.table with the columns doc_id and token_id
+A data.table with the columns doc_id, sentence and token_id
 }
 \description{
 Get and/or merge ids for the block argument in \link{find_nodes}

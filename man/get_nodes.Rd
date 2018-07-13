@@ -10,7 +10,7 @@ get_nodes(tokens, nodes, use = NULL, fill = T, token_cols = c("token"),
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
 
-\item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_rules}. Can be a list of multiple data.tables.}
+\item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
 
 \item{use}{Optionally, specify which columns from nodes to add. Other than convenient, this is slighly different 
 from subsetting the columns in 'nodes' beforehand if fill is TRUE. When the children are collected,

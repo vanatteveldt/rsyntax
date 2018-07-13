@@ -9,6 +9,6 @@
 data(dutch)
 }
 \description{
-Various categories of lemma, for use in syntax rules
+Various categories of lemma, for use in syntax queries
 }
 \keyword{datasets}

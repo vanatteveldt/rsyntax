@@ -1,44 +1,44 @@
-#' Returns a list with the quote rules for ALPINO
+#' Returns a list with the quote queries for ALPINO
 #'
-#' @return A list with rynstax rules, as created with \link{rule}
+#' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
-alpino_quote_rules <- function() {
+alpino_quote_queries <- function() {
   # x zegt dat y
-  zegtdat = rule(lemma = dutch$SIP,
+  zegtdat = tquery(lemma = dutch$SIP,
                         children(save = 'source', relation=c('su')),
                         children(relation='vc', POS = c('C', 'comp'),
                                  children(save='quote', relation=c('body'))))
   
   # x stelt: y
-  ystelt = rule(lemma = dutch$SIP, 
+  ystelt = tquery(lemma = dutch$SIP, 
                        children(save = 'source', relation=c('su')),
                        children(save = 'quote', relation='nucl'),
                        children(lemma =  quote_punctuation))
   
   # y, stelt x
-  xstelt = rule(save='quote', 
+  xstelt = tquery(save='quote', 
                        children(relation='tag', lemma = dutch$SIP,
                                 children(save = 'source', relation=c('su'))))
   
   # y, volgens x
-  volgens = rule(save='quote',
+  volgens = tquery(save='quote',
                         children(relation=c('mod','tag'), lemma = dutch$source_mod,
                                  children(save='source')))
   
   # y, zo noemt x het
-  noemt = rule(relation='tag', 
+  noemt = tquery(relation='tag', 
                       children(save='source', relation=c('su')),
                       parents(save='quote',
                               children(relation = ' --', lemma = quote_punctuation)))
   
   # x is het er ook mee eens: y
-  impliciet = rule(
+  impliciet = tquery(
                           children(lemma = quote_punctuation),
                           children(save='quote', relation=c('tag','nucl','sat')),
                           children(save='source', relation=c('su')))
   
   # x: y
-  impliciet2 = rule(save='source',
+  impliciet2 = tquery(save='source',
                            children(lemma = quote_punctuation),
                            children(save='quote', relation=c('tag','nucl','sat')))
   
@@ -46,35 +46,35 @@ alpino_quote_rules <- function() {
   list(zegtdat=zegtdat, ystelt=ystelt, xstelt=xstelt, volgens=volgens, noemt=noemt, impliciet=impliciet, impliciet2=impliciet2)
 }
 
-#' Returns a list with the clause rules for ALPINO
+#' Returns a list with the clause queries for ALPINO
 #'
-#' @return A list with rynstax rules, as created with \link{rule}
+#' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
-alpino_clause_rules <- function(){
+alpino_clause_queries <- function(){
   ## [passive subject as object] [passive verb with modifier] [object as subject] 
-  #passive_conj = rule(POS = 'verb', 
+  #passive_conj = tquery(POS = 'verb', 
   #               parents(save='predicate', lemma = dutch$passive_vc),
   #               children(lemma = dutch$passive_mod, 
   #                        children(save='subject', relation='obj1')))
   
-  passive = rule(POS = 'verb', 
+  passive = tquery(POS = 'verb', 
                         parents(save='predicate', lemma = dutch$passive_vc),
                         children(lemma = dutch$passive_mod, 
                                  children(save='subject', relation='obj1')))
   
   ## [subject] [has/is/etc.] [verb] [object]
-  perfect = rule(POS = 'verb',
+  perfect = tquery(POS = 'verb',
                         parents(save='predicate', lemma = dutch$passive_vc),
                         children(save='subject', relation=c('su')))
   
   ## [subject] [verb] [object]
-  active = rule(save='predicate', POS = 'verb',
+  active = tquery(save='predicate', POS = 'verb',
                          children(save='subject', relation=c('su')),
                          children(NOT=T, POS = 'adj',                 ## cannot have children that are adj if the key (parent of child)
                                   parents(lemma = dutch$passive_vc))) ## is a passive verb. Excludes reality (e.g., "Joe was defeated") 
   
   ## [subject] [verb] 
-  no_object = rule(save='predicate', POS = 'verb',
+  no_object = tquery(save='predicate', POS = 'verb',
                 children(save='subject', relation=c('su')))
                          
   list(passive=passive, perfect=perfect, active=active, no_object)
@@ -82,6 +82,26 @@ alpino_clause_rules <- function(){
 
 
 function(){
+  
+  
+  ?AND()
+  ?OR()
+  ?NOT()
+  
+  
+  
+  
+  ?substitute
+  test <- function(...) {
+    x = substitute(c(...))
+    for(i in seq_along(x)) {
+      print(x[[i]])
+      print(class(x[[i]]))
+    }
+
+  }
+  d = data.frame(zz=10)
+  test(x=5, z > 10, d, c(1,2,3), grepl('x','u'), est=6)
   
   tokens = as_tokenindex(tokens_dutchclauses)
   tokens = annotate_alpino(tokens)

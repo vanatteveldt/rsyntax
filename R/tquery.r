@@ -13,23 +13,31 @@
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
 #'                The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
-#'                Only rows with an exact match to one of the values are found. If multiple name-value pairs are given, they are considered as AND statements. 
-#'                If the name is given the suffix __NOT (double underscore), only rows without an exact match are found. (so, lemma__NOT = "fish" look for all rows in which the lemma is not "fish")
+#'                By default, search uses case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character).
+#'                Alternatively, flags can be used to to change this behavior to 'fixed' (__F), 'igoring case' (__I) or 'regex' (__R). See details for more information. 
+#'                
+#'                If multiple name-value pairs are given, they are considered as AND statements, but see details for syntax on using OR statements, and combinations.
 #'                
 #'                To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 #'                These functions have the same query arguments as tquery, but with some additional arguments. 
 #' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
-#'                However, this has two limitations. Firstly, select should not rely on absolute positions (a logical vector or indices). Secondly, since the expression will only be evaluated
-#'                when the query is performed, any names used in the expression that are not columns in the data.table need to be in the environment when the search is performed.
-#'                A solution for the second limitation is to explicitly tell tquery to evalute these names immediately, by marking them as .(name). For example, if the name VERBS refers 
-#'                to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.
-#' @param g_id    Find nodes by global id, which is the combination of the doc_id and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id and (2) token_id. 
+#'                WARNING!! since the expression will only be evaluated when the query is performed, any names used in the expression that are not columns in the data.table 
+#'                need to be in the environment from where the query is performed. Alternatively, you can ask to evaluate specific names when making the tquery, by marking them 
+#'                as .(name). For example, if the name VERBS refers to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.
+#' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
 #'                
-#' @return        A tQuery object, that can be used with the \link{apply_rules} function.
+#'                
+#' @return        A tQuery object, that can be used with the \link{apply_queries} function.
 #' 
-#' Searching by name-value pairs. 
+#' @details 
+#' 
+#' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
+#' If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
+#' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
+#' If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
+#' Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
 #' 
 #' @examples
 #' ## it is convenient to first prepare vectors with relevant words/pos-tags/relations
@@ -40,10 +48,10 @@
 #' quotes_direct = tquery(lemma = .SAY_VERBS,
 #'                          children(save = 'source', p_rel = .SUBJECT_RELS),
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
-#' quotes_direct ## print shows rule
+#' quotes_direct ## print shows tquery
 #' @export
-rule <- function(..., select=NULL, find=NULL, NOT=NULL, g_id=NULL, save=NA) {
-  select = deparse(bquote_s(substitute(select)))
+tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
+  select = deparse(bquote_s(substitute(select), where = parent.frame()))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
@@ -52,7 +60,7 @@ rule <- function(..., select=NULL, find=NULL, NOT=NULL, g_id=NULL, save=NA) {
     q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL)
   }
   
-  class(q) = c('rsyntaxRule', class(q))
+  class(q) = c('tQuery', class(q))
   q
 }
 
@@ -68,8 +76,10 @@ rule <- function(..., select=NULL, find=NULL, NOT=NULL, g_id=NULL, save=NA) {
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
 #'                The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
-#'                Only rows with an exact match to one of the values are found. If multiple name-value pairs are given, they are considered as AND statements. 
-#'                If the name is given the suffix __NOT (double underscore), only rows without an exact match are found. (so, lemma__NOT = "fish" look for all rows in which the lemma is not "fish")
+#'                By default, search uses case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character).
+#'                Alternatively, flags can be used to to change this behavior to 'fixed' (__F), 'igoring case' (__I) or 'regex' (__R). See details for more information. 
+#'                
+#'                If multiple name-value pairs are given, they are considered as AND statements, but see details for syntax on using OR statements, and combinations.
 #'                
 #'                To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 #'                These functions have the same query arguments as tquery, but with some additional arguments. 
@@ -78,7 +88,7 @@ rule <- function(..., select=NULL, find=NULL, NOT=NULL, g_id=NULL, save=NA) {
 #'                when the query is performed, any names used in the expression that are not columns in the data.table need to be in the environment when the search is performed.
 #'                A solution for the second limitation is to explicitly tell tquery to evalute these names immediately, by marking them as .(name). For example, if the name VERBS refers 
 #'                to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.
-#' @param g_id    Find nodes by global id, which is the combination of the doc_id and token_id. Passed as a data.frame or data.table with 2 columns: (1) doc_id and (2) token_id. 
+#' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
 #' @param NOT     If TRUE, make having these parents/children a NOT condition.          
@@ -90,6 +100,12 @@ rule <- function(..., select=NULL, find=NULL, NOT=NULL, g_id=NULL, save=NA) {
 #' that clearly shows the different levels. As shown in the examples, the idea is that each line is a node, and to look for parents
 #' or children, we put them on the next line with indentation (in RStudio, it should automatically allign correctly when you press enter inside
 #' of the children() or parents() functions). 
+#' 
+#' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
+#' If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
+#' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
+#' If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
+#' Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
 #' 
 #' @return Should not be used outside of \link{find_nodes}
 #' @name find_nodes_functions
