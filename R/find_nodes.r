@@ -1,3 +1,5 @@
+#' Query the token index
+#' 
 #' There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
 #' queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
 #' The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).
@@ -41,7 +43,7 @@
 #' 
 #'                
 #' @export
-find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL, check=T, use_index=T, e=parent.frame()) {
+find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL, check=T, use_index=T, name=NULL, e=parent.frame()) {
   .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
   safe_save_name(save)
   tokens = as_tokenindex(tokens)  
@@ -67,7 +69,8 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   } else {
     data.table::setnames(ids, old = cname('token_id'), new='.KEY')
     if (!is.na(save)) ids[,(save) := .KEY]
-    return(ids)
+    ids = create_unique_key(ids, name)
+    return(ids[])
   }
   if (nrow(nodes) == 0) return(NULL)
   
@@ -92,7 +95,7 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   
   nodes = unique(nodes)
   
-  if (check) {
+  if (check && ncol(nodes) > 3) {
     lnodes = unique(melt(nodes, id.vars=c(cname('doc_id'),cname('sentence'),'.KEY'), variable.name = '.ROLE', value.name = cname('token_id')))
     if (anyDuplicated(lnodes, by=c(cname('doc_id'),cname('sentence'),cname('token_id')))) {
       warning('DUPLICATE NODES: Some tokens occur multiple times as nodes (either in different patterns or the same pattern). 
@@ -101,9 +104,20 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   }
   
   data.table::setnames(nodes, colnames(nodes), gsub('\\.[xy]$', '', colnames(nodes)))
+  nodes = create_unique_key(nodes, name)
   nodes[]
 }
 
+create_unique_key <- function(nodes, name){
+  #if (ncol(nodes) > 3) {
+  #  key = paste0(name, '(', nodes$.KEY, ':', do.call(paste, args = c(nodes[,-(1:3)], sep='.')), ')')
+  #} else {
+  #  key = paste0(name, '(', nodes$.KEY, ')')
+  #}        
+  key = paste0(name, '.', 1:nrow(nodes))
+  nodes$.KEY = key
+  return(nodes)
+}
 
 #' Get and/or merge ids for the block argument in \link{find_nodes}
 #'
@@ -127,7 +141,10 @@ block_ids <- function(..., names=NULL) {
         } else {
           d = subset(d, select = setdiff(colnames(d), '.TQUERY'))
         }
-        d = data.table::melt(d, id.vars = c(cname('doc_id'), cname('sentence')), value.name=cname('token_id'))
+        
+        d = data.table::melt(d, id.vars = c(cname('doc_id'), cname('sentence')), 
+                             measure.vars=setdiff(colnames(d), c(cname('doc_id','sentence'),'.KEY')),
+                             value.name=cname('token_id'))
         d[,variable := NULL]
       } 
      

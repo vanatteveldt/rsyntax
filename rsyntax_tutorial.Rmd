@@ -1,13 +1,14 @@
 ---
 title: "The rsyntax package"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(printr)
 ```
-
 
 # What is rsyntax
 
@@ -16,27 +17,12 @@ Despite severely simplifying communication, this is a powerfull and computationa
 
 # Input: dependency parse data
 
-The input data for `rsyntax` is a data.frame with the output of a dependency parser, such as Stanford CoreNLP (english), Alpino (dutch) or ParZu (German). 
-As a convenient way to use these parsers, you can set up an NLPipe server (also developed by the authors) or use an existing server. The `nlpiper` package offers bindings for interacting with an NLPipe server directly from within R.
-
-Here we show how to parse a sentence using `nlpiper`. We first install the latest `nlpiper` version, and set up a connection.
-
-```{r, eval=F}
-devtools::install_github('vanatteveldt/nlpiper')
-```
-```{r, message=F, warning=F}
-library(nlpiper)
-options(nlpiper.token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJpYXQiOjE1MDE4NzgzMDF9.Zqjoo_NcUTWQu6bZce4q3FhQRcKEbwfkzi2w2-yqK2g")
-options(nlpiper.server="https://nlpipe.amcat.nl")
-```
-
-Now, we can choose a module and enter a text using the `process()` function. NLPipe keeps a cache of all texts that have been parsed, and if a text has not been parsed before, NLPipe can parse it on the fly. Note that for more and/or larger texts this can take a long time, so then it would be recommended to use `process_async()` to start a job on the NLPipe server without waiting for it to finish.
+The input data for `rsyntax` is a data.frame with the output of a dependency parser, such as Stanford CoreNLP (English), Alpino (Dutch) or ParZu (German). Short examples are included in `rsyntax`.
 
 ```{r}
-tokens = nlpiper::process("alpinocoref", text = "Jan zegt dat Marie een tas heeft gekocht", format = "csv")
+head(tokens_corenlp)
+head(tokens_dutchclauses)
 ```
-
-If `process()` does not return any data, the NLPipe server or the specific parser that you are trying to use might be down. Note that it is possible that you can obtain cached data but not process new data, which would mean that NLPipe is up and running, but the specific parser is down.
 
 # rsyntax
 
@@ -49,15 +35,104 @@ devtools::install_github('vanatteveldt/rsyntax')
 library(rsyntax)
 ```
 
+## preparing the token index
+
 The input for rsyntax is a data.frame with the output of a dependency parser.
-This data.frame needs to have certain columnnames.
-We can test whether this is the case by converting the token data.frame with `as_tokenindex()`, which also prepares the data for more efficient processing.
+There are four mandatory columns:
+
+* *doc_id*: the document ids as numeric values
+* *sentence*: the id of the sentence (preferably according to position in the document) as numeric values.
+* *token_id*: the id of the token (preferably according to position in the document or sentence) as numeric values. The global token ID is the combination of the document, sentence and token_id, and has to be unique.
+* *parent*: the id of the token's parent in the dependency tree. Specifically, parent points to the token_id within the same document-sentence pair.
+
+The data.frame needs to have these columns, and by default uses these names, but this can be customized with the `tokenindex_columns()` function.
 
 ```{r}
-tokens = as_tokenindex(tokens)
+tokenindex_columns(doc_id = 'doc_id', sentence='sentence', token_id='token_id', parent='parent')  ## these are also the default values
 ```
 
-We can now create and use rules.
+We can now create the tokenindex. This verifies whether the mandatory columns are present, converts the data.frame to a data.table (of the data.table package), and creates a key and index for the global token (and parent) IDs. This enables the efficient lookup of parents/children.
+
+```{r}
+head(tokens_corenlp)  ## demo data included in rsyntax
+tokens = as_tokenindex(tokens_corenlp)
+data.table::key(tokens)
+data.table::indices(tokens)
+```
+
+## Querying the token index
+
+We can now look for nodes in the token index. This can be done directly with the `find_nodes()` function, or we can make a list of queries and apply them. Here we will first demonstrate the `find_nodes` function.
+
+We will start with an example of a usefull, but complex query. 
+
+```{r}
+View(tokens)
+
+## error if save not specified
+?find_nodes
+nodes = find_nodes(tokens, POS = 'VB*', save='predicate',
+                   children(relation = 'nsubj*', save='subject'))
+
+nodes = find_nodes(tokens[tokens$sentence == 1,], POS='verb', save='pred',
+             children(relation='su', save='subject',
+                      children(relation='cnj', save='conj')))
+annotate_nodes(tokens,nodes,'test')  
+
+
+nodes = find_nodes(tokens, 
+           children(relation='cnj', save='conjunction'))
+get_nodes(tokens, nodes)
+
+split_conjunctions <- function(tokens, nodes, ...) {
+  lnodes = data.table::melt(nodes, id.vars = cname('doc_id','sentence','.KEY'))
+  conj = find_nodes(tokens, ..., g_id = lnodes[,c(cname('doc_id','sentence'),'value')])
+  conj
+}
+
+
+
+
+split_conjunctions(tokens, nodes, relation='cop')
+
+
+
+nodes$.KEY = paste('test', nodes$.KEY)
+annotate_nodes(tokens, nodes, 'test')
+
+process_nodes <- function(tokens, nodes, ...) {
+  
+}
+
+
+nodes
+
+
+
+annotate()
+
+annotate_nodes(tokens, nodes, column = 'vp')
+?annotate_nodes
+
+```
+
+
+```{r}
+?find_nodes
+find_nodes(tokens, POS = 'VBZ')
+```
+
+```{r}
+find_nodes(tokens, POS = 'NNP', save='noun')
+```
+
+```{r}
+find_nodes(tokens, POS = 'NNP', save='noun')
+```
+
+
+
+
 Rules are created with the `rule()` function, and can be applied in several ways. From most specific to most convenient, these are:
 
 * `apply_rules()` applies a rule or a list of rules to find nodes (i.e. tokens in a parse tree).

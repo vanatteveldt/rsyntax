@@ -18,10 +18,10 @@ as_tokenindex <- function(tokens) {
   
   
   has_keys = data.table::key(tokens)
-  if (!identical(has_keys, cname('doc_id','token_id'))) data.table::setkeyv(tokens, cname('doc_id','token_id'))
+  if (!identical(has_keys, cname('doc_id','sentence','token_id'))) data.table::setkeyv(tokens, cname('doc_id','sentence','token_id'))
   has_indices = data.table::indices(tokens)
-  doc_id__parent = paste(cname('doc_id','parent'), collapse='__')     ## paired doc_id__parent index
-  if (!doc_id__parent %in% has_indices) data.table::setindexv(tokens, cname('doc_id','parent'))
+  doc_id__sentence__parent = paste(cname('doc_id','sentence','parent'), collapse='__')     ## paired doc_id__sentence__parent index
+  if (!doc_id__sentence__parent %in% has_indices) data.table::setindexv(tokens, cname('doc_id','sentence','parent'))
   
   if (new_index) {
     check_tokens(tokens)

@@ -2,12 +2,11 @@
 % Please edit documentation in R/find_nodes.r
 \name{find_nodes}
 \alias{find_nodes}
-\title{There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
-queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
-The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).}
+\title{Query the token index}
 \usage{
 find_nodes(tokens, ..., select = NULL, g_id = NULL, save = NA,
-  block = NULL, check = T, use_index = T, e = parent.frame())
+  block = NULL, check = T, use_index = T, name = NULL,
+  e = parent.frame())
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
@@ -44,10 +43,14 @@ A data.table in which each row is a node for which all conditions are satisfied,
                (parents / children) with names as specified in the save argument.
 }
 \description{
-Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
-These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc.
+There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
+queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
+The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).
 }
 \details{
+Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
+These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc.
+
 Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
 
 

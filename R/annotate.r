@@ -75,6 +75,7 @@ annotate <- function(tokens, queries, column, use=NULL, fill=T, block=NULL, chec
 #'
 #' @export
 annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=NULL, check=T, with_tquery=F, show_fill=F) {
+  if (ncol(nodes) <= 3) stop('Cannot annotate nodes, because no nodes are specified (using the save parameter in find_nodes() or tquery())')
   id_column = paste0(column, '_id')
   if (column %in% colnames(tokens)) tokens[, (column) := NULL]
   if (id_column %in% colnames(tokens)) tokens[, (id_column) := NULL]
@@ -139,7 +140,9 @@ prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, rm_dup=T, check=
   use = if (is.null(use)) colnames(nodes) else union(c(cname('doc_id'),cname('sentence'), '.KEY'), use)
   if (!all(use %in% colnames(nodes))) stop('Invalid column names (for the nodes data.table) in the use argument')
 
+  
   .NODES = subset(nodes, select=use) ## subset also prevents modifying by reference, even if all columns are used (so beware when changing this)
+  if(!'.TQUERY' %in% colnames(.NODES)) .NODES[,.TQUERY := '']
   .NODES = unique(data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.KEY','.TQUERY'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T))
   
   has_duplicates = anyDuplicated(.NODES, by=c(cname('doc_id'),cname('sentence'),cname('token_id')))

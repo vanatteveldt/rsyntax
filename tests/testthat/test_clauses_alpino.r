@@ -24,6 +24,13 @@ test_that("extracting clauses works", {
   
   tokenindex_columns()
   
+  find_nodes(tokens[tokens$sentence == 1,], POS='verb', save='pred',
+             children(relation='su', save='subject',
+                      children(relation='cnj', save='conj')))
+  
+  clauses = get_clauses_alpino(tokens)
+  #View(annotate_nodes(tokens,clauses,'clause'))
+  
   # subject and subject -> verb -> object
   clauses = get_clauses_alpino(tokens[tokens$sentence == 1,])
   annotate_nodes(tokens[tokens$sentence == 1,], clauses, column='test')

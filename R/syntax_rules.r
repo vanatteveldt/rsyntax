@@ -38,11 +38,11 @@ apply_queries <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
   
   for (i in 1:length(r)){
     .TQUERY_NAME = names(r)[i]
-    .TQUERY_NAME = ifelse(is.null(.TQUERY_NAME), '', as.character(.TQUERY_NAME))
+    .TQUERY_NAME = ifelse(is.null(.TQUERY_NAME), paste0('tq', i), as.character(.TQUERY_NAME))
     args = r[[i]]
     #nodes = find_nodes(tokens, )
     #nodes = do.call(r[[i]], args = list(tokens=tokens, block=block, check=check, e=parent.frame()))
-    l = c(args$lookup, args$nested, list(tokens=tokens, select=args$select, g_id=args$g_id, save=args$save, block=block, check=check, e=parent.frame()))
+    l = c(args$lookup, args$nested, list(tokens=tokens, select=args$select, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME, e=parent.frame()))
     nodes = do.call(find_nodes, args = l)
     if (!is.null(nodes)) {
       nodes[,.TQUERY := .TQUERY_NAME]

@@ -4,24 +4,24 @@
 #' @export
 alpino_quote_queries <- function() {
   # x zegt dat y
-  zegtdat = tquery(lemma = dutch$SIP,
+  zegtdat = tquery(lemma = dutch$SIP, save='sayverb',
                         children(save = 'source', relation=c('su')),
                         children(relation='vc', POS = c('C', 'comp'),
                                  children(save='quote', relation=c('body'))))
   
   # x stelt: y
-  ystelt = tquery(lemma = dutch$SIP, 
+  ystelt = tquery(lemma = dutch$SIP, save='sayverb',
                        children(save = 'source', relation=c('su')),
                        children(save = 'quote', relation='nucl'),
                        children(lemma =  quote_punctuation))
   
   # y, stelt x
-  xstelt = tquery(save='quote', 
-                       children(relation='tag', lemma = dutch$SIP,
+  xstelt = tquery(save='quote',
+                       children(relation='tag', lemma = dutch$SIP, save='sayverb',
                                 children(save = 'source', relation=c('su'))))
   
   # y, volgens x
-  volgens = tquery(save='quote',
+  volgens = tquery(save='quote', 
                         children(relation=c('mod','tag'), lemma = dutch$source_mod,
                                  children(save='source')))
   
@@ -57,13 +57,13 @@ alpino_clause_queries <- function(){
   #               children(lemma = dutch$passive_mod, 
   #                        children(save='subject', relation='obj1')))
   
-  passive = tquery(POS = 'verb', 
+  passive = tquery(POS = 'verb', save='verb',
                         parents(save='predicate', lemma = dutch$passive_vc),
                         children(lemma = dutch$passive_mod, 
                                  children(save='subject', relation='obj1')))
   
   ## [subject] [has/is/etc.] [verb] [object]
-  perfect = tquery(POS = 'verb',
+  perfect = tquery(POS = 'verb', save='verb',
                         parents(save='predicate', lemma = dutch$passive_vc),
                         children(save='subject', relation=c('su')))
   
