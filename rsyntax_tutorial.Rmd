@@ -12,17 +12,11 @@ library(printr)
 
 # What is rsyntax
 
-Many techniques for automatic content analysis rely on a bag-of-words assumption, meaning that syntactic information and even the order of words is ignored.
-Despite severely simplifying communication, this is a powerfull and computationally efficient approach. Still, syntax can be crucial for extracting certain types of information from texts. The rsyntax package offers tools to annotate token data with syntactic information, thus enabling more fine-grained automatic content analysis at the level of quotes and clauses, using the same bag-of-words techniques for the analysis. 
+Many techniques for automatic content analysis rely on a bag-of-words assumption, meaning that syntactic information and even the order of words is ignored. However, syntax can be crucial for extracting certain types of information from texts. The rsyntax package offers tools for querying dependency trees to extract syntactic information. This information can then also be used to annotate tokens, thus enabling more fine-grained automatic content analysis at the level of quotes and clauses, using the same bag-of-words techniques for the analysis. 
 
 # Input: dependency parse data
 
 The input data for `rsyntax` is a data.frame with the output of a dependency parser, such as Stanford CoreNLP (English), Alpino (Dutch) or ParZu (German). Short examples are included in `rsyntax`.
-
-```{r}
-head(tokens_corenlp)
-head(tokens_dutchclauses)
-```
 
 # rsyntax
 
@@ -54,170 +48,112 @@ tokenindex_columns(doc_id = 'doc_id', sentence='sentence', token_id='token_id', 
 We can now create the tokenindex. This verifies whether the mandatory columns are present, converts the data.frame to a data.table (of the data.table package), and creates a key and index for the global token (and parent) IDs. This enables the efficient lookup of parents/children.
 
 ```{r}
-head(tokens_corenlp)  ## demo data included in rsyntax
-tokens = as_tokenindex(tokens_corenlp)
-data.table::key(tokens)
-data.table::indices(tokens)
+tokens = data(tokens_corenlp)  ## demo data included in rsyntax
+tokens = tokens_corenlp[23:32,] ## we'll use a selection for this demo
+tokens = as_tokenindex(tokens)
+tokens
 ```
 
 ## Querying the token index
 
-We can now look for nodes in the token index. This can be done directly with the `find_nodes()` function, or we can make a list of queries and apply them. Here we will first demonstrate the `find_nodes` function.
+We can now look for nodes in the token index. This can be done directly with the `find_nodes()` function, or we first make a query with `tquery()` and then apply it with `apply_queries()`. The `find_nodes()` function is usefull for single queries or to develop and try out new queries. For now, we will focus on the slightly more verbose combination of `tquery()` and `apply_queries()`, which should be more intuitive.
 
-We will start with an example of a usefull, but complex query. 
+### Using tquery() and apply_queries()
 
-```{r}
-View(tokens)
+The `tquery()` function is used to create token queries, and the `apply_queries()` function is used to apply one or multiple queries on the tokenindex. 
+In the `tquery()` function, the query terms are given as name-value pairs, in which the name has to correspond to a column in the tokenindex, and the value is a vector with query terms. By default, queries use case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character). There are more advanced query options, but we'll ignore these for now.
 
-## error if save not specified
-?find_nodes
-nodes = find_nodes(tokens, POS = 'VB*', save='predicate',
-                   children(relation = 'nsubj*', save='subject'))
+The first argument for `apply_queries()` is the tokenindex (here named `tokens`). Next, any number of queries can be added as (named) arguments. If a named argument is used (recommended) the name will be used in the unique ids for the results, which is convenient later on.
 
-nodes = find_nodes(tokens[tokens$sentence == 1,], POS='verb', save='pred',
-             children(relation='su', save='subject',
-                      children(relation='cnj', save='conj')))
-annotate_nodes(tokens,nodes,'test')  
-
-
-nodes = find_nodes(tokens, 
-           children(relation='cnj', save='conjunction'))
-get_nodes(tokens, nodes)
-
-split_conjunctions <- function(tokens, nodes, ...) {
-  lnodes = data.table::melt(nodes, id.vars = cname('doc_id','sentence','.KEY'))
-  conj = find_nodes(tokens, ..., g_id = lnodes[,c(cname('doc_id','sentence'),'value')])
-  conj
-}
-
-
-
-
-split_conjunctions(tokens, nodes, relation='cop')
-
-
-
-nodes$.KEY = paste('test', nodes$.KEY)
-annotate_nodes(tokens, nodes, 'test')
-
-process_nodes <- function(tokens, nodes, ...) {
-  
-}
-
-
-nodes
-
-
-
-annotate()
-
-annotate_nodes(tokens, nodes, column = 'vp')
-?annotate_nodes
-
-```
-
+For example, the following query looks for all tokens in which the POS tag is "VB*", where \* is a wildcard for any number of undefined characters. Thus, any POS tag that starts with "VB" will be found.
 
 ```{r}
-?find_nodes
-find_nodes(tokens, POS = 'VBZ')
+q = tquery(POS = 'VB*')
+apply_queries(tokens, q1 = q)
 ```
+
+The output contains three columns: doc_id, sentence and .ID. The doc_id and sentence simply indicate the context in which a match is found, and the .ID is a unique id for the match. Each row is a unique match. 
+
+What you do not yet see is the actual token that is matched. This is because you will need to explicitly state which of the matched tokens you want to `save` as nodes in the network pattern. (this will make sense once we get to more complex queries). Here we will save the nodes using the name "verb".
 
 ```{r}
-find_nodes(tokens, POS = 'NNP', save='noun')
+q = tquery(POS='VB*', save='verb')
+apply_queries(tokens, q1 = q)
 ```
+
+The output now contains an additional column named "verb", that contains the token ids of the tokens that match the query. 
+
+To see why this is usefull, let's create a more complex query that looks for patterns of multiple nodes. In a dependency tree, tokens are nodes in a network, and each node can have parents and children. We can look for the parents or children of nodes by passing the `parents()` and `children()` functions as arguments to the `tquery()` function. The `children()` and `parents()` functions work (mostly) identical to the tquery() function. They can also themselves contain `parents()` and `children()`, to look for more complex patterns.
+
+Here we add `children()` to our former query. As a condition, we say that the `relation` has to match 'nsubj*'. In the current data, the `relation` column contains the dependency relation of a token to its parent. Thus, we are now looking for children of verbs that are the subject of the verb. We save these nodes as "subject".
 
 ```{r}
-find_nodes(tokens, POS = 'NNP', save='noun')
+q = tquery(POS = 'VB*', save='verb',
+           children(relation = 'nsubj*', save='subject'))
+apply_queries(tokens, q1=q)
 ```
 
+Now the output has two node columns: "verb" and "subject". Also note that there are fewer results. This is because all the verbs that did not have a child with a subject relation do not match the query. 
 
-
-
-Rules are created with the `rule()` function, and can be applied in several ways. From most specific to most convenient, these are:
-
-* `apply_rules()` applies a rule or a list of rules to find nodes (i.e. tokens in a parse tree).
-* `annotate_nodes()` uses the nodes (output of `apply_rules`) to annotate the token data.
-* `annotate()` is a wrapper that combines `apply_rules` and `annotate_nodes`. 
-* `annotate_qs()` is short for annotate quotes and soures. This function requires two lists of rules, one for quotes and one for sources. Effectively, this is identical to calling `annotate` twice, but it also uses the `block` argument in annotate to prevent the sources of quote to also be assigned as subjects of clauses. 
-
-We'll first demonstrate annotate_qs, which is the function you would use if you only want to apply the pre-defined rules in `rsyntax` for quote and clause extraction.
-
-(for now, we'll demonstrate the Dutch rules, because the English rules are not yet converted to the new rsyntax design)
+We can now annotate the tokens (tokenindex) based on the nodes found with the tquery. This is also a good way to inspect whether the tquery works as intended. For this we use the `annotate_nodes()` function, which has three mandatory arguments: the tokenindex, the nodes, and a name for the column that is added to the tokenindex.
 
 ```{r}
-tokens = annotate_qc(tokens, 
-                     quote_rules = alpino_quote_rules(),
-                     clause_rules = alpino_clause_rules())
+nodes = apply_queries(tokens, q1=q)
+annotate_nodes(tokens, nodes, column='nodes')
 ```
 
-The tokens data now has four additional columns.
-The `quote_id` and `clause_id` columns contain the unique ids of quotes and clauses, with the value referring to the token_id of the `key` of the rule (explained later).
-The `quote` column indicates whether a token is the `source` or `quote` of a quote, and the `source` column indicates if a token is the `subject` or `predicate` of a clause. 
+This adds two columns to the tokenindex: nodes and nodes_id. The `nodes_id` column contains the id of a pattern of nodes (i.e. a row in the nodes data.table), and the `nodes` column contains the given name of the nodes (i.e. the columns in the nodes data.frame, as given in the tquery with the save parameter).
 
-For validating results, and possibly optimizing rules, it is convenient to plot the dependency tree, with the quotes and clauses highlighted. For this we can use the `plot_tree()` function. By default, this function plots the first sentence in the token data. Alternatively, we can set it to using the n-th sentence, and also to focus on a specific document, or to use a specific sentence.
+Note that in the second sentence, "Mary is loved by John", Mary is now considered the subject, but in truth the subject is John, because the sentence is passive. Since language is creative, you will often have to combine multiple tqueries. 
+
+### Combining multiple queries
+
+Combining queries introduces some new arguments in annotate_nodes, because you will have to deal with overlapping nodes across queries. This can require different settings depending on what you want to do. Here we use an example to introduce the relevant arguments.
+
+Continuing on the previous example, we can combine queries for a *direct* and *passive* subject. 
 
 ```{r}
-plot_tree(tokens)
+passive = tquery(POS = 'VB*', save='verb',
+                 children(relation = 'nsubjpass'),
+                 children(relation = 'nmod:agent', save='subject'))
+direct = tquery(POS = 'VB*', save='verb',
+                children(relation = 'nsubj*', save='subject'))
+
+nodes = apply_queries(tokens, pas=passive, dir=direct)
+annotate_nodes(tokens, nodes, column='nodes')
 ```
 
-Here the red nodes represent quotes, with square frames being the source and round frame being the quote.
-The blue nodes represent clauses, with square frames being the subject and round frames being the predicate.
-Also, if a clause is nested inside a quote, the (blue) frames have red borders.
+Now the results are correct, but there is some magic going on that you need to be aware of. The reason that Mary is no longer (wrongly) coded as the subject, is that by default the `annotate_nodes()` function ignores a pattern of nodes (i.e. a row in the nodes data.table) if one of the nodes has been matched in a previous pattern. In this case, the node "loved" was already matched in the *passive* query, and so the *direct* match is ignored.
 
-## Creating rules
+This is usefull, because it makes it possible to chain queries together in a particular order. Very specific queries can be performed first, and very broad queries at the end. This way, the broad queries do not need to account for many possible exceptions, given that these exections are addressed before. (In this example, it would have been easy to make *direct* more specific by using "nsubj" instead of "nsubj*" as a relation, but it is often more complex)
 
-It is easy to add or change rules, or even to build a new set of rules altogether.
-The quote and clause rules used above are lists with rsyntaxRule objects.
-These are regular R lists, so changing rules in the list or creating new lists works accordingly.
-
-For example, see the results of the `alpino_clause_rules` function, which is a list of rules.
+Be aware that the order of queries thus matters. See, for example, what happens if we first use the *direct* query and then the *passive* query. 
 
 ```{r}
-alpino_clause_rules()
+nodes = apply_queries(tokens, dir=direct, pas=passive)
+annotate_nodes(tokens, nodes, column='nodes')
 ```
 
-Here we see three rules: for passive, present perfect and active clauses. 
-The print method of rsyntaxRules has been set to display how the rules were entered, which makes it transparent and easy to change or replicate.
+Now only the direct queries are used (note that the query that is used can be seen in nodes_id). 
 
-For illustration, see the first rule (passive).
-The first line specifies the query for the starting node, referred to as the `key`.
-For selecting, you can use 
-
-* `lemma`: lemmatized token
-* `POS`: part-of-speech tag
-* `p_rel`: dependency relation of node to its parent
-* `g_id`: "global id", given as a data.frame or data.table with two columns: doc_id and token_id
-* `select`: an R expression that can use any column in the token data. This is supported for versatility.
-* `NOT_*`: for `lemma`, `POS` and `p_rel`, you can also use `not_lemma`, `not_POS` and `not_p_rel` for negative selection.
-
-In this case, the only selection criterion is that the key should be a verb (POS = 'verb').
-
-On the second line, we see a nested `parents()` function.
-This means that we will now look for parents of the key node. 
-We can use the same selection parameters, which in this case is used to look for the lemma in .ALPINO.PASSIVE_VC.
-Here we also see the "save" parameter, by which we specify that we consider this node to be the root of the predicate.
-
-On the third line, we see a `children()` function, that is nested in `rule()`, but not in `parents()`.
-This means that we are looking for children of the key node.
-
-On the fourth line, we see another `children()` function, but this time it is nested in the previous `children()` function. 
-This means that here, we are looking for children of children (i.e. the grandchildren of the key node).
-
-For more detailed instructions, see the help page of the `rule()` function
-
-## Lists of rules
-
-There are two things to keep in mind regarding the way rules are organized in lists.
-Firstly, the order of rules matters. 
-Since tokens can only be assigned once, certain rules need to have priority over other in case their results overlap.
-Rules that occur earlier in the list have priority over rules further down the list.
-The second thing to keep in mind is that it's good to use named lists.
-This way, the `with_rule` argument can be used in the `annotate` functions to see which rule was used for which tokens, which is convenient for improving rules.
+In some cases, you might want to use all the nodes, including duplicates. For this, you can set the rm_dup (remove duplicates) argument to FALSE. The duplicate nodes are than concatenated (if concat_dup is TRUE) or the rows in the tokenindex are duplicated (if concat_dup is FALSE)
 
 ```{r}
-tokens = annotate_qc(tokens, 
-                     quote_rules = alpino_quote_rules(),
-                     clause_rules = alpino_clause_rules(),
-                     with_rule = T)
-tokens[,c('token', 'quote_rule', 'quote_id','quote')]
+annotate_nodes(tokens, nodes, column='nodes', rm_dup=F)
+annotate_nodes(tokens, nodes, column='nodes', rm_dup=F, concat_dup=F)
 ```
+
+### Using the fill argument
+
+Till now, annotate_nodes() coded only the specific nodes, as matched by the tquery. But often it is usefull to code all the children of these nodes. In the previous example, we might want to extract predicates. A convenient and often accurate way of doing this is by taking everything 'under' the verb in the dependency tree. For this, we can use the *fill* argument.
+
+```{r}
+nodes = apply_queries(tokens, pas=passive, dir=direct)
+annotate_nodes(tokens, nodes, column='nodes', fill = T)
+```
+
+Now, every node under "verb" (children, grandchildren, etc.) is coded as "verb", and every node under "subject" is coded as "subject". The exception is nodes that are already coded. For instance, "John" is also a child of "loves", but since the "John" node is already coded as subject, it will not be filled as "verb". 
+
+Using fill makes it possible to easily extract usefull sub-sentences, without having to write many elaborate queries for matching all possible patterns. The tradeoff is that it is crude, and should thus only be seen as a heuristic. 
+
+

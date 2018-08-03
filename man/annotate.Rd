@@ -4,8 +4,8 @@
 \alias{annotate}
 \title{Annotate a tokenlist based on rsyntax queries}
 \usage{
-annotate(tokens, queries, column, use = NULL, fill = T, block = NULL,
-  check = T, with_tquery = F, show_fill = F)
+annotate(tokens, queries, column, use = NULL, fill = F, block = NULL,
+  check = F, with_tquery = F, show_fill = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}

@@ -3,8 +3,8 @@ Type: Package
 Title: R library to help dealing with syntactic structure
 Version: 0.1
 Date: 2015-10-17
-Author: Wouter van Atteveldt
-Maintainer: Wouter van Atteveldt <wouter@vanatteveldt.com>
+Author: Wouter van Atteveldt and Kasper Welbers
+Maintainer: Kasper Welbers <kasperwelbers@gmail.com>
 Depends:
     igraph,
     reshape2,
@@ -12,7 +12,9 @@ Depends:
     colorspace,
     Matrix
 Imports:
-    data.table
+    data.table,
+    Rcpp (>= 0.12.12),
+LinkingTo: Rcpp
 LazyData: true
 Description: R library to help dealing with syntactic structure
 License: MIT license

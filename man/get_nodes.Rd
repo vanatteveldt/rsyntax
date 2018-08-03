@@ -22,7 +22,7 @@ For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only add
 
 \item{token_cols}{A character vector, specifying which columns from tokens to include in the output}
 
-\item{block}{Optionally, another set of nodes, of which the .KEY values will be blocked for annotations}
+\item{block}{Optionally, another set of nodes, of which the nodes that are already in used will be blocked.}
 
 \item{show_fill}{If TRUE, add a .FILL column that indicates which tokens were added with fill}
 }

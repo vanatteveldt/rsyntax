@@ -2,6 +2,9 @@
 filter_tokens <- function(tokens, lookup=list(), select='NULL', .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, e=parent.frame(), use_index=T) {
   ## we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
   
+  .G_ID = unique(.G_ID)
+  .G_PARENT = unique(.G_PARENT)
+  
   i = NULL
   null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) 
   if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]], .G_ID[[3]]), on=c(cname('doc_id'),cname('sentence'),cname('token_id')), which=T])

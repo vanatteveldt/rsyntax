@@ -4,8 +4,9 @@
 \alias{annotate_nodes}
 \title{Annotate a tokenlist based on rsyntax queries}
 \usage{
-annotate_nodes(tokens, nodes, column, use = NULL, fill = T,
-  fill_block = NULL, check = T, with_tquery = F, show_fill = F)
+annotate_nodes(tokens, nodes, column, rm_dup = T, fill = F,
+  fill_block = NULL, check = F, with_tquery = F, show_fill = F,
+  concat_dup = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
@@ -13,6 +14,8 @@ annotate_nodes(tokens, nodes, column, use = NULL, fill = T,
 \item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
 
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id}
+
+\item{rm_dup}{If true (default), remove duplicate nodes (keeping the first match). Otherwise, rows in tokens will be repeated for each match. If the concat_dup argument is true (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.}
 
 \item{fill}{If TRUE, the children for each id are added recursively (children of children etc.). If this leads to
 duplicate ids (if an id in nodes is a child of another id in nodes), the most direct children are kept.
@@ -23,6 +26,8 @@ For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only add
 \item{check}{For testing queries. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)}
 
 \item{with_tquery}{For testing queries. If TRUE, add a column that shows the name of the specific tquery that was used. This only works if 'queries' is a named list.}
+
+\item{concat_dup}{see rm_dup arugment.}
 }
 \description{
 Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.

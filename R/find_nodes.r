@@ -1,5 +1,6 @@
 #' Query the token index
 #' 
+#' @description 
 #' There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
 #' queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
 #' The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).
@@ -34,7 +35,6 @@
 #'                (parents / children) with names as specified in the save argument.
 #'
 #' @details 
-#' 
 #' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
 #' If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
 #' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
@@ -67,27 +67,28 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   if (length(nested) > 0) {
     nodes = rec_find(tokens, ids=ids, ql=nested, e=e, block=block)
   } else {
-    data.table::setnames(ids, old = cname('token_id'), new='.KEY')
-    if (!is.na(save)) ids[,(save) := .KEY]
+    data.table::setnames(ids, old = cname('token_id'), new='.ID')
+    if (!is.na(save)) ids[,(save) := .ID]
     ids = create_unique_key(ids, name)
+    data.table::setattr(ids, 'class', c('rsyntaxNodes', class(ids)))
     return(ids[])
   }
   if (nrow(nodes) == 0) return(NULL)
   
   ## always remember the node from which the search starts as .ID, for identifying unique matches
-  nodes[, .KEY := .MATCH_ID]
-  data.table::setcolorder(nodes, c('.KEY', setdiff(colnames(nodes), '.KEY')))
+  nodes[, .ID := .MATCH_ID]
+  data.table::setcolorder(nodes, c('.ID', setdiff(colnames(nodes), '.ID')))
   
   if (is.na(save)) {
     nodes[,.MATCH_ID := NULL]
-    data.table::setcolorder(nodes, c(cname('doc_id'),cname('sentence'),'.KEY', setdiff(colnames(nodes), c('.KEY',cname('doc_id'),cname('sentence')))))
+    data.table::setcolorder(nodes, c(cname('doc_id'),cname('sentence'),'.ID', setdiff(colnames(nodes), c('.ID',cname('doc_id'),cname('sentence')))))
   } else {
     if (save %in% colnames(nodes)) {
       data.table::setnames(nodes, save, paste0(save,'.y'))
       save = paste0(save,'.x')
     }
     data.table::setnames(nodes, '.MATCH_ID', save)
-    data.table::setcolorder(nodes, c(cname('doc_id'),cname('sentence'),'.KEY', save, setdiff(colnames(nodes), c('.KEY',cname('doc_id'),cname('sentence'),save))))
+    data.table::setcolorder(nodes, c(cname('doc_id'),cname('sentence'),'.ID', save, setdiff(colnames(nodes), c('.ID',cname('doc_id'),cname('sentence'),save))))
   }
   if ('.DROP' %in% colnames(nodes)) {
     nodes[, .DROP := NULL]
@@ -96,7 +97,7 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   nodes = unique(nodes)
   
   if (check && ncol(nodes) > 3) {
-    lnodes = unique(melt(nodes, id.vars=c(cname('doc_id'),cname('sentence'),'.KEY'), variable.name = '.ROLE', value.name = cname('token_id')))
+    lnodes = unique(melt(nodes, id.vars=c(cname('doc_id'),cname('sentence'),'.ID'), variable.name = '.ROLE', value.name = cname('token_id')))
     if (anyDuplicated(lnodes, by=c(cname('doc_id'),cname('sentence'),cname('token_id')))) {
       warning('DUPLICATE NODES: Some tokens occur multiple times as nodes (either in different patterns or the same pattern). 
               This should be preventable by making patterns more specific. You can turn off this duplicate check by setting check to FALSE')
@@ -105,17 +106,18 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   
   data.table::setnames(nodes, colnames(nodes), gsub('\\.[xy]$', '', colnames(nodes)))
   nodes = create_unique_key(nodes, name)
+  data.table::setattr(ids, 'class', c('rsyntaxNodes', class(ids)))
   nodes[]
 }
 
 create_unique_key <- function(nodes, name){
   #if (ncol(nodes) > 3) {
-  #  key = paste0(name, '(', nodes$.KEY, ':', do.call(paste, args = c(nodes[,-(1:3)], sep='.')), ')')
+  #  key = paste0(name, '(', nodes$.ID, ':', do.call(paste, args = c(nodes[,-(1:3)], sep='.')), ')')
   #} else {
-  #  key = paste0(name, '(', nodes$.KEY, ')')
+  #  key = paste0(name, '(', nodes$.ID, ')')
   #}        
-  key = paste0(name, '.', 1:nrow(nodes))
-  nodes$.KEY = key
+  key = paste0(name, '#', 1:nrow(nodes))
+  nodes$.ID = key
   return(nodes)
 }
 
@@ -141,13 +143,12 @@ block_ids <- function(..., names=NULL) {
         } else {
           d = subset(d, select = setdiff(colnames(d), '.TQUERY'))
         }
-        
         d = data.table::melt(d, id.vars = c(cname('doc_id'), cname('sentence')), 
-                             measure.vars=setdiff(colnames(d), c(cname('doc_id','sentence'),'.KEY')),
-                             value.name=cname('token_id'))
-        d[,variable := NULL]
+                             measure.vars=setdiff(colnames(d), c(cname('doc_id','sentence'),'.ID')),
+                             variable.name = '.VARIABLE', value.name=cname('token_id'))
+        #if ('.VARIABLE' in colnames(d)) d[,.VARIABLE := NULL]
       } 
-     
+      if (!cname('token_id') %in% colnames(d)) next
       out[[i]] = d[,c(cname('doc_id'),cname('sentence'),cname('token_id'))]
       next
     }
@@ -221,7 +222,7 @@ select_tokens <- function(tokens, ids, q, e, block=NULL) {
 }
 
 
-token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F) {
+token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F, show_level=F) {
   .MATCH_ID = NULL
 
   if (!replace) block = block_ids(ids, block)
@@ -244,12 +245,14 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
     id = merge(id, .NODE, by.x=c(cname('doc_id'),cname('sentence'),cname('token_id')), by.y=c(cname('doc_id'),cname('sentence'),cname('parent')), allow.cartesian=T)
   }
   
-  if (depth > 1) id = deep_family(tokens, id, level, depth, minimal=minimal, block=block, replace=replace) 
+  if (depth > 1) id = deep_family(tokens, id, level, depth, minimal=minimal, block=block, replace=replace, show_level=show_level) 
+  if (depth <= 1 && show_level) id = cbind(.FILL_LEVEL=rep(1,nrow(id)), id)
+    
   id
 }
 
-deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F) {
-  id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed.
+deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F, show_level=F) {
+  id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed (don't think this actually requires reallocation).
   id_list[[1]] = id
   i = 2
   while (i <= depth) {
@@ -270,12 +273,20 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
     if (nrow(id_list[[i]]) == 0) break
     i = i + 1
   }
-  data.table::rbindlist(id_list)
+  
+  if (show_level) {
+    id_list = id_list[!sapply(id_list, is.null)]   ## in older version of data.table R breaks (badly) if idcol is used in rbindlist with NULL values in list
+    return(data.table::rbindlist(id_list, idcol = '.FILL_LEVEL'))
+  } else {
+    return(data.table::rbindlist(id_list))
+  }
 }
 
 safe_save_name <- function(name) {
   if(grepl('\\.[A-Z]', name)) stop(sprintf('save name cannot be all-caps and starting with a dot'))
-  special_names = cname('doc_id','token_id')
+  if(grepl(',', name)) stop(sprintf('save name cannot contain comma'))
+  
+  special_names = cname('doc_id','token_id','sentence')
   if (name %in% special_names) stop(sprintf('save name (%s) cannot be the same as the special tokenIndex column names (%s)', name, paste(special_names, collapse=', ')))
 }
 

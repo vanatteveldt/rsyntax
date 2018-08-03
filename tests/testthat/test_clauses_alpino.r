@@ -52,6 +52,8 @@ test_that("extracting clauses works", {
   expect_equal(nrow(clauses), 1)
   .check_clause(tokens, clauses, predicate = 'zijn', subject="Jantje")
 
+  
+
   # passive: object <- is/becomes verb <- subject (complex subject; should this be filtered on nouns?)
   clauses = get_clauses_alpino(tokens[tokens$sentence == 4,])
   expect_equal(nrow(clauses), 1)

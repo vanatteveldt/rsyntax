@@ -1,6 +1,7 @@
 
 #' Create a query for dependency based parse trees in a data.table (CoNLL-U or similar format).
 #'
+#' @description
 #' There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
 #' queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
 #' The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).
@@ -32,7 +33,6 @@
 #' @return        A tQuery object, that can be used with the \link{apply_queries} function.
 #' 
 #' @details 
-#' 
 #' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
 #' If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
 #' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).

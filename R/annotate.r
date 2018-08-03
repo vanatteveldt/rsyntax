@@ -40,7 +40,7 @@ annotate_qc <- function(tokens, quote_queries, clause_queries, check=F, with_tqu
 #' @param with_tquery  For testing queries. If TRUE, add a column that shows the name of the specific tquery that was used. This only works if 'queries' is a named list.
 #'
 #' @export
-annotate <- function(tokens, queries, column, use=NULL, fill=T, block=NULL, check=T, with_tquery=F, show_fill=F) {
+annotate <- function(tokens, queries, column, use=NULL, fill=F, block=NULL, check=F, with_tquery=F, show_fill=F) {
   tokens = as_tokenindex(tokens)
   
   if (!is.null(substitute(block))) {
@@ -66,15 +66,18 @@ annotate <- function(tokens, queries, column, use=NULL, fill=T, block=NULL, chec
 #' @param tokens     A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).
 #' @param nodes      A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.
 #' @param column     The name of the column in which the annotations are added. The unique ids are added as [column]_id
+#' @param rm_dup     If true (default), remove duplicate nodes (keeping the first match). Otherwise, rows in tokens will be repeated for each match. If the concat_dup argument is true (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.
 #' @param fill       If TRUE, the children for each id are added recursively (children of children etc.). If this leads to
 #'                   duplicate ids (if an id in nodes is a child of another id in nodes), the most direct children are kept.
 #'                   For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only added as a child of 2.
 #' @param fill_block Optionally, another data.table of nodes (as created with \link{find_nodes}) or a list of data.tables, used to block the fill process. That is, the nodes in block and all their descendants are not used in fill.
 #' @param check      For testing queries. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)
 #' @param with_tquery  For testing queries. If TRUE, add a column that shows the name of the specific tquery that was used. This only works if 'queries' is a named list.
+#' @param concat_dup see rm_dup arugment.
 #'
 #' @export
-annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=NULL, check=T, with_tquery=F, show_fill=F) {
+annotate_nodes <- function(tokens, nodes, column, rm_dup=T, fill=F, fill_block=NULL, check=F, with_tquery=F, show_fill=F, concat_dup=T) {
+  tokens = as_tokenindex(tokens)
   if (ncol(nodes) <= 3) stop('Cannot annotate nodes, because no nodes are specified (using the save parameter in find_nodes() or tquery())')
   id_column = paste0(column, '_id')
   if (column %in% colnames(tokens)) tokens[, (column) := NULL]
@@ -86,21 +89,20 @@ annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=N
     return(tokens)
   }
     
-  tokens = as_tokenindex(tokens)
-  .NODES = prepare_long_nodes(tokens, nodes, use=use, fill=fill, check=check, fill_block=fill_block, show_fill=show_fill)
-  data.table::setnames(.NODES, c('.ROLE','.KEY'), c(column, id_column))
+  .NODES = prepare_long_nodes(tokens, nodes, rm_dup=rm_dup, fill=fill, check=check, fill_block=fill_block, show_fill=show_fill, concat_dup=concat_dup)
+  data.table::setnames(.NODES, c('.ROLE','.ID'), c(column, id_column))
   
-  if (with_tquery) {
-    data.table::setnames(.NODES, c('.TQUERY'), paste0(column, '_tquery'))
-  } else {
-    .NODES[,.TQUERY := NULL]
-  }
+  #if (with_tquery) {
+  #  data.table::setnames(.NODES, c('.TQUERY'), paste0(column, '_tquery'))
+  #} else {
+  #  .NODES[,.TQUERY := NULL]
+  #}
   
   if (show_fill) {
-    data.table::setnames(.NODES, c('.FILL'), paste0(column, '_tquery'))
+    data.table::setnames(.NODES, c('.FILL'), paste0(column, '_fill'))
   } 
   
-  tokens = merge(tokens, .NODES, by=c(cname('doc_id'),cname('sentence'),cname('token_id')), all.x=T)
+  tokens = merge(tokens, .NODES, by=c(cname('doc_id'),cname('sentence'),cname('token_id')), all.x=T, allow.cartesian = T)
   as_tokenindex(tokens)
  
 }
@@ -116,7 +118,7 @@ annotate_nodes <- function(tokens, nodes, column, use=NULL, fill=T, fill_block=N
 #'                   duplicate ids (if an id in nodes is a child of another id in nodes), the most direct children are kept.
 #'                   For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only added as a child of 2. 
 #' @param token_cols A character vector, specifying which columns from tokens to include in the output
-#' @param block      Optionally, another set of nodes, of which the .KEY values will be blocked for annotations
+#' @param block      Optionally, another set of nodes, of which the nodes that are already in used will be blocked.
 #' @param show_fill  If TRUE, add a .FILL column that indicates which tokens were added with fill
 #'
 #' @return A data.table with the nodes in long format, and the specified token_cols attached 
@@ -130,56 +132,76 @@ get_nodes <- function(tokens, nodes, use=NULL, fill=T, token_cols=c('token'), bl
   
   out = merge(.NODES, tokens, by=c(cname('doc_id'),cname('sentence'),cname('token_id')))
   if (show_fill) {
-    subset(out, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),'.KEY','.ROLE', '.FILL', token_cols))
+    subset(out, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),'.ID','.ROLE', '.FILL', token_cols))
   } else {
-    subset(out, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),'.KEY','.ROLE', token_cols))
+    subset(out, select = c(cname('doc_id'),cname('sentence'),cname('token_id'),'.ID','.ROLE', token_cols))
   }
 }
   
-prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, rm_dup=T, check=T, fill_block=NULL, show_fill=F) {
-  use = if (is.null(use)) colnames(nodes) else union(c(cname('doc_id'),cname('sentence'), '.KEY'), use)
+prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, rm_dup=T, check=T, fill_block=NULL, show_fill=F, concat_dup=T) {
+  #use = if (is.null(use)) colnames(nodes) else union(c(cname('doc_id'),cname('sentence'), '.ID'), use)
   if (!all(use %in% colnames(nodes))) stop('Invalid column names (for the nodes data.table) in the use argument')
-
+  #if(!'.TQUERY' %in% colnames(nodes)) nodes$.TQUERY = ''
   
-  .NODES = subset(nodes, select=use) ## subset also prevents modifying by reference, even if all columns are used (so beware when changing this)
-  if(!'.TQUERY' %in% colnames(.NODES)) .NODES[,.TQUERY := '']
-  .NODES = unique(data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.KEY','.TQUERY'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T))
+  .NODES = data.table::copy(nodes)
+  #.NODES = subset(nodes, select=use) ## subset also prevents modifying by reference, even if all columns are used (so beware when changing this)
+  #.NODES = unique(data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.ID','.TQUERY'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T))
+  .NODES = unique(data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.ID'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T))
   
   has_duplicates = anyDuplicated(.NODES, by=c(cname('doc_id'),cname('sentence'),cname('token_id')))
-  if (has_duplicates & rm_dup) {
+  if (has_duplicates && rm_dup) {
     if (check) {
       warning("DUPLICATE NODES: Some tokens occur multiple times as nodes (either in different patterns or the same pattern). 
       Duplicates have now been deleted, but it's better (less ambiguous) to prevent duplicates by making the queries more specific")
     }
     .NODES = nodes
-    .NODES[, .PATH := 1:.N]
-    .NODES = data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.PATH','.KEY', '.TQUERY'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T)
+    .NODES$.PATH = as.double(1:nrow(.NODES))
+    #.NODES = data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.PATH','.ID', '.TQUERY'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T)
+    .NODES = data.table::melt(.NODES, id.vars=c(cname('doc_id'),cname('sentence'),'.PATH','.ID'), variable.name='.ROLE', value.name=cname('token_id'), na.rm=T)
     .NODES = unique(.NODES)
     .NODES = rm_duplicates(.NODES)
-    .NODES = unique(subset(.NODES, select = c(cname('doc_id'),cname('sentence'),'.KEY', '.ROLE', cname('token_id'), '.TQUERY')))
+    #.NODES = unique(subset(.NODES, select = c(cname('doc_id'),cname('sentence'),'.ID', '.ROLE', cname('token_id'), '.TQUERY')))
+    .NODES = unique(subset(.NODES, select = c(cname('doc_id'),cname('sentence'),'.ID', '.ROLE', cname('token_id'))))
   }
   
   if (fill) {
-    add = token_family(tokens, ids=.NODES[,c(cname('doc_id'),cname('sentence'),cname('token_id'))], level='children', depth=Inf, minimal=T, block=fill_block, replace = F)
+    if (!rm_dup) {
+      ## ok, so this is whats going on. If you do not want to remove the duplicate nodes across patterns, you also don't want fill to be blocked by nodes in other patterns
+      ## however, you do want fill to be blocked by nodes in the same pattern. this is only possible via post processing. For this, we ask token_family to return the .FILL_LEVEL
+      ## Afterwards, we then delete duplicate nodes within the same pattern, keeping the nodes with the lowest fill level.
+      add = token_family(tokens, ids=unique(.NODES[,c(cname('doc_id'),cname('sentence'),cname('token_id'))]), level='children', depth=Inf, minimal=T, block=fill_block, replace = T, show_level=T)
+    } else {
+      add = token_family(tokens, ids=unique(.NODES[,c(cname('doc_id'),cname('sentence'),cname('token_id'))]), level='children', depth=Inf, minimal=T, block=fill_block, replace = F)
+    }
     add = merge(add, .NODES, by.x=c(cname('doc_id'),cname('sentence'),'.MATCH_ID'), by.y=c(cname('doc_id'),cname('sentence'),cname('token_id')), allow.cartesian = T)
+    
+    if (!rm_dup) .NODES[,.FILL_LEVEL := 0]
     if (show_fill) {
       .NODES[,.FILL := F]
       add[,.FILL := T]
     } 
     .NODES = rbind(.NODES, add[,colnames(.NODES), with=F])
+    if (!rm_dup) {
+      .NODES = .NODES[order(.NODES$.FILL_LEVEL)]
+      .NODES = .NODES[!duplicated(.NODES, by = c(cname('doc_id','sentence','token_id'),'.ID'))]
+      .NODES[,.FILL_LEVEL := NULL]
+    }
+  }
+  if (!rm_dup && concat_dup) {
+    .SD=NULL
+    .NODES = .NODES[,lapply(.SD, paste, collapse=','), by=eval(cname('doc_id','sentence', 'token_id'))]
   }
   data.table::setkeyv(.NODES, c(cname('doc_id'),cname('sentence'),cname('token_id')))
+  if (!is.null(use)) .NODES = subset(.NODES, .ROLE %in% use)  
   .NODES
 }
 
 rm_duplicates <- function(nodes) {
   nodes = unique(nodes, by = c(cname('doc_id'),cname('sentence'),cname('token_id'))) ## sorted by name, for which the factor indices match the query order
   
-  ## if there are incomplete .KEY's after removing duplicates, remove the entire pattern
-  nodes[,complete := length(unique(.ROLE)) == nlevels(.ROLE), by=c(cname('doc_id'),cname('sentence'),'.KEY','.PATH')]
+  ## if there are incomplete .ID's after removing duplicates, remove the entire pattern
+  nodes[,complete := length(unique(.ROLE)) == nlevels(.ROLE), by=c(cname('doc_id'),cname('sentence'),'.ID','.PATH')]
   nodes = subset(nodes, complete, select=setdiff(colnames(nodes), 'complete'))  
   
   nodes
 }
-
-

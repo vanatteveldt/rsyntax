@@ -16,7 +16,7 @@ Accepts any data.frame given that the required columns (doc_id, sentence, token_
 \details{
 The default column names can be changed with \link{tokenindex_columns}.
 
-The data will be sorted by the doc_id and token_id columns (or aliases specified in \link{tokenindex_columns}).
+The data will be sorted by the doc_id, sentence and token_id columns (or aliases specified in \link{tokenindex_columns}).
 Accordingly, it is recommended to use numeric token_id's. 
 Some parsers return token_id's as numbers with a prefix (t_1, w_1), in which case sorting is inconvenient (t_15 > t_100).
 }

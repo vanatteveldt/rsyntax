@@ -11,33 +11,26 @@ CORENLP_PNOUN_POS = c('NNS','NNPS')
 CORENLP_DETER_POS = c('PDT','DT','WDT')
 CORENLP_ADVERB_POS = c('RB','RBR','RBS')
 
-#' Get quotes from tokens parsed by coreNLP
+#' Returns a list with the quote queries for CoreNLP
 #'
-#' @param tokens     a token list data frame
-#' @param block      Optionally, .G_ID's to exclude from search. Can also be a data.table with nodes, as returned by
-#'                   find_nodes or get_quotes_alpino
-#'
-#' @return a data.table with nodes (as .G_ID) for id, source and quote
-get_quotes <- function(tokens) {
-  tokens = as_tokenindex(tokens_corenlp)
+#' @return A list with rynstax queries, as created with \link{tquery}
+#' @export
+corenlp_quote_queries <- function(say_verbs=CORENLP_SAY_VERBS) {
   
-  src_expr=list(relation__in=CORENLP_SUBJECT_RELS, rename="source")
-  quote_expr=list(relation__in=CORENLP_QUOTE_RELS, rename="quote")
+  subject_relations = c('su', 'nsubj', 'agent', 'nmod:agent') 
   
-  quotes_direct = find_nodes(tokens, lemma__in=CORENLP_SAY_VERBS, children=list(src_expr, quote_expr))
+  direct = tquery(lemma = CORENLP_SAY_VERBS, save='quote', 
+                         children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'))
   
-  # check for xcomp - subjects
-  quotes_nosrc = subset(find_nodes(tokens, lemma__in=CORENLP_SAY_VERBS, children=list(quote_expr)), !(id %in% quotes_direct$id))
-  xcomp_src = find_nodes(tokens, pos1="V", children=list(src_expr, xcomp=list(relation="xcomp", id__in=quotes_nosrc$id)))
-  xcomp_src$id = NULL
-  quotes_nosrc = merge(quotes_nosrc, xcomp_src, by.x="id", by.y="xcomp")[c("id", "source", "quote")]
+  nosrc = tquery(POS='VB*', save='quote',
+                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
+                 children(lemma = CORENLP_SAY_VERBS, relation='xcomp',
+                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), save='quote')))
   
-  # according to sentences
-  quotes_according = find_nodes(tokens, children=list(source=list("nmod:according_to", children=list(key=list(relation="case")))))
-  quotes_according = with(quotes_according, data.frame(id=key, source=source, quote=id))
+  according = tquery(save='quote',
+                     children(relation='nmod:according_to', save='source'))
   
-  rbind(quotes_direct, quotes_nosrc, quotes_according)
-  
+  list(direct=direct, nosrc=nosrc, according=according)
 }
   
 
@@ -88,4 +81,14 @@ get_clauses <- function(tokens, quotes=NULL) {
   clauses$subject[clauses$subject %in% subord_who] = clause_gps[clauses$subject %in% subord_who]
   
   clauses[c("clause_id", "subject", "predicate")]
+}
+
+
+function(){
+  tokens = as_tokenindex(tokens_corenlp)
+  
+  quote_queries = corenlp_quote_queries()  
+  quote_queries
+  nodes = apply_queries(tokens, quote_queries)
+  annotate_nodes(tokens, nodes, 'quotes')
 }

@@ -5,7 +5,7 @@
 #' 
 #' The default column names can be changed with \link{tokenindex_columns}. 
 #' 
-#' The data will be sorted by the doc_id and token_id columns (or aliases specified in \link{tokenindex_columns}).
+#' The data will be sorted by the doc_id, sentence and token_id columns (or aliases specified in \link{tokenindex_columns}).
 #' Accordingly, it is recommended to use numeric token_id's. 
 #' Some parsers return token_id's as numbers with a prefix (t_1, w_1), in which case sorting is inconvenient (t_15 > t_100).
 #'
@@ -79,8 +79,8 @@ check_colnames <- function(columns) {
 }
 
 check_tokens <- function(tokens) {
-  if (anyDuplicated(tokens, by = c(cname('doc_id'),cname('token_id')))) stop(sprintf('Cannot have duplicate doc_id - token_id pairs. ("%s" - "%s")', cname('doc_id'), cname('token_id')))
-  missing_parents = tokens[!tokens[,cname('doc_id','token_id'), with=F], on=cname('doc_id','token_id')]
+  #if (anyDuplicated(tokens, by = c(cname('doc_id'),cname('sentence'),cname('token_id')))) stop(sprintf('Cannot have duplicate doc_id - token_id pairs. ("%s" - "%s")', cname('doc_id'), cname('sentence'),cname('token_id')))
+  missing_parents = tokens[!tokens[,cname('doc_id','sentence','token_id'), with=F], on=cname('doc_id','sentence','token_id')]
   if (nrow(missing_parents) > 0) warning(sprintf('There are %s tokens with missing parents', nrow(missing_parents)))
 }
 

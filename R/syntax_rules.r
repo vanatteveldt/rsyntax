@@ -1,8 +1,8 @@
 #' Apply queries created with \link{tquery}
 #'
 #' @param tokens   A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).
-#' @param ...      tquery functions, as created with \link{tquery}. Can also be a list with tquery functions.
-#' @param as_chain If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument).
+#' @param ...      tqueries, as created with \link{tquery}. Can also be a list with tquery functions. It is recommended to use named arguments/lists, to name the tqueries. 
+#' @param as_chain If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument). Note that duplicate nodes can also easily be ignored afterwards in annotate_nodes().
 #' @param block    Optionally, specify ids (doc_id - token_id pairs) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 #'                 Can also be a data.table returned by (a previous) apply_queries, in which case all ids are blocked. 
 #' @param check    If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
@@ -28,7 +28,7 @@
 #' annotate(tokens, nodes, column = 'example')
 #' 
 #' @export
-apply_queries <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
+apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
   r = list(...)
   
   is_tquery = sapply(r, is, 'tQuery')
@@ -38,6 +38,7 @@ apply_queries <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
   
   for (i in 1:length(r)){
     .TQUERY_NAME = names(r)[i]
+    if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(is.null(.TQUERY_NAME), paste0('tq', i), as.character(.TQUERY_NAME))
     args = r[[i]]
     #nodes = find_nodes(tokens, )
@@ -45,54 +46,14 @@ apply_queries <- function(tokens, ..., as_chain=T, block=NULL, check=T) {
     l = c(args$lookup, args$nested, list(tokens=tokens, select=args$select, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME, e=parent.frame()))
     nodes = do.call(find_nodes, args = l)
     if (!is.null(nodes)) {
-      nodes[,.TQUERY := .TQUERY_NAME]
+      #nodes[,.TQUERY := .TQUERY_NAME]
       if (as_chain) block = block_ids(block, nodes)
       out[[i]] = nodes  
     }
   }
-  data.table::rbindlist(out, fill=T)
+  nodes = data.table::rbindlist(out, fill=T)
+  class(nodes) = c('rsyntaxNodes', class(nodes))
+  nodes
 } 
 
-recprint <- function(x, level=1, connector='└') {
-  if (level > 1) {
-    cat(rep('  ', level-1), connector, ifelse(x$level == 'children', ' c', ' p'), ' ', sep='')
-    if (!is.na(x$save)) cat(x$save, sep='') else cat('...', sep='')
-    
-    l = x$lookup
-    for (n in names(l)) {
-      v = if (class(l[[n]]) %in% c('factor','character')) paste0('"',l[[n]],'"') else l[[n]]
-      v = paste(v, collapse=',')
-      cat(', ', n, '=', v, sep='')
-    }
-    cat('\n', sep='')
-  }
-  for (i in seq_along(x$nested)) {
-    if (i == length(x$nested))
-      recprint(x$nested[[i]], level+1, '└')
-    else
-      recprint(x$nested[[i]], level+1, '├')
-  }
-}
-
-#' S3 print for tQuery class
-#'
-#' @param x a tQuery
-#' @param ... not used
-#'
-#' @method print tQuery
-#' @examples
-#' q = tquery(select = lemma %in% .VIND_VERBS, 
-#'                    children(save = 'source', p_rel=.SUBJECT_REL),
-#'                    children(p_rel='vc', select = POS %in% c('C', 'comp'),
-#'                             children(save='quote', p_rel=.SUBJECT_BODY)))
-#' q 
-#' @export
-print.tQuery <- function(x, ...) {
-  if (!is.na(x$save) &! x$save == '') cat(x$save, '\n', sep = '') else cat('...', sep='')
-  cat('\n', sep='')
-  recprint(x)
-}
-
-#queries = alpino_quote_queries()
-#print(queries)
 
