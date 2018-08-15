@@ -1,7 +1,9 @@
 ---
 title: "The rsyntax package"
-output: html_document
-editor_options: 
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
   chunk_output_type: console
 ---
 
@@ -42,7 +44,8 @@ There are four mandatory columns:
 The data.frame needs to have these columns, and by default uses these names, but this can be customized with the `tokenindex_columns()` function.
 
 ```{r}
-tokenindex_columns(doc_id = 'doc_id', sentence='sentence', token_id='token_id', parent='parent')  ## these are also the default values
+tokenindex_columns(doc_id = 'doc_id', sentence='sentence', 
+                   token_id='token_id', parent='parent')  ## these are also the default values
 ```
 
 We can now create the tokenindex. This verifies whether the mandatory columns are present, converts the data.frame to a data.table (of the data.table package), and creates a key and index for the global token (and parent) IDs. This enables the efficient lookup of parents/children.
