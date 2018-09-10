@@ -1,9 +1,9 @@
 #' Apply queries created with \link{tquery}
 #'
-#' @param tokens   A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).
+#' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param ...      tqueries, as created with \link{tquery}. Can also be a list with tquery functions. It is recommended to use named arguments/lists, to name the tqueries. 
-#' @param as_chain If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument). Note that duplicate nodes can also easily be ignored afterwards in annotate_nodes().
-#' @param block    Optionally, specify ids (doc_id - token_id pairs) where find_nodes will stop (ignoring the id and recursive searches through the id). 
+#' @param as_chain If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument). 
+#' @param block    Optionally, specify ids (doc_id - sentence - token_id triples) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 #'                 Can also be a data.table returned by (a previous) apply_queries, in which case all ids are blocked. 
 #' @param check    If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
 #'
@@ -38,13 +38,15 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
   
   for (i in 1:length(r)){
     .TQUERY_NAME = names(r)[i]
+    if (is.null(.TQUERY_NAME)) .TQUERY_NAME = ''
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
-    .TQUERY_NAME = ifelse(is.null(.TQUERY_NAME), paste0('tq', i), as.character(.TQUERY_NAME))
+    .TQUERY_NAME = ifelse(.TQUERY_NAME == '', paste0('tq', i), as.character(.TQUERY_NAME))
     args = r[[i]]
     #nodes = find_nodes(tokens, )
     #nodes = do.call(r[[i]], args = list(tokens=tokens, block=block, check=check, e=parent.frame()))
     l = c(args$lookup, args$nested, list(tokens=tokens, select=args$select, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME, e=parent.frame()))
     nodes = do.call(find_nodes, args = l)
+
     if (!is.null(nodes)) {
       #nodes[,.TQUERY := .TQUERY_NAME]
       if (as_chain) block = block_ids(block, nodes)
@@ -55,5 +57,3 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
   class(nodes) = c('rsyntaxNodes', class(nodes))
   nodes
 } 
-
-

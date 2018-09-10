@@ -3,124 +3,46 @@ title: "README"
 output: md_document
 ---
 
-R functions for working with syntactic structure coded as token lists (e.g. CONLL format)
+This repository contains the package `amcatr`,
+which has a number of useful functions for working with the AmCAT API in R.
 
-Installation
-====
+# Installing
 
-You can install directly from github:
 
-```{r, eval=F}
-library(devtools)
-install_github("vanatteveldt/rsyntax")
+You can install `amcatr` directly from this github repository uising devtools:
+
+```{r}
+if (!require(devtools)) {install.packages("devtools"); library(devtools)}
+install_github("amcat/amcat-r")
+```
+
+# Connecting
+
+Use the `amcat_connect()` function to connect to an AmCAT server. The typical mode of use is to 
+
+```{r}
+?amcat_co 
+library(amcatr)
+amcat.save.password("https://amcat.nl", username="example", password="secret")
+```
+
+Note: You only need to run this line once per computer, so *do not save this line* in a script, and certainly do not publish or email it, to avoid compromising the security of your account!
+
+Now, you can connect to AmCAT using `amcat.connect`.
+This requests an authentication token from the specified AmCAT server and stores it for further commands.
+The resulting data (named `conn`, below) is then used every time you call the API. 
+
+```r
+library(amcatr)
+conn = amcat.connect("https://amcat.nl")
 ```
 
 Usage
-====
+-----
 
-The functions in this module assume that you have a list of tokens in a data frame.
-A simple example is provided with the module:
+All functions in `amcatr` start with `amcat.` and you can use the built-in help functions to view documentation. 
 
-```{r, echo=F}
-head = function(...) knitr::kable(utils::head(...))
-```
+To help you get started with the AmCAT API, please see the following how-to guides:
 
-
-```{r, echo=F, message=F}
-library(rsyntax)
-tokens = as_tokenindex(tokens_corenlp)
-```
-
-Get the text of a sentence, optionally specifying which column(s) to use:
-
-```{r}
-get_text(tokens)
-get_text(tokens, word.column = c("lemma", "pos"))
-```
-
-Plot the syntactic structure of a sentence:
-(Note: if you have multiple sentences in one token list, you should filter it or provide a sentence= argument)
-
-```{r readme_example_plot, fig.path=".", fig.cap="Syntactic Structure of example sentence"}
-g = graph_from_sentence(tokens)
-plot(g)
-```
-
-Clauses and Sources
-====
-
-You can use the `get_quotes` function to extract quotes and paraphrases from the sentences.
-Note that for this, the token ids need to be globally unique. 
-If that is not the case, you can use the `unique.ids` function to make them unique:
-
-```{r}
-tokens = unique_ids(tokens)
-```
-
-You can get the quotes from the tokens with `get_quotes`:
-
-```{r}
-quotes = get_quotes(tokens)
-head(quotes)
-```
-
-A single quote was found, with node 2 ("say") as the key, node 1 ("John") as the  sources, and nodes 3 through 6 ("that Mary hit him") as quote. 
-
-To find the clauses, you can use the get_clauses function, which takes the quotes as an optional argument to make sure that speech actions are not listed as clauses:
-
-```{r}
-clauses = get_clauses(tokens, quotes=quotes)
-head(clauses)
-```
-
-You can annotate the original tokens file with the quotes and tokens to facilitate processing
-(e.g. to create a word cloud or topic model of all utterances per source):
-
-```{r}
-tokens = annotate_tokens(tokens, quotes, clauses)
-head(tokens)
-```
-
-Finally, you can also provide the quotes and clauses to the `graph_from_sentence` function. 
-This will fill the clauses in a desaturated rainbow, with the subject as a circle and the predicate as rectangle.
-Quotes are represented with a bright node for the source, and the border in the same colour for the quote.
-
-```{r readme_example_plot_clauses, fig.path=".", fig.cap="Syntactic Structure of example sentence with clauses and quotes marked"}
-g = graph_from_sentence(tokens)
-plot(g)
-```
-
-Use with coreNLP
-====
-
-You can use the coreNLP package to directly parse (English) sentences and create a token list. 
-
-First, initialize coreNLP and parse the sentence:
-
-```{r, message=F, echo=F}
-# note: the doc says the function will use CORENLP_HOME, but it doesn't seem to actually do so...
-coreNLP::initCoreNLP(libLoc=Sys.getenv("CORENLP_HOME"))
-```
-```{r, eval=F}
-coreNLP::initCoreNLP()
-```
-```{r}
-a = coreNLP::annotateString("John told Mary he loves her")
-```
-
-Now, you can create a token list from the coreNLP annotation and use that to compute sources and clauses as normal:
-
-```{r}
-tokens = tokens_from_coreNLP(a)
-quotes = get_quotes(tokens)
-clauses = get_clauses(tokens, quotes)
-tokens = annotate_tokens(tokens, quotes, clauses)
-head(tokens)
-```
-
-And plot the sentence:
-
-```{r readme_example_plot_corenlp, fig.path=".", fig.cap="Syntactic Structure of example sentence from coreNLP"}
-plot(graph_from_sentence(tokens))
-```
-
++ [Howto: Querying](howto/howto_query.md) deals with querying and metadata retrieval. 
++ [Howto: DTM](howto/howto_create_document_term_matrix.md) shows how you can create a document term matrix, and refers to usefull packages for computational text analysis. 

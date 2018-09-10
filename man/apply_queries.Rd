@@ -7,13 +7,13 @@
 apply_queries(tokens, ..., as_chain = F, block = NULL, check = T)
 }
 \arguments{
-\item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
+\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{...}{tqueries, as created with \link{tquery}. Can also be a list with tquery functions. It is recommended to use named arguments/lists, to name the tqueries.}
 
-\item{as_chain}{If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument). Note that duplicate nodes can also easily be ignored afterwards in annotate_nodes().}
+\item{as_chain}{If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument).}
 
-\item{block}{Optionally, specify ids (doc_id - token_id pairs) where find_nodes will stop (ignoring the id and recursive searches through the id). 
+\item{block}{Optionally, specify ids (doc_id - sentence - token_id triples) where find_nodes will stop (ignoring the id and recursive searches through the id). 
 Can also be a data.table returned by (a previous) apply_queries, in which case all ids are blocked.}
 
 \item{check}{If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.}

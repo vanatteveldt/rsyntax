@@ -13,8 +13,6 @@ Depends:
     Matrix
 Imports:
     data.table,
-    Rcpp (>= 0.12.12),
-LinkingTo: Rcpp
 LazyData: true
 Description: R library to help dealing with syntactic structure
 License: MIT license

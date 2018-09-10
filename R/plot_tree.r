@@ -2,21 +2,21 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
   if (!length(sentence_i) == 1) stop('Can only select one sentence_i') 
   if (!is.null(.DOC_ID)) {
     if (!length(.DOC_ID) == 1) stop('Can only select one doc_id') 
-    sent = tokens[list(.DOC_ID), on=cname('doc_id'), nomatch=0]
+    sent = tokens[list(.DOC_ID), on='doc_id', nomatch=0]
     if (nrow(sent) == 0) return(sent)
     if (is.null(.SENTENCE)) {
-      sentences = unique(sent[[cname('sentence')]])
+      sentences = unique(sent[['sentence']])
       if (length(sentences) < sentence_i) stop(sprintf('Cannot select sentence_i = %s, only %s sentences available', sentence_i, length(sentences)))
       .SENTENCE = sentences[sentence_i]
     }
     if (!length(.SENTENCE) == 1) stop('Can only select one sentence') 
-    sent = sent[list(.SENTENCE), on=cname('sentence'), nomatch=0]
+    sent = sent[list(.SENTENCE), on='sentence', nomatch=0]
   } else {
     if (!is.null(.SENTENCE)) stop('Cannot specificy "sentence" without specifying "doc_id"')
-    .DOC_SENT = unique(subset(tokens, select = cname('doc_id','sentence')))
+    .DOC_SENT = unique(subset(tokens, select = c('doc_id','sentence')))
     if (nrow(.DOC_SENT) < sentence_i) stop(sprintf('Cannot select sentence_i = %s, only %s sentences available', sentence_i, nrow(.DOC_SENT)))
     .DOC_SENT = .DOC_SENT[sentence_i,]
-    sent = tokens[.DOC_SENT, on=cname('doc_id','sentence'), nomatch=0]
+    sent = tokens[.DOC_SENT, on=c('doc_id','sentence'), nomatch=0]
   }
   sent
 }
@@ -26,7 +26,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' 
 #' Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
 #' 
-#' @param tokens      A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).
+#' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
@@ -45,24 +45,24 @@ plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var
   if (!relation_var %in% colnames(tokens)) relation_var = NULL
   
   nodes = get_sentence(tokens, doc_id, sentence, sentence_i)
-  data.table::setcolorder(nodes, union(cname('token_id'), colnames(nodes))) ## set token_id first for matching with edges
+  data.table::setcolorder(nodes, union('token_id', colnames(nodes))) ## set token_id first for matching with edges
   
   # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
-  edges = nodes[!is.na(nodes[[cname('parent')]]), cname('parent', 'token_id', 'relation'), with=F]
+  edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
   
-  label = nodes[[cname('token_id')]]
+  label = nodes[['token_id']]
   if (coref %in% colnames(tokens)) {
     has_coref = !is.na(nodes[[coref]]) & !nodes[[coref]] == ''
     label = ifelse(has_coref, paste0(label, ' - ', nodes[[coref]]), label)
   }
-  label = paste0(label, '\n', nodes[[cname('lemma')]])
-  label = paste0(label, '\n', '(', nodes[[cname('POS')]])
+  #label = paste0(label, '\n', nodes[['lemma']])
+  #label = paste0(label, '\n', '(', nodes[['POS']])
   label = paste0(label, ')')
   
   nodes$label = label 
   
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
-  root = nodes[[cname('token_id')]][is.na(nodes[['parent']])]
+  root = nodes[['token_id']][is.na(nodes[['parent']])]
   
   plot.new()
   par(mar=c(0,0,0,0))

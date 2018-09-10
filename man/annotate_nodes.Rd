@@ -2,14 +2,14 @@
 % Please edit documentation in R/annotate.r
 \name{annotate_nodes}
 \alias{annotate_nodes}
-\title{Annotate a tokenlist based on rsyntax queries}
+\title{Annotate a tokenlist based on rsyntaxNodes}
 \usage{
 annotate_nodes(tokens, nodes, column, rm_dup = T, fill = F,
   fill_block = NULL, check = F, with_tquery = F, show_fill = F,
   concat_dup = T)
 }
 \arguments{
-\item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
+\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
 
@@ -30,7 +30,8 @@ For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only add
 \item{concat_dup}{see rm_dup arugment.}
 }
 \description{
-Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
+Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
+Two columns will be added.
 One column contains the ids for each hit. The other column contains the annotations.
 Only nodes that are given a name in the tquery (using the 'save' parameter) will be added as annotation.
 }

@@ -55,9 +55,9 @@ tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested])
+    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], req=F)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL)
+    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, req=F)
   }
   
   class(q) = c('tQuery', class(q))
@@ -91,6 +91,8 @@ tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
 #' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
+#' @param req     Can be set to false to not make a node 'required'. This can be used to include optional nodes in queries. For instance, in a query for finding subject - verb - object triples, 
+#'                make the object optional.
 #' @param NOT     If TRUE, make having these parents/children a NOT condition.          
 #' @param depth   A positive integer, determining how deep parents/children are sought. The default, 1, 
 #'                means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
@@ -108,20 +110,20 @@ tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
 #' Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
 #' 
 #' @return Should not be used outside of \link{find_nodes}
-#' @name find_nodes_functions
-#' @rdname find_nodes_functions
+#' @name nested_nodes
+#' @rdname nested_nodes
 NULL
 
-#' @rdname find_nodes_functions
+#' @rdname nested_nodes
 #' @export
-children <- function(..., select=NULL, g_id=NULL, save=NA, NOT=F, depth=1) {
+children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, NOT=F, depth=1) {
   select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', NOT=NOT, depth=depth)
+    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', NOT=NOT, depth=depth)
+    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth)
   }
   
   
@@ -129,16 +131,16 @@ children <- function(..., select=NULL, g_id=NULL, save=NA, NOT=F, depth=1) {
   q
 }
 
-#' @rdname find_nodes_functions
+#' @rdname nested_nodes
 #' @export
-parents <- function(..., select=NULL, g_id=NULL, save=NA, NOT=F, depth=1) {
+parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, NOT=F, depth=1) {
   select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', NOT=NOT, depth=depth)
+    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', NOT=NOT, depth=depth)
+    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth)
   }
   
   class(q) = c('tQueryParent', class(q))

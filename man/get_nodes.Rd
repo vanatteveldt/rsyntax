@@ -8,7 +8,7 @@ get_nodes(tokens, nodes, use = NULL, fill = T, token_cols = c("token"),
   block = NULL, show_fill = F)
 }
 \arguments{
-\item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
+\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
 

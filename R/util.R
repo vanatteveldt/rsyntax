@@ -1,8 +1,8 @@
 get_children_i <- function(tokens, i) {
   tokens = as_tokenindex(tokens)
-  select = tokens[i,cname('doc_id','token_id'), with=F]
+  select = tokens[i,c('doc_id','token_id'), with=F]
   data.table::setnames(select, c('doc_id','parent'))
-  children = tokens[select, on=cname('doc_id','parent'), nomatch=0, which=T]
+  children = tokens[select, on=c('doc_id','parent'), nomatch=0, which=T]
   if (length(children) > 0) children = union(children, get_children_i(tokens, children)) 
   union(i, children)
 }
@@ -64,4 +64,24 @@ tokens_from_coreNLP <- function(a) {
   tokens$pos1 = substr(tokens$POS, 1, 1)
   tokens = plyr::arrange(tokens, sentence, id)
   unique_ids(tokens, context=tokens$sentence)
+}
+
+
+safe_melt <- function(d, variable.name='variable', measure.vars=NULL, ...){
+  ## melt with silly hack for duplicate columns
+  dup = duplicated(colnames(d))
+  
+  if (!any(dup)) return(data.table::melt(d, variable.name=variable.name, measure.vars=measure.vars, ...))
+ 
+  dupnames = colnames(d)[dup]
+  dup = colnames(d) %in% dupnames
+  colnames(d)[dup] = paste(colnames(d)[dup], 1:sum(dup), sep='#DUPLICATE#')
+  if (!is.null(measure.vars)) {
+    measure.vars = setdiff(measure.vars, dupnames)
+    measure.vars = c(measure.vars, grep('#DUPLICATE#', colnames(d), fixed = T, value = T))
+  }
+  d = data.table::melt(d, variable.name=variable.name, measure.vars=measure.vars, ...)
+  levels(d[[variable.name]]) = gsub('#DUPLICATE#[0-9]*', '', levels(d[[variable.name]]))
+  d[[variable.name]] = as.factor(as.character(d[[variable.name]]))
+  d
 }

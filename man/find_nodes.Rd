@@ -9,7 +9,7 @@ find_nodes(tokens, ..., select = NULL, g_id = NULL, save = NA,
   e = parent.frame())
 }
 \arguments{
-\item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
+\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 

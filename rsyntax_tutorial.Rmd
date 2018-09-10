@@ -41,29 +41,22 @@ There are four mandatory columns:
 * *token_id*: the id of the token (preferably according to position in the document or sentence) as numeric values. The global token ID is the combination of the document, sentence and token_id, and has to be unique.
 * *parent*: the id of the token's parent in the dependency tree. Specifically, parent points to the token_id within the same document-sentence pair.
 
-The data.frame needs to have these columns, and by default uses these names, but this can be customized with the `tokenindex_columns()` function.
-
-```{r}
-tokenindex_columns(doc_id = 'doc_id', sentence='sentence', 
-                   token_id='token_id', parent='parent')  ## these are also the default values
-```
-
 We can now create the tokenindex. This verifies whether the mandatory columns are present, converts the data.frame to a data.table (of the data.table package), and creates a key and index for the global token (and parent) IDs. This enables the efficient lookup of parents/children.
 
 ```{r}
 tokens = data(tokens_corenlp)  ## demo data included in rsyntax
-tokens = tokens_corenlp[23:32,] ## we'll use a selection for this demo
+tokens = tokens_corenlp[23:32,] ## a selection for this demo
 tokens = as_tokenindex(tokens)
 tokens
 ```
 
 ## Querying the token index
 
-We can now look for nodes in the token index. This can be done directly with the `find_nodes()` function, or we first make a query with `tquery()` and then apply it with `apply_queries()`. The `find_nodes()` function is usefull for single queries or to develop and try out new queries. For now, we will focus on the slightly more verbose combination of `tquery()` and `apply_queries()`, which should be more intuitive.
+We can now look for nodes in the token index using the `tquery()` and `apply_queries()` functions. The `tquery()` function is used to create token queries, and the `apply_queries()` function is used to apply one or multiple queries on the tokenindex. 
+
 
 ### Using tquery() and apply_queries()
 
-The `tquery()` function is used to create token queries, and the `apply_queries()` function is used to apply one or multiple queries on the tokenindex. 
 In the `tquery()` function, the query terms are given as name-value pairs, in which the name has to correspond to a column in the tokenindex, and the value is a vector with query terms. By default, queries use case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character). There are more advanced query options, but we'll ignore these for now.
 
 The first argument for `apply_queries()` is the tokenindex (here named `tokens`). Next, any number of queries can be added as (named) arguments. If a named argument is used (recommended) the name will be used in the unique ids for the results, which is convenient later on.
@@ -98,7 +91,7 @@ apply_queries(tokens, q1=q)
 
 Now the output has two node columns: "verb" and "subject". Also note that there are fewer results. This is because all the verbs that did not have a child with a subject relation do not match the query. 
 
-We can now annotate the tokens (tokenindex) based on the nodes found with the tquery. This is also a good way to inspect whether the tquery works as intended. For this we use the `annotate_nodes()` function, which has three mandatory arguments: the tokenindex, the nodes, and a name for the column that is added to the tokenindex.
+We can now annotate the tokens (tokenindex) based on the nodes found with the tquery. This is also a good way to inspect whether the tquery works as intended. For this we use the `annotate_nodes()` function, which has three mandatory arguments: the tokenindex, the nodes, and a name for the column that is added to the tokenindex. 
 
 ```{r}
 nodes = apply_queries(tokens, q1=q)
@@ -157,6 +150,14 @@ annotate_nodes(tokens, nodes, column='nodes', fill = T)
 
 Now, every node under "verb" (children, grandchildren, etc.) is coded as "verb", and every node under "subject" is coded as "subject". The exception is nodes that are already coded. For instance, "John" is also a child of "loves", but since the "John" node is already coded as subject, it will not be filled as "verb". 
 
-Using fill makes it possible to easily extract usefull sub-sentences, without having to write many elaborate queries for matching all possible patterns. The tradeoff is that it is crude, and should thus only be seen as a heuristic. 
+Using fill makes it possible to easily extract usefull sub-sentences, without having to write many elaborate queries for matching all possible patterns. 
 
 
+## More complex queries
+
+```{r}
+tokens = as_tokenindex(tokens_corenlp)
+
+quote_queries = corenlp_quote_queries()
+annotate(tokens, quote_queries, column='quotes', fill=T)
+```

@@ -4,7 +4,8 @@
 \alias{as_tokenindex}
 \title{Prepare a tokenIndex}
 \usage{
-as_tokenindex(tokens)
+as_tokenindex(tokens, doc_id = "doc_id", sentence = "sentence",
+  token_id = "token_id", parent = "parent")
 }
 \arguments{
 \item{tokens}{}
@@ -12,11 +13,10 @@ as_tokenindex(tokens)
 \description{
 Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
 Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent) are present.
+Alternative column names can be given, in which case the
 }
 \details{
-The default column names can be changed with \link{tokenindex_columns}.
-
-The data will be sorted by the doc_id, sentence and token_id columns (or aliases specified in \link{tokenindex_columns}).
+The data will be sorted by the doc_id, sentence and token_id columns.
 Accordingly, it is recommended to use numeric token_id's. 
 Some parsers return token_id's as numbers with a prefix (t_1, w_1), in which case sorting is inconvenient (t_15 > t_100).
 }

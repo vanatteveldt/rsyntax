@@ -4,6 +4,8 @@ test_that("find_nodes works", {
   library(testthat)
   tokens = as_tokenindex(tokens_dutchquotes)
   
+  nrow(find_nodes(tokens, lemma__N = "Rutte"))
+  
   dat = find_nodes(tokens, save='id', select = lemma == 'dat')
   expect_equal(nrow(dat), 1)
   expect_equal(dat$id, 45)
@@ -45,4 +47,21 @@ test_that("find_nodes works", {
   
   expect_equal(nrow(family), 1)
   expect_equal(colnames(family), c('doc_id','sentence','.ID','parent','grandparent','child','grandchild'))
+  
+  # test using req for optional arguments
+  test_req = tokens_corenlp
+  nodes1 = find_nodes(test_req, POS = 'VB*', save='verb',
+                     children(relation = 'nsubj', save='subject'),
+                     children(relation = 'dobj', save='object', req=F))
+  nodes2 = find_nodes(test_req, POS = 'VB*', save='verb',
+                     children(relation = 'nsubj', save='subject'),
+                     children(relation = 'dobj', save='object', req=T))
+  nodes3 = find_nodes(test_req, POS = 'VB*', save='verb',
+                      children(relation = 'nsubj', save='subject'))
+  expect_equal(nrow(nodes1), nrow(nodes3))
+  expect_true(nrow(nodes2) < nrow(nodes1))
+  
+  find_nodes(test_req, POS = 'VB*', save='verb',
+                      children(relation = 'nsubj', save='subject'),
+                      children(relation = 'dobj', save='object', req=F))
 })

@@ -9,7 +9,7 @@ plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
   label_size = 0.9, node_size = 30, edge_label_size = 0.8)
 }
 \arguments{
-\item{tokens}{A tokenIndex data.table, created with \link{as_tokenindex}, or any data.frame with the required columns (see \link{tokenindex_columns}).}
+\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{sentence_i}{By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)}
 

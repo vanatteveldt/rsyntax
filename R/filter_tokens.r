@@ -7,10 +7,10 @@ filter_tokens <- function(tokens, lookup=list(), select='NULL', .G_ID=NULL, .G_P
   
   i = NULL
   null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) 
-  if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]], .G_ID[[3]]), on=c(cname('doc_id'),cname('sentence'),cname('token_id')), which=T])
-  if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]], .G_PARENT[[3]]), on=c(cname('doc_id'),cname('sentence'),cname('parent')), which=T])
+  if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]], .G_ID[[3]]), on=c('doc_id','sentence','token_id'), which=T])
+  if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]], .G_PARENT[[3]]), on=c('doc_id','sentence','parent'), which=T])
   .BLOCK = block_ids(.BLOCK)
-  if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]], .BLOCK[[3]]), on=c(cname('doc_id'),cname('sentence'),cname('token_id')), which=T])
+  if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]], .BLOCK[[3]]), on=c('doc_id','sentence','token_id'), which=T])
   if (!is.null(i)) {
     i = na.omit(i)
     tokens = tokens[as.numeric(i),]  
@@ -32,6 +32,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
   for (lookup_i in seq_along(lookup)) {
     .N = names(lookup)[lookup_i]
     .V = lookup[[lookup_i]]
+    if (is.null(.V)) next
     
     if (is(.V, 'tokenLookup')) {
       result = lookup_tokens(tokens, .V$lookup, boolean=.V$boolean)
@@ -39,6 +40,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
       .COLNAME = gsub('__.*', '', .N)
       if (!.COLNAME %in% colnames(tokens)) stop(sprintf('%s is not a valid column name in tokens', .N))
       if (use_index) if (!.N %in% data.table::indices(tokens)) data.table::setindexv(tokens, .COLNAME)
+
       .V = prepare_terms(.V, tokens[[.COLNAME]], 
                          ignore_case = grepl('__N?R?F?I', .N), 
                          regex = grepl('__N?I?F?R', .N),
@@ -46,7 +48,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
       if (!grepl('__R?I?L?N', .N)) {
         result = tokens[list(.V), on=(.COLNAME), which=T]
       } else {
-        result = tokens[!list(.V), on=(.N), which=T]
+        result = tokens[!list(.V), on=(.COLNAME), which=T]
       }
     }
     if (is.null(i)) {
