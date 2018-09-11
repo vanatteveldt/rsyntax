@@ -10,6 +10,7 @@ Depends:
     reshape2,
     plyr,
     colorspace,
+    stringi,
     Matrix
 Imports:
     data.table,

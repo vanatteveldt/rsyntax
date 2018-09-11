@@ -244,7 +244,7 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
   if ('.MATCH_ID' %in% colnames(tokens)) tokens[, .MATCH_ID := NULL]
 
   if (level == 'children') {
-    id = tokens[list(ids[[1]], ids[[2]], ids[[3]]), on=c('doc_id','sentence','parent'), nomatch=0]
+    id = tokens[list(ids[[1]], ids[[2]], ids[[3]]), on=c('doc_id','sentence','parent'), nomatch=0, allow.cartesian=T]
     id = filter_tokens(id, .BLOCK=block)
     if (minimal) id = subset(id, select = c('doc_id','sentence','token_id','parent'))
     data.table::set(id, j = '.MATCH_ID', value = id[['parent']])
@@ -269,9 +269,16 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
   id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed (don't think this actually requires reallocation).
   id_list[[1]] = id
   i = 2
+  safety_depth = if (depth == Inf) max(tokens$token_id) else depth
   while (i <= depth) {
+    if (i == safety_depth) {
+      warning(sprintf('Safety depth threshold was reached (max token_id), which probably indicates an infinite loop in deep_family(), due to a type of cyle not taken into account. Please make a GitHub issue if you see this'))
+      break
+    }
     .NODE = id_list[[i-1]]
     if (!replace) block = block_ids(block, .NODE[,c('doc_id','sentence','token_id'), with=F])
+    #print(.NODE)
+    #.NODE = subset(.NODE, .NODE$token_id %in% unique(.NODE$parent)) ## prevent infinite loops
     
     if (level == 'children') {
       id = filter_tokens(tokens, .G_PARENT = .NODE[,c('doc_id','sentence','token_id')], .BLOCK=block)
@@ -284,6 +291,7 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
       id = merge(id, subset(.NODE, select = c('doc_id','sentence','parent', '.MATCH_ID')), by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','parent'), allow.cartesian=T)
       id_list[[i]] = if (minimal) subset(id, select = c('doc_id','sentence','token_id','parent','.MATCH_ID')) else id
     }
+    #print(nrow(id_list[[i]]))
     if (nrow(id_list[[i]]) == 0) break
     i = i + 1
   }

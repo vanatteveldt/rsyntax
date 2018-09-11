@@ -33,16 +33,16 @@ spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=N
 #' @param verbs         A character vector with verbs used to indicate clauses. If NULL (default), all verbs are used (except those listed in exclude verbs)
 #' @param exclude_verbs A character vector with verbs that are not used in clauses. By default, this is the list of ENGLISH_SAY_VERBS, 
 #'                      which are the verbs used in the spacy_english__quote_queries(). If set to NULL, no verbs are excluded.
-#' @param tokens     a token list data frame
-#'
+#' @param with_subject  If True, subject nodes will be "saved" as "subject" 
+#' @param with_object   Same for object nodes
+#' @param sub_req       If True, subject nodes are required (must be matched). By default this is true.
+#' @param ob_req        Same for object nodes. By default this is false.
+#' 
 #' @return a data.table with nodes (as .G_ID) for id, subject and predicate
 #' @export
-spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F) {
+spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F, sub_req=T, ob_req=F) {
   subject_name = if (with_subject) 'subject' else 'predicate'
   object_name = if (with_object) 'object' else 'predicate'
-  
-  sub_req = T
-  ob_req = F
   
   #tokens = as_tokenindex(tokens_spacy_english_)
   

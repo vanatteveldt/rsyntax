@@ -82,6 +82,8 @@ annotate_nodes <- function(tokens, nodes, column, rm_dup=T, fill=F, fill_block=N
   } 
   
   tokens = merge(tokens, .NODES, by=c('doc_id','sentence','token_id'), all.x=T, allow.cartesian = T)
+  if (!is.factor(tokens[[column]])) tokens[[column]] = as.factor(tokens[[column]])
+  if (!is.factor(tokens[[id_column]])) tokens[[id_column]] = as.factor(tokens[[id_column]])
   as_tokenindex(tokens)
  
 }
@@ -148,7 +150,7 @@ prepare_long_nodes <- function(tokens, nodes, use=NULL, fill=T, rm_dup=T, check=
       add = token_family(tokens, ids=unique(.NODES[,c('doc_id','sentence','token_id')]), level='children', depth=Inf, minimal=T, block=fill_block, replace = F)
     }
     add = merge(add, .NODES, by.x=c('doc_id','sentence','.MATCH_ID'), by.y=c('doc_id','sentence','token_id'), allow.cartesian = T)
-    if (!rm_dup) .NODES[,.FILL_LEVEL := 0]
+    if (!rm_dup) .NODES$.FILL_LEVEL = 0
     if (show_fill) {
       .NODES[,.FILL := F]
       add[,.FILL := T]
