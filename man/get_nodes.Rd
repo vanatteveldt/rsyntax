@@ -4,8 +4,8 @@
 \alias{get_nodes}
 \title{Transform the nodes to long format and match with token data}
 \usage{
-get_nodes(tokens, nodes, use = NULL, fill = T, token_cols = c("token"),
-  block = NULL, show_fill = F)
+get_nodes(tokens, nodes, use = NULL, fill = T,
+  token_cols = c("token"), block = NULL, show_fill = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}

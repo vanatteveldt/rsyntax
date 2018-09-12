@@ -7,7 +7,7 @@ get_quotes <- function(tokens, block=NULL) {
 }
 
 get_clauses <- function(tokens, block=NULL){
-  queries = corenlp_clause_queries()
+  queries = corenlp_clause_queries(with_object = T)
   apply_queries(tokens, queries, as_chain=T, block = block, check = F)
 }
 
@@ -26,7 +26,7 @@ get_clauses <- function(tokens, block=NULL){
 
 test_that("extracting quotes works with coreNLP", {
   tokens = as_tokenindex(tokens_corenlp)
-  
+  library(testthat)
   #John says Mary is great.
   quotes = get_quotes(tokens[tokens$sentence == 1,])
   testthat::expect_equal(nrow(quotes), 2)
@@ -56,6 +56,7 @@ test_that("extracting clauses works with coreNLP", {
   # John loves Mary
   clauses = get_clauses(tokens[tokens$sentence == 4,])
   testthat::expect_equal(nrow(clauses), 1)
+  clauses
   .check(tokens, clauses, subject="John", predicate="love", object='Mary')
   
   # Mary is loved by John

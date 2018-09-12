@@ -50,8 +50,8 @@ corenlp_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
 #' @return a data.table with nodes (as .G_ID) for id, subject and predicate
 #' @export
 corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F) {
-  subject_name = if (with_subject) 'subject' else 'predicate'
-  object_name = if (with_object) 'object' else 'predicate'
+  subject_name = if (with_subject) 'subject' else NA
+  object_name = if (with_object) 'object' else NA
 
   #tokens = as_tokenindex(tokens_corenlp)
   

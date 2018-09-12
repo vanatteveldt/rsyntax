@@ -17,5 +17,5 @@ Imports:
 LazyData: true
 Description: R library to help dealing with syntactic structure
 License: MIT license
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
 Suggests: testthat

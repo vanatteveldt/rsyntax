@@ -63,21 +63,19 @@ alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
 alpino_clause_queries <- function(verbs=NULL, exclude_verbs=DUTCH_SAY_VERBS, with_subject=T, with_object=F) {
   
   passive = tquery(POS = 'verb', lemma__N = exclude_verbs, save='predicate',
-                        parents(save='predicate', lemma = c('zijn','worden','hebben')),
+                        parents(lemma = c('zijn','worden','hebben')),
                         children(lemma = c('door','vanwege','omwille'), 
                                  children(save='subject', relation='obj1')))
   
   ## [subject] [has/is/etc.] [verb] [object]
-  perfect = tquery(POS = 'verb', lemma__N = exclude_verbs, save='predicate',
-                        parents(save='predicate', lemma = c('zijn','worden','hebben')),
+  perfect = tquery(POS = 'verb', lemma__N = exclude_verbs, 
+                   parents(save='predicate', lemma = c('zijn','worden','hebben')),
                         children(save='subject', relation=c('su')))
   
   ## [subject] [verb] [object]
-  active = tquery(save='predicate', POS = 'verb', lemma__N = exclude_verbs,
-                         children(save='subject', relation=c('su')),
-                         children(NOT=T, POS = 'adj',                 ## cannot have children that are adj if the key (parent of child)
-                                  parents(lemma = dutch$passive_vc))) ## is a passive verb. Excludes reality (e.g., "Joe was defeated") 
-  
+  active = tquery(save='predicate', POS = 'verb', relation__N = 'vc', lemma__N = exclude_verbs,
+                         children(save='subject', relation=c('su')))
+
   ## [subject] [verb] 
   catch_rest = tquery(save='predicate', POS = 'verb', lemma__N = exclude_verbs,
                 children(save='subject', relation=c('su')))

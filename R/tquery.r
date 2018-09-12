@@ -59,9 +59,16 @@ tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
   } else {
     q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, req=F)
   }
-  
+  check_duplicate_names(q)
   class(q) = c('tQuery', class(q))
   q
+}
+
+
+check_duplicate_names <- function(tq, save_names=c()) {
+  if (!is.na(tq$save)) save_names = c(save_names, tq$save)
+  if (anyDuplicated(save_names)) stop('tquery cannot contain duplicate "save" values')
+  for (n in tq$nested) check_duplicate_names(n, save_names)
 }
 
 #' Search for parents or children in tquery

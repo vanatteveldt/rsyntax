@@ -4,7 +4,8 @@
 \alias{spacy_english_quote_queries}
 \title{Returns a list with the quote queries for spacy_english_}
 \usage{
-spacy_english_quote_queries(verbs = ENGLISH_SAY_VERBS, exclude_verbs = NULL)
+spacy_english_quote_queries(verbs = ENGLISH_SAY_VERBS,
+  exclude_verbs = NULL)
 }
 \arguments{
 \item{verbs}{A character vector with verbs used to indicate quotes ("say", "report", "admit", etc.). A default list of verbs is provided

@@ -91,18 +91,17 @@ test_that("extracting clauses works", {
   # passive: subject <- is/becomes verb <- object
   clauses = get_clauses(tokens[tokens$sentence == 3,])
   expect_equal(nrow(clauses), 1)
-  .check(tokens, clauses, predicate = c('zijn','slaan'), subject="Jantje")
+  .check(tokens, clauses, predicate = c('slaan'), subject="Jantje")
 
-  
   # passive: object <- is/becomes verb <- subject (complex subject; should this be filtered on nouns?)
   clauses = get_clauses(tokens[tokens$sentence == 4,])
   expect_equal(nrow(clauses), 1)
-  .check(tokens, clauses, predicate = c('zijn','schrikken'), subject="aanval")
+  .check(tokens, clauses, predicate = c('schrikken'), subject="aanval")
   
   # quote and clause: object says: subject -> verb -> object
   clauses = get_clauses(tokens[tokens$sentence == 5,])
   expect_equal(nrow(clauses), 1)
-  .check(tokens, clauses, predicate = c('slaan','hebben'), subject="Jantje")
+  .check(tokens, clauses, predicate = c('hebben'), subject="Jantje")
   
   # quote, clause and negation: subject says: subject -> dit not verb -> object
   quotes = get_quotes(tokens[tokens$sentence == 6,])

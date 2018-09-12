@@ -62,6 +62,7 @@ find_nodes <- function(tokens, ..., select=NULL, g_id=NULL, save=NA, block=NULL,
   if (!class(substitute(select)) %in% c('name','character')) select = deparse(substitute(select))
   
   ids = filter_tokens(tokens, lookup, select=select, .G_ID=g_id, .BLOCK=block, e=e, use_index = use_index)
+
   ids = subset(ids, select = c('doc_id','sentence','token_id'))
   if (length(ids) == 0) return(NULL)
   if (length(nested) > 0) {
@@ -116,7 +117,8 @@ create_unique_key <- function(nodes, name){
   #} else {
   #  key = paste0(name, '(', nodes$.ID, ')')
   #}        
-  key = paste0(name, '#', match(nodes$.ID, unique(nodes$.ID)))
+  #key = paste0(name, '#', match(nodes$.ID, unique(nodes$.ID)))
+  key = paste0(name, '#', 1:nrow(nodes))
   nodes$.ID = key
   return(nodes)
 }
@@ -225,9 +227,17 @@ rec_find <- function(tokens, ids, ql, e=parent.frame(), block=NULL) {
 select_tokens <- function(tokens, ids, q, e, block=NULL) {
   .MATCH_ID = NULL ## bindings for data.table
   
+
   selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=T)
   if (!data.table::haskey(selection)) data.table::setkeyv(selection, c('doc_id','sentence','token_id'))
 
+  if ('.RECURSIVE' %in% colnames(selection)) {
+    ## experimental. Currently only used if .RECURSIVE is added manually to tokens before running find_nodes
+    ## Might be usefull to let certain nodes, such as conjuctions, include parents recursively 
+    ## current issue: root of query not expanded. filter tokens also needs to be able to look for nodes recursively. 
+    ## in the sense that nodes with .RECURSIVE are filled till a valid token is found
+    selection = deep_family(tokens, selection, level=q$level, depth=Inf, minimal=F, block=NULL, replace=T, show_level=F, condition_col='.RECURSIVE', only_new=F) 
+  }
   selection = filter_tokens(selection, q$lookup, select = q$select, .G_ID = q$g_id)
   
   selection = subset(selection, select=c('.MATCH_ID', 'doc_id','sentence','token_id'))
@@ -261,11 +271,10 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
   
   if (depth > 1) id = deep_family(tokens, id, level, depth, minimal=minimal, block=block, replace=replace, show_level=show_level) 
   if (depth <= 1 && show_level) id = cbind(.FILL_LEVEL=rep(1,nrow(id)), id)
-    
   id
 }
 
-deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F, show_level=F) {
+deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F, show_level=F, condition_col=NULL, only_new=F) {
   id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed (don't think this actually requires reallocation).
   id_list[[1]] = id
   i = 2
@@ -283,19 +292,24 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
     if (level == 'children') {
       id = filter_tokens(tokens, .G_PARENT = .NODE[,c('doc_id','sentence','token_id')], .BLOCK=block)
       id = merge(id, subset(.NODE, select = c('doc_id','sentence','token_id','.MATCH_ID')), by.x=c('doc_id','sentence','parent'), by.y=c('doc_id','sentence','token_id'), allow.cartesian=T)
+      if (!is.null(condition_col)) id = subset(id, id[[condition_col]])
       id_list[[i]] = if (minimal) subset(id, select = c('doc_id','sentence','token_id','parent','.MATCH_ID')) else id
     }
   
     if (level == 'parents') {
+      if (!is.null(condition_col)) .NODE = subset(.NODE, .NODE[[condition_col]])
       id = filter_tokens(tokens, .G_ID = .NODE[,c('doc_id','sentence','parent')], .BLOCK=block)
       id = merge(id, subset(.NODE, select = c('doc_id','sentence','parent', '.MATCH_ID')), by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','parent'), allow.cartesian=T)
       id_list[[i]] = if (minimal) subset(id, select = c('doc_id','sentence','token_id','parent','.MATCH_ID')) else id
     }
+    
+    
     #print(nrow(id_list[[i]]))
     if (nrow(id_list[[i]]) == 0) break
     i = i + 1
   }
-
+  
+  if (only_new) id_list[[1]] = NULL
   if (show_level) {
     id_list = id_list[!sapply(id_list, is.null)]   ## in older version of data.table R breaks (badly) if idcol is used in rbindlist with NULL values in list
     return(data.table::rbindlist(id_list, use.names = T, idcol = '.FILL_LEVEL'))

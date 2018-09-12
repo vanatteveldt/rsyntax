@@ -9,9 +9,8 @@ ENGLISH_SAY_VERBS = c("tell", "show", " acknowledge", "admit", "affirm", "allege
 #' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
 spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
-  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='verb', 
-                  children(dep_rel=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
-                  children(save='quote'))
+  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='quote', 
+                  children(dep_rel=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'))
   
   nosrc = tquery(pos='VERB*', 
                  children(dep_rel= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
@@ -41,8 +40,8 @@ spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=N
 #' @return a data.table with nodes (as .G_ID) for id, subject and predicate
 #' @export
 spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F, sub_req=T, ob_req=F) {
-  subject_name = if (with_subject) 'subject' else 'predicate'
-  object_name = if (with_object) 'object' else 'predicate'
+  subject_name = if (with_subject) 'subject' else NA
+  object_name = if (with_object) 'object' else NA
   
   #tokens = as_tokenindex(tokens_spacy_english_)
   

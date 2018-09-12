@@ -6,11 +6,11 @@
 \alias{parents}
 \title{Search for parents or children in tquery}
 \usage{
-children(..., select = NULL, g_id = NULL, save = NA, req = T, NOT = F,
-  depth = 1)
+children(..., select = NULL, g_id = NULL, save = NA, req = T,
+  NOT = F, depth = 1)
 
-parents(..., select = NULL, g_id = NULL, save = NA, req = T, NOT = F,
-  depth = 1)
+parents(..., select = NULL, g_id = NULL, save = NA, req = T,
+  NOT = F, depth = 1)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
