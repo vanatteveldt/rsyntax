@@ -49,7 +49,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
 
     if (!is.null(nodes)) {
       #nodes[,.TQUERY := .TQUERY_NAME]
-      if (as_chain) block = block_ids(block, nodes)
+      if (as_chain) block = get_long_ids(block, nodes)
       out[[i]] = nodes  
     }
   }

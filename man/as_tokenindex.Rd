@@ -5,7 +5,7 @@
 \title{Prepare a tokenIndex}
 \usage{
 as_tokenindex(tokens, doc_id = "doc_id", sentence = "sentence",
-  token_id = "token_id", parent = "parent")
+  token_id = "token_id", parent = "parent", relation = "relation")
 }
 \arguments{
 \item{tokens}{A data.frame, data.table, or tokenindex.}

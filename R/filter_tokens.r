@@ -9,7 +9,7 @@ filter_tokens <- function(tokens, lookup=list(), select='NULL', .G_ID=NULL, .G_P
   null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) 
   if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]], .G_ID[[3]]), on=c('doc_id','sentence','token_id'), which=T])
   if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]], .G_PARENT[[3]]), on=c('doc_id','sentence','parent'), which=T])
-  .BLOCK = block_ids(.BLOCK)
+  .BLOCK = get_long_ids(.BLOCK)
   if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]], .BLOCK[[3]]), on=c('doc_id','sentence','token_id'), which=T])
   if (!is.null(i)) {
     i = na.omit(i)

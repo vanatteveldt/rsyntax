@@ -49,30 +49,30 @@ corenlp_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
 #'
 #' @return a data.table with nodes (as .G_ID) for id, subject and predicate
 #' @export
-corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F) {
+corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F, sub_req=T, ob_req=F) {
   subject_name = if (with_subject) 'subject' else NA
   object_name = if (with_object) 'object' else NA
 
   #tokens = as_tokenindex(tokens_corenlp)
   
   direct = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
-                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name),
-                  children(relation = c('dobj'), save=object_name, req=F)) 
+                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                  children(relation = c('dobj'), save=object_name, req=ob_req)) 
  
   
   passive = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
                   children(relation = 'nmod:agent', save=subject_name, req=F),
-                  children(relation = 'nsubjpass', save=object_name, req=F)) 
+                  children(relation = 'nsubjpass', save=object_name, req=ob_req)) 
   
   copula_direct = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs,
                          parents(save='predicate',
-                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=T),
-                                 children(relation = c('dobj'), save=object_name, req=F))) 
+                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                                 children(relation = c('dobj'), save=object_name, req=ob_req))) 
   
   copula_passive = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs,
                          parents(save='predicate',
-                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=T),
-                                 children(relation = c('dobj'), save=object_name, req=F))) 
+                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                                 children(relation = c('dobj'), save=object_name, req=ob_req))) 
   
         
   list(direct=direct, passive=passive, copula_direct=copula_direct, copula_passive=copula_passive)

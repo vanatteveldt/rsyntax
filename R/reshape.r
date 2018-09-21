@@ -13,7 +13,7 @@
 #' @export
 #'
 #' @examples
-cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL){
+cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL, rm.na=T){
   mode = if (collapse_id) 'collapse' else 'each'
   out = NULL
   for (i in seq_along(by)) {
@@ -22,7 +22,7 @@ cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL){
     if (!column %in% colnames(tokens)) stop(sprintf('%s is not a valid column in tokens', column))
     if (!group %in% levels(tokens[[column]])) stop(sprintf('%s is not a valid value in tokens$%s', group, column))
     tg = get_token_group(tokens, column=column, group=group, rows=NULL, group_values=id, mode=mode)
-    out = if (is.null(out)) tg else merge(out, tg, by=c('doc_id','sentence','token_id'))
+    out = if (is.null(out)) tg else merge(out, tg, by=c('doc_id','sentence','token_id'), all=!rm.na, allow.cartesian=T)
   }
   
   id_cols = paste(names(by), 'id', sep='_')
@@ -157,7 +157,7 @@ get_token_group <- function(tokens, column, group, rows, group_values, mode) {
   }  else {
     out = subset(tokens, subset=tokens[[column]] %in% rows, select = c('doc_id','sentence','token_id',column_id))
   }
-  merge(out, ids, by.x = column_id, by.y = 'id')
+  merge(out, ids, by.x = column_id, by.y = 'id', allow.cartesian=T)
 }
 
 

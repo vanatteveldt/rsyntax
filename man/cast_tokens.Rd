@@ -4,7 +4,8 @@
 \alias{cast_tokens}
 \title{Cast tokens into sub-sentences based on rsyntax annotations}
 \usage{
-cast_tokens(tokens, by, id, collapse_id = F, columns = NULL)
+cast_tokens(tokens, by, id, collapse_id = F, columns = NULL,
+  rm.na = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex with rsyntax annotations}

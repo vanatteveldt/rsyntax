@@ -26,112 +26,150 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' 
 #' Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
 #' 
-#' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param text        A character vector with column names, to be printed as text and labels (e.g., c('token','lemma','POS'))
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
-#' @param label_var   The name of the column with the token label (word or lemma). Will be ignored if column is not available.
-#' @param pos_var     The name of the column with the part-of-speech tag. Will be ignored if column is not available.
-#' @param quote_var   The name of the column with quote annotations. Will be ignored if column is not available.
-#' @param clause_var  The name of the column with quote annotations. Will be ignored if column is not available.
-#' @param relation_var The name of the column with the dependency relation. Will be ignored if column is not available.
-#' 
+#' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
+#' @param all_lower   If TRUE (default) make all text lowercase
+#' @param bypass      Optionally, a character vector specifying one or multiple relations. If a node has this relation to its parent, it will bypass the parent by adopting the parent's parent id and relation. Using bypass and link_children makes it possible to reshape the tree to deal with the pesky recursive nature of language.
+#' @param link_children Optionally, a character vector specifying one or multiple relations. If bypass is used, children of the parent nodes with this relation will adopted. 
+#' @param textsize    A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number. 
+#' @param abbrev      Optionally, a number for abbreviating text, with the number being the target number of characters. 
+#' @param spacing     A number for scaling the distance between words (between 0 and infinity) 
+#' @param use_color   If true, use colors
+#' @param max_curve   A number for controlling the allowed amount of curve in the edges. 
+#' @param palette     A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation
+#'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, sentence_i=1, doc_id=NULL, sentence=NULL, quote_var='quote', clause_var='clause', coref='coref_id', label_size=0.9, node_size=30, edge_label_size=0.8) {  
+plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sentence=NULL, ignore_rel=NULL, all_lower=T, bypass=NULL, link_children=NULL, textsize=1, abbrev=NULL, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
   tokens = as_tokenindex(tokens)  
-  if (!quote_var %in% colnames(tokens)) quote_var = NULL
-  if (!clause_var %in% colnames(tokens)) clause_var = NULL
-  if (!relation_var %in% colnames(tokens)) relation_var = NULL
   
   nodes = get_sentence(tokens, doc_id, sentence, sentence_i)
+  if (!is.null(bypass)) {
+    nodes = unpack_conjunctions(nodes, bypass, link_children = link_children)
+  }
+  
   data.table::setcolorder(nodes, union('token_id', colnames(nodes))) ## set token_id first for matching with edges
   
   # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
   edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
+  edges = edges[!edges$relation %in% bypass,]
   
-  label = nodes[['token_id']]
-  if (coref %in% colnames(tokens)) {
-    has_coref = !is.na(nodes[[coref]]) & !nodes[[coref]] == ''
-    label = ifelse(has_coref, paste0(label, ' - ', nodes[[coref]]), label)
+  text_cols = text
+  text = NULL
+  for (tc in text_cols) {
+    textval = if (!is.null(abbrev)) abbreviate(nodes[[tc]], minlength = abbrev) else nodes[[tc]]
+    text = if (is.null(text)) textval else paste(text, textval, sep='\n')
   }
-  #label = paste0(label, '\n', nodes[['lemma']])
-  #label = paste0(label, '\n', '(', nodes[['POS']])
-  label = paste0(label, ')')
+  nodes$label = if (!is.null(abbrev)) abbreviate(nodes[['relation']], abbrev) else nodes[['relation']]
+  if (!is.null(ignore_rel)) nodes$label[nodes$label %in% ignore_rel] = ''
   
-  nodes$label = label 
+  if (all_lower) {
+    text = tolower(text)
+    nodes$label = tolower(nodes$label)
+  }
   
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
-  root = nodes[['token_id']][is.na(nodes[['parent']])]
-  
-  plot.new()
-  par(mar=c(0,0,0,0))
 
   root = find_roots(g)
   g$layout = igraph::layout_as_tree(g, root = root)
+  if (!is.null(ignore_rel)) g = delete.edges(g, which(get.edge.attribute(g, 'relation') %in% ignore_rel))
+  co = g$layout ## vertex coordinates
+  
+  ## arrange horizontal positions
+  textwidth = strwidth(text)
+  relwidth = strwidth(V(g)$label)
+  width = ifelse(textwidth > relwidth, textwidth, relwidth)
+  co[,1] = 1:nrow(co) / (nrow(co) / 2) - 1
+  right_allign = cumsum(width)
+  left_allign = c(0,right_allign[-length(right_allign)])
+  middle = right_allign + left_allign / 2
+  co[,1] = rescale_var(middle, new_min = -1, new_max = 1)
+  
+  ## format edges
+  e = get.edges(g, E(g))
+  vdist = (e[,2] - e[,1])
+  maxcurve = 1 / (1 + exp(-max(abs(vdist))*0.05))
+  maxcurve = min(maxcurve, max_curve) # max_curve, with underscore, is a parameter
+  curve = rescale_var(abs(vdist)^2, 0, maxcurve) * sign(vdist)
+  E(g)$curved = curve
+  E(g)$arrow.size = 1
+  E(g)$color = 'darkgrey'
 
-  ## make childen line out in circle, preventing (most) label overlap
-  ei = get.edgelist(g, names = F)
-  parent.x = g$layout[ei[match(1:nrow(g$layout), ei[,2]),1],1]
-  parent.x[is.na(parent.x)] = 0
-  dif = abs(parent.x - g$layout[,1])
-  dif = (dif - min(dif)) / (max(dif) - min(dif))
-  g$layout[,2] = g$layout[,2] + (0.5*label_size*dif)
   
-  ## adjust size based on width    
-  lsize = strwidth(V(g)$label, cex=label_size)
-  lsize[lsize < (0.5*label_size)] = 0
-  igraph::V(g)$label.cex = label_size - (lsize^2.2)
+  ## arrange vertical positions
+  levels = max(co[,2]) - min(co[,2])
+  maxheight = if (levels > 10) 1 else -0.5 + levels*0.15
+  co[,2] = rescale_var(co[,2], new_min = -0.5, new_max = maxheight)
+  #co[,2] = co[,2] + 1
+  E(g)$arrow.size=0.3
+  E(g)$arrow.mode=1
   
-  # style defaults
-  if (!is.null(relation_var)) {
-    igraph::E(g)$label = igraph::get.edge.attribute(g, relation_var)
-    igraph::E(g)$label.cex= edge_label_size
-  }
-  igraph::E(g)$color = 'grey'
-  igraph::E(g)$label.color = 'blue'
-  igraph::E(g)$arrow.size=.3
+  ## make empty plot to get positions in current plot device
+  par(mar=c(0,0,0,0))
+  plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(co[,1]),ylim=extendrange(c(-1,1)))
   
-  igraph::V(g)$label.color = 'black'
-  igraph::V(g)$size = node_size
-  igraph::V(g)$size2 = node_size*0.66
-  igraph::V(g)$color = "white"
-  igraph::V(g)$shape = 'none'
-  igraph::V(g)$frame.size=20
+  need_width = strwidth(paste(V(g)$label, collapse=paste(rep(' ', 5*spacing), collapse='')), units='inches')
+  max_width = dev.size(units = 'in')[1]
+  cex = if (max_width < need_width) max_width / need_width else 1
+  cex = textsize * cex
+    
+  width = (strwidth(V(g)$label, cex=cex) + strwidth('', cex=cex)) * 100
+  height = strheight('I', cex=cex) * 1.2 * 100
   
-  quote = igraph::get.vertex.attribute(g, quote_var)
-  if (!is.null(quote)) {
-    is_source = quote == 'source' & !is.na(quote)
-    is_quote = quote == 'quote' & !is.na(quote)
-    V(g)$shape[is_source] = 'rectangle'
-    V(g)$shape[is_quote] = 'circle'
-    V(g)$frame.color[is_source | is_quote] = 'tomato'
-    V(g)$color[is_source] = 'tomato1'
-    V(g)$color[is_quote] = 'tomato3'
+  V(g)$label.cex = cex
+  V(g)$label.color = 'black'
+  V(g)$shape = 'rectangle'
+  V(g)$size = width
+  V(g)$size2 = height
+  V(g)$color = 'white'
+  V(g)$border.color = 'white'
+  V(g)$frame.color = 'white'
+  V(g)$label.font=2
+
+  drop = if (is.null(ignore_rel)) rep(F, vcount(g)) else V(g)$relation %in% ignore_rel
+  V(g)$size[drop] = 0
+  V(g)$size2[drop] = 0
+  V(g)$label[drop] = ''
+
+  hl = if ('.CONJ_LEVEL' %in% vertex.attributes(g)) !is.na(V(g)$.CONJ_LEVEL) else rep(F, vcount(g))
+  if (use_color) {
+    V(g)$color = festival(V(g)$label, palette)
+    E(g)$color = V(g)$color[e[,2]]
+    V(g)$frame.color[hl] = 'red'
+    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   } else {
-    is_source = rep(F, vcount(g))
-    is_quote = rep(F, vcount(g))
+    V(g)$frame.color[hl] =  'grey'
+    V(g)$color[hl] =  'grey'
+    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   }
-
-  clause = igraph::get.vertex.attribute(g, clause_var)
-  if (!is.null(clause)) {
-    is_subject = clause == 'subject' & !is.na(clause)
-    is_predicate = clause == 'predicate' & !is.na(clause)
-    V(g)$shape[is_subject] = 'rectangle'
-    V(g)$shape[is_predicate] = 'circle'
-    V(g)$color[is_subject] = 'lightblue1'
-    V(g)$color[is_predicate] = 'lightblue3'
-  }
-  plot(g)
-  par(mar=c(4,4,4,4))
-  invisible(g)
+  
+    
+  plot(g, layout=co, rescale=FALSE, add=TRUE)
+  ## add text and lines
+  if ('.ADDED' %in% vertex.attributes(g)) {
+    col = ifelse(V(g)$.ADDED, ifelse(use_color, 'red', 'darkgrey'),'black')
+  } else col = 'black'
+  text(co[,1], min(co[,2]), labels=text, 
+       col = col, 
+       cex=cex, adj=c(0.5,1.5))
+  segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
 }
 
-function() {
-  tokens = as_tokenindex(tokens)
-  tokens = as_tokenindex(tokens_dutchquotes)
-  tokens = annotate_alpino(tokens)
-  g =  plot_tree(tokens, label_vars=c('token'), sentence_i = 2)
+festival <- function(labels, palette=palette){
+  pal = palette(10000)
+  color = NA
+  for (label in labels) {
+    if (label == '') next
+    labelint = sum(utf8ToInt(label)^(nchar(label)))
+    labelint = labelint %% 10000
+    mean(utf8ToInt(paste(c(letters,LETTERS), collapse='')))
+    color[labels == label] = pal[labelint]
+  }
+  color
 }
 
 find_roots <- function(g) {
@@ -151,4 +189,109 @@ find_roots <- function(g) {
     roots = union(roots, root)
   }
   roots
+}
+
+
+
+rescale_var <- function(x, new_min=0, new_max=1, x_min=min(x), x_max=max(x)){
+  if (x_min == x_max) return(x)
+  x = (x - x_min) / (x_max - x_min) # normalize
+  x = x * (new_max-new_min)
+  return(x + new_min)
+}
+
+#plot_tree(tokens, text=c('token','lemma','pos'))
+
+#plot_tree(tokens, text=c('token','lemma','pos'), bypass='conj', link_children = 'nsubj')
+
+
+function() {
+  tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, kissed Mary, and were kicked by Bob."', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, text=c('token_id','token'))
+  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children='nsubj')
+  
+  
+  tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, and Bob kissed Mary and punched Ben."', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, text=c('token_id','token'))
+  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children = 'nsubj')
+  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children = 'nsubj', ignore_rel = 'punct')
+  
+  tokens = spacy_parse('Steve and Patrick were kicked by Bob.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, text=c('token_id','token'))
+  plot_tree(tokens, text=c('token','lemma','pos'), bypass='conj', link_children = 'nsubj')
+  
+  
+  tokens = spacy_parse('Charges would have been filed by the woman, Christine Blasey Ford, or her parents.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, text=c('token_id','token'))
+  plot_tree(tokens, text=c('token_id','token','pos'), bypass='conj', link_children = 'nsubj', ignore_rel = 'punct')
+  tokens
+  
+  tokens = spacy_parse('Steve said that Bob loved Mary and John', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, text=c('token_id','token'))
+  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children=c('nsubj'))
+  
+  
+  plot_tree(tokens, text='token', labels='POS')
+  
+  tokens = tokens2
+  tokens = as_tokenindex(tokens_corenlp)
+  tokens = tokens[7:14,]
+  plot_tree(tokens, text='token', labels = c('POS'))
+  
+  tokens
+  
+  text = tokens$token
+  width = strwidth(paste0(text, '  '))
+  if (sum(width) > 1) {
+    cex = 1 / sum(width) 
+    maxwidth = 1
+  } else {
+    cex = 1 
+    maxwidth = sum(width)
+  }
+  
+  cumwidth = cumsum(width)
+  cumwidth = rescale_var(cumwidth, new_max = maxwidth)
+  startpos = c(0, cumwidth[-length(cumwidth)])
+  centerpos = (startpos + cumwidth) / 2
+  
+  d = data.frame(text = text,
+                 startpos = startpos,
+                 centerpos = centerpos)
+   
+  
+  plot.new()
+  for(i in 1:length(text)) {
+    text(startpos[i], 0, text[i], cex=cex, adj=c(0,0))
+  }
+  
+  plot.new()
+  ?text
+  text(0,0,'test', adj=c(0,0), family='mono')
+  text(0.1,0,'test', adj=c(0,0))
+  text(0.2,0,'John', adj=c(0,0))
+  text(0.3,0,'testing', adj=c(0,0))
+  text(0.4,0,'WHAT', adj=c(0,0))
+  text(0.5,0,'test', adj=c(0,0))
+  
+
+  ?text()
+  strwidth('testing', font = 'monospace')
+  text(0,0,'test testint twwe')
+  text(0,0,'test')
+  
+  
+  cumlen
+  plot.new()
+  text(0,0,'test')
+  
+  plot(0:0, -1:1, type = "n", xlab = "Re", ylab = "Im")
+  text('test')
+  label = vertex.attributes(g)
+  g$layout
 }

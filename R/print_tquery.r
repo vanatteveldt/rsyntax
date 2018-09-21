@@ -5,7 +5,7 @@ abbrev_str <- function(string, maxlen) {
 
 
 
-recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery_print_max_char', default=65), ...) {
+recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery_print_max_char', default=30), ...) {
   cat(level, ': ', sep='')
   if (level > 0) {
     type = if('level' %in% names(x)) ifelse(x$level == 'children', ' c', ' p') else 'root'
@@ -15,16 +15,35 @@ recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery
     
     if (!is.na(x$save))
       cat('  ', x$save, rep(' ', pd[2] - nchar(x$save)), '  ', sep='') else cat('  ', rep(' ', pd[2]), '  ', sep='')
+
+    first = T    
+    if (x$NOT) {
+      if (!first) cat(', ') else cat(' ')
+      cat('NOT=T')
+      first = F
+    }
+    if (!x$req) {
+      if (!first) cat(', ') else cat(' ')
+      cat('req=F')
+      first = F
+    }  
+    if (!x$select == 'NULL') {
+      if (!first) cat(', ') else cat(' ')
+      cat('select=', abbrev_str(x$select, max_char))
+      first = F
+    }  
+    if (x$depth > 1) {
+      if (!first) cat(', ') else cat(' ')
+      cat('depth=', x$depth)
+      first = F
+    }  
     
     l = x$lookup
-    first = T
     for (n in names(l)) {
+      if (is.null(l[[n]])) next
       v = if (class(l[[n]]) %in% c('factor','character')) paste0(l[[n]]) else l[[n]]
       if (length(v) > 1) v = paste0('(', abbrev_str(paste(v, collapse=','), max_char), ')')
-      if (!first)
-        cat(', ')
-      else
-        cat(' ')
+      if (!first) cat(', ') else cat(' ')
       first = F
       cat(n, '=', v, sep='')
     }

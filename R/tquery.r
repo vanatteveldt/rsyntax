@@ -55,9 +55,9 @@ tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], req=F)
+    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], req=T, NOT=F, depth=0)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, req=F)
+    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, req=T, NOT=F, depth=0)
   }
   check_duplicate_names(q)
   class(q) = c('tQuery', class(q))
@@ -79,6 +79,8 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #' Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have parents/children.
 #' If select is used to pass an expression, the node must have parents/children for which the expression is TRUE.
 #' The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
+#' 
+#' the not_children and not_parents functions will make the matched children/parents a NOT condition. 
 #'   
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
@@ -100,7 +102,6 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #'                If NA, the column is not returned.
 #' @param req     Can be set to false to not make a node 'required'. This can be used to include optional nodes in queries. For instance, in a query for finding subject - verb - object triples, 
 #'                make the object optional.
-#' @param NOT     If TRUE, make having these parents/children a NOT condition.          
 #' @param depth   A positive integer, determining how deep parents/children are sought. The default, 1, 
 #'                means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
 #'
@@ -123,7 +124,10 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, NOT=F, depth=1) {
+children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+  NOT = F
+  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  
   select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
@@ -138,9 +142,52 @@ children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, NOT=F, depth=1
   q
 }
 
+
 #' @rdname nested_nodes
 #' @export
-parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, NOT=F, depth=1) {
+not_children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+  NOT = T
+  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  select = deparse(bquote_s(substitute(select)))
+  l = list(...)
+  if (length(l) > 0) {
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
+    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth)
+  } else {
+    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth)
+  }
+  
+  
+  class(q) = c('tQueryChild', class(q))
+  q
+}
+
+
+#' @rdname nested_nodes
+#' @export
+parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+  NOT = F
+  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  
+  select = deparse(bquote_s(substitute(select)))
+  l = list(...)
+  if (length(l) > 0) {
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
+    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth)
+  } else {
+    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth)
+  }
+  
+  class(q) = c('tQueryParent', class(q))
+  q
+}
+
+#' @rdname nested_nodes
+#' @export
+not_parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+  NOT = T
+  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  
   select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {

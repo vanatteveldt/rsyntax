@@ -5,7 +5,7 @@
 \title{Returns a list with the clause queries for CoreNLP}
 \usage{
 corenlp_clause_queries(verbs = NULL, exclude_verbs = ENGLISH_SAY_VERBS,
-  with_subject = T, with_object = F)
+  with_subject = T, with_object = F, sub_req = T, ob_req = F)
 }
 \arguments{
 \item{verbs}{A character vector with verbs used to indicate clauses. If NULL (default), all verbs are used (except those listed in exclude verbs)}

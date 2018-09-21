@@ -4,12 +4,16 @@
 \alias{plot_tree}
 \title{Create an igraph tree from a sentence}
 \usage{
-plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
-  quote_var = "quote", clause_var = "clause", coref = "coref_id",
-  label_size = 0.9, node_size = 30, edge_label_size = 0.8)
+plot_tree(tokens, text = c("token_id"), sentence_i = 1,
+  doc_id = NULL, sentence = NULL, ignore_rel = NULL, all_lower = T,
+  bypass = NULL, link_children = NULL, textsize = 1, abbrev = NULL,
+  spacing = 1, use_color = T, max_curve = 0.3,
+  palette = terrain.colors)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
+
+\item{text}{A character vector with column names, to be printed as text and labels (e.g., c('token','lemma','POS'))}
 
 \item{sentence_i}{By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)}
 
@@ -17,15 +21,25 @@ plot_tree(tokens, sentence_i = 1, doc_id = NULL, sentence = NULL,
 
 \item{sentence}{Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well.}
 
-\item{quote_var}{The name of the column with quote annotations. Will be ignored if column is not available.}
+\item{ignore_rel}{Optionally, a character vector with relation names that will not be shown in the tree}
 
-\item{clause_var}{The name of the column with quote annotations. Will be ignored if column is not available.}
+\item{all_lower}{If TRUE (default) make all text lowercase}
 
-\item{label_var}{The name of the column with the token label (word or lemma). Will be ignored if column is not available.}
+\item{bypass}{Optionally, a character vector specifying one or multiple relations. If a node has this relation to its parent, it will bypass the parent by adopting the parent's parent id and relation. Using bypass and link_children makes it possible to reshape the tree to deal with the pesky recursive nature of language.}
 
-\item{pos_var}{The name of the column with the part-of-speech tag. Will be ignored if column is not available.}
+\item{link_children}{Optionally, a character vector specifying one or multiple relations. If bypass is used, children of the parent nodes with this relation will adopted.}
 
-\item{relation_var}{The name of the column with the dependency relation. Will be ignored if column is not available.}
+\item{textsize}{A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number.}
+
+\item{abbrev}{Optionally, a number for abbreviating text, with the number being the target number of characters.}
+
+\item{spacing}{A number for scaling the distance between words (between 0 and infinity)}
+
+\item{use_color}{If true, use colors}
+
+\item{max_curve}{A number for controlling the allowed amount of curve in the edges.}
+
+\item{palette}{A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation}
 }
 \value{
 an igraph graph

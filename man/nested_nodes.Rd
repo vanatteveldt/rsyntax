@@ -3,14 +3,22 @@
 \name{nested_nodes}
 \alias{nested_nodes}
 \alias{children}
+\alias{not_children}
 \alias{parents}
+\alias{not_parents}
 \title{Search for parents or children in tquery}
 \usage{
 children(..., select = NULL, g_id = NULL, save = NA, req = T,
-  NOT = F, depth = 1)
+  depth = 1)
+
+not_children(..., select = NULL, g_id = NULL, save = NA, req = T,
+  depth = 1)
 
 parents(..., select = NULL, g_id = NULL, save = NA, req = T,
-  NOT = F, depth = 1)
+  depth = 1)
+
+not_parents(..., select = NULL, g_id = NULL, save = NA, req = T,
+  depth = 1)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -38,8 +46,6 @@ If NA, the column is not returned.}
 \item{req}{Can be set to false to not make a node 'required'. This can be used to include optional nodes in queries. For instance, in a query for finding subject - verb - object triples, 
 make the object optional.}
 
-\item{NOT}{If TRUE, make having these parents/children a NOT condition.}
-
 \item{depth}{A positive integer, determining how deep parents/children are sought. The default, 1, 
 means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.}
 }
@@ -54,6 +60,8 @@ Enables searching for parents or children, either direct (depth = 1) or until a 
 Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have parents/children.
 If select is used to pass an expression, the node must have parents/children for which the expression is TRUE.
 The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
+
+the not_children and not_parents functions will make the matched children/parents a NOT condition.
 
 
 Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
