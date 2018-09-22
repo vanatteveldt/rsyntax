@@ -27,16 +27,17 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
 #' 
 #' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param text        A character vector with column names, to be printed as text and labels (e.g., c('token','lemma','POS'))
+#' @param ...         Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)  
+#' @parma id          By default (true) the token_id is printed, but maybe you don't like ids.
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
 #' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
-#' @param all_lower   If TRUE (default) make all text lowercase
+#' @param all_lower   If TRUE, make all text lowercase
+#' @param all_abbrev  If an integer, abbreviate all text, with the number being the target number of characters. 
 #' @param bypass      Optionally, a character vector specifying one or multiple relations. If a node has this relation to its parent, it will bypass the parent by adopting the parent's parent id and relation. Using bypass and link_children makes it possible to reshape the tree to deal with the pesky recursive nature of language.
 #' @param link_children Optionally, a character vector specifying one or multiple relations. If bypass is used, children of the parent nodes with this relation will adopted. 
 #' @param textsize    A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number. 
-#' @param abbrev      Optionally, a number for abbreviating text, with the number being the target number of characters. 
 #' @param spacing     A number for scaling the distance between words (between 0 and infinity) 
 #' @param use_color   If true, use colors
 #' @param max_curve   A number for controlling the allowed amount of curve in the edges. 
@@ -44,12 +45,20 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sentence=NULL, ignore_rel=NULL, all_lower=T, bypass=NULL, link_children=NULL, textsize=1, abbrev=NULL, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
-  tokens = as_tokenindex(tokens)  
+plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, bypass=NULL, link_children=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
+  tokens = as_tokenindex(tokens) 
   
-  nodes = get_sentence(tokens, doc_id, sentence, sentence_i)
+  nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
+  sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
   if (!is.null(bypass)) {
     nodes = unpack_conjunctions(nodes, bypass, link_children = link_children)
+  }
+  
+  l = tidyselect::quos(...)
+  text_cols = if (id) list(nodes$token_id) else list()
+  for (i in seq_along(l)) {
+    if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
+    text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
   }
   
   data.table::setcolorder(nodes, union('token_id', colnames(nodes))) ## set token_id first for matching with edges
@@ -58,13 +67,12 @@ plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sent
   edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
   edges = edges[!edges$relation %in% bypass,]
   
-  text_cols = text
   text = NULL
   for (tc in text_cols) {
-    textval = if (!is.null(abbrev)) abbreviate(nodes[[tc]], minlength = abbrev) else nodes[[tc]]
+    textval = if (!is.null(all_abbrev)) abbreviate(tc, minlength = all_abbrev) else tc
     text = if (is.null(text)) textval else paste(text, textval, sep='\n')
   }
-  nodes$label = if (!is.null(abbrev)) abbreviate(nodes[['relation']], abbrev) else nodes[['relation']]
+  nodes$label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
   if (!is.null(ignore_rel)) nodes$label[nodes$label %in% ignore_rel] = ''
   
   if (all_lower) {
@@ -82,12 +90,13 @@ plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sent
   ## arrange horizontal positions
   textwidth = strwidth(text)
   relwidth = strwidth(V(g)$label)
+  
   width = ifelse(textwidth > relwidth, textwidth, relwidth)
   co[,1] = 1:nrow(co) / (nrow(co) / 2) - 1
   right_allign = cumsum(width)
   left_allign = c(0,right_allign[-length(right_allign)])
-  middle = right_allign + left_allign / 2
-  co[,1] = rescale_var(middle, new_min = -1, new_max = 1)
+  #middle = right_allign + left_allign / 2llign, new_min = -1, new_max = 1, x_min = left_allign, x_max = right_allign)
+  co[,1] = rescale_var(right_allign, new_min = -1, new_max = 1, x_min = 0, x_max=max(right_allign))
   
   ## format edges
   e = get.edges(g, E(g))
@@ -112,14 +121,18 @@ plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sent
   par(mar=c(0,0,0,0))
   plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(co[,1]),ylim=extendrange(c(-1,1)))
   
-  need_width = strwidth(paste(V(g)$label, collapse=paste(rep(' ', 5*spacing), collapse='')), units='inches')
+  width_label = strwidth(V(g)$label, units='inches')
+  width_text = strwidth(text, units='inches')
+  need_width = sum(ifelse(width_label > width_text, width_label, width_text))
+  need_width = need_width + (strwidth('  ', units='inches') * spacing * vcount(g))
+  
   max_width = dev.size(units = 'in')[1]
+  max_width = max_width * (1 - min(co[,1])) / 2
   cex = if (max_width < need_width) max_width / need_width else 1
   cex = textsize * cex
     
-  width = (strwidth(V(g)$label, cex=cex) + strwidth('', cex=cex)) * 100
-  height = strheight('I', cex=cex) * 1.2 * 100
-  
+  width = (strwidth(V(g)$label, cex=cex) + strwidth(' ', cex=cex)) * 100
+  height = (max(strheight(V(g)$label), strheight('I')) + strheight('I')*0.1) * 100
   V(g)$label.cex = cex
   V(g)$label.color = 'black'
   V(g)$shape = 'rectangle'
@@ -135,7 +148,10 @@ plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sent
   V(g)$size2[drop] = 0
   V(g)$label[drop] = ''
 
-  hl = if ('.CONJ_LEVEL' %in% vertex.attributes(g)) !is.na(V(g)$.CONJ_LEVEL) else rep(F, vcount(g))
+  if ('.CONJ_LEVEL' %in% igraph::vertex_attr_names(g)) {
+    hl = !is.na(V(g)$.CONJ_LEVEL)
+  } else hl = rep(F, vcount(g))
+  
   if (use_color) {
     V(g)$color = festival(V(g)$label, palette)
     E(g)$color = V(g)$color[e[,2]]
@@ -147,15 +163,16 @@ plot_tree <-function(tokens, text=c('token_id'), sentence_i=1, doc_id=NULL, sent
     E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   }
   
-    
   plot(g, layout=co, rescale=FALSE, add=TRUE)
   ## add text and lines
-  if ('.ADDED' %in% vertex.attributes(g)) {
+  if ('.ADDED' %in% vertex_attr_names(g)) {
     col = ifelse(V(g)$.ADDED, ifelse(use_color, 'red', 'darkgrey'),'black')
   } else col = 'black'
   text(co[,1], min(co[,2]), labels=text, 
        col = col, 
        cex=cex, adj=c(0.5,1.5))
+  #text(0, min(max(co[,2] + 0.1), 1), sentmes, cex=cex*1.2, font=2)
+  message(sentmes)
   segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
 }
 
@@ -200,23 +217,18 @@ rescale_var <- function(x, new_min=0, new_max=1, x_min=min(x), x_max=max(x)){
   return(x + new_min)
 }
 
-#plot_tree(tokens, text=c('token','lemma','pos'))
-
-#plot_tree(tokens, text=c('token','lemma','pos'), bypass='conj', link_children = 'nsubj')
-
 
 function() {
   tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, kissed Mary, and were kicked by Bob."', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-  plot_tree(tokens, text=c('token_id','token'))
-  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children='nsubj')
-  
+  plot_tree(tokens, token, tolower(pos))
+  plot_tree(tokens, token, tolower(pos), bypass='conj', link_children='nsubj')
   
   tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, and Bob kissed Mary and punched Ben."', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-  plot_tree(tokens, text=c('token_id','token'))
-  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children = 'nsubj')
-  plot_tree(tokens, text=c('token_id','token'), bypass='conj', link_children = 'nsubj', ignore_rel = 'punct')
+  plot_tree(tokens, token, tolower(pos))
+  plot_tree(tokens, token, tolower(pos), bypass='conj', link_children='nsubj')
+  plot_tree(tokens, token, tolower(pos), bypass='conj', link_children='nsubj')
   
   tokens = spacy_parse('Steve and Patrick were kicked by Bob.', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
