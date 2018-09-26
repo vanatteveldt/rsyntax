@@ -1,5 +1,5 @@
 
-filter_tokens <- function(tokens, lookup=list(), select='NULL', .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, e=parent.frame(), use_index=T) {
+filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, use_index=T) {
   ## we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
   
   .G_ID = unique(.G_ID)
@@ -22,7 +22,7 @@ filter_tokens <- function(tokens, lookup=list(), select='NULL', .G_ID=NULL, .G_P
     tokens = tokens[as.numeric(i),]  
   }
   
-  if (!select == 'NULL' & !is.null(select)) tokens = tokens[eval(parse(text=select), tokens, e),]
+  #if (!select == 'NULL' & !is.null(select)) tokens = tokens[eval(parse(text=select), tokens, e),]
   tokens
 }
 

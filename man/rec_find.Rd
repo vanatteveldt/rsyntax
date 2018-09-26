@@ -4,7 +4,7 @@
 \alias{rec_find}
 \title{Recursive search tokens}
 \usage{
-rec_find(tokens, ids, ql, e = parent.frame(), block = NULL)
+rec_find(tokens, ids, ql, block = NULL)
 }
 \arguments{
 \item{tokens}{The tokenIndex}
@@ -12,8 +12,6 @@ rec_find(tokens, ids, ql, e = parent.frame(), block = NULL)
 \item{ids}{A data.table with global ids (doc_id,sentence,token_id).}
 
 \item{ql}{a list of queriers (possibly the list nested in another query, or containing nested queries)}
-
-\item{e}{an environment (in case query contains $select)}
 
 \item{block}{A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search}
 }

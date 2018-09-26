@@ -14,7 +14,6 @@
 #' @examples
 inspect_family <- function(tokens, query, node, family=c('family','children','parents'), depth=1, group_cols=NULL) {
   family = match.arg(family)
-  query = spacy_english_clause_queries()[[1]]
   ids = apply_queries(tokens, query)
   if (nrow(ids) == 0) {
     message('No nodes found')
@@ -37,7 +36,7 @@ inspect_family <- function(tokens, query, node, family=c('family','children','pa
   if (!is.null(group_cols)) {
     group_cols = union(c('family','depth'), group_cols)
     out = out[,list(.N),by=group_cols]
-    out$pct = out$N / sum(out$N)
+    out$pct = out$N / nrow(ids)
   }
   out
 }

@@ -8,17 +8,17 @@
 \alias{not_parents}
 \title{Search for parents or children in tquery}
 \usage{
-children(..., select = NULL, g_id = NULL, save = NA, req = T,
-  depth = 1)
+children(..., g_id = NULL, save = NA, req = T, depth = 1,
+  connected = F)
 
-not_children(..., select = NULL, g_id = NULL, save = NA, req = T,
-  depth = 1)
+not_children(..., g_id = NULL, save = NA, req = T, depth = 1,
+  connected = F)
 
-parents(..., select = NULL, g_id = NULL, save = NA, req = T,
-  depth = 1)
+parents(..., g_id = NULL, save = NA, req = T, depth = 1,
+  connected = F)
 
-not_parents(..., select = NULL, g_id = NULL, save = NA, req = T,
-  depth = 1)
+not_parents(..., g_id = NULL, save = NA, req = T, depth = 1,
+  connected = F)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -32,12 +32,6 @@ If multiple name-value pairs are given, they are considered as AND statements, b
 To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 These functions have the same query arguments as tquery, but with some additional arguments.}
 
-\item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
-However, this has two limitations. Firstly, select should not rely on absolute positions (a logical vector or indices). Secondly, since the expression will only be evaluated
-when the query is performed, any names used in the expression that are not columns in the data.table need to be in the environment when the search is performed.
-A solution for the second limitation is to explicitly tell tquery to evalute these names immediately, by marking them as .(name). For example, if the name VERBS refers 
-to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.}
-
 \item{g_id}{Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id.}
 
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
@@ -47,7 +41,12 @@ If NA, the column is not returned.}
 make the object optional.}
 
 \item{depth}{A positive integer, determining how deep parents/children are sought. The default, 1, 
-means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.}
+means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
+All parents/children must meet the filtering conditions (... or g_id)}
+
+\item{connected}{controlls behaviour if depth > 1 and filters are used. If FALSE (default) all parents/children to the given depth are retrieved, and then filtered. 
+This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
+If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved.}
 }
 \value{
 Should not be used outside of \link{find_nodes}
@@ -57,8 +56,7 @@ Should only be used inside of the \link{tquery} function.
 Enables searching for parents or children, either direct (depth = 1) or until a given depth (depth 2 for children and grandchildren, Inf (infinite) for all).
 }
 \details{
-Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have parents/children.
-If select is used to pass an expression, the node must have parents/children for which the expression is TRUE.
+Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
 The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 
 the not_children and not_parents functions will make the matched children/parents a NOT condition.

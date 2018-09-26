@@ -5,10 +5,10 @@
 \title{Create an igraph tree from a sentence}
 \usage{
 plot_tree(tokens, ..., id = T, sentence_i = 1, doc_id = NULL,
-  sentence = NULL, ignore_rel = NULL, all_lower = F,
-  all_abbrev = NULL, bypass = NULL, link_children = NULL,
-  textsize = 1, spacing = 1, use_color = T, max_curve = 0.3,
-  palette = terrain.colors)
+  sentence = NULL, allign_text = T, ignore_rel = NULL,
+  all_lower = F, all_abbrev = NULL, bypass = NULL,
+  link_children = NULL, textsize = 1, spacing = 1, use_color = T,
+  max_curve = 0.3, palette = terrain.colors)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -20,6 +20,8 @@ plot_tree(tokens, ..., id = T, sentence_i = 1, doc_id = NULL,
 \item{doc_id}{Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document.}
 
 \item{sentence}{Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well.}
+
+\item{allign_text}{If TRUE (default) allign text (the columns specified in ...) in a single horizontal line at the bottom, instead of following the different levels in the tree}
 
 \item{ignore_rel}{Optionally, a character vector with relation names that will not be shown in the tree}
 

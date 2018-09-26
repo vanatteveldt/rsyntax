@@ -16,7 +16,7 @@
 #' .QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
 #' .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 #' 
-#' quotes_direct = tquery(select = lemma %in% .SAY_VERBS,
+#' quotes_direct = tquery(lemma = .SAY_VERBS,
 #'                          children(save = 'source', p_rel = .SUBJECT_RELS),
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows tquery
@@ -44,7 +44,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
     args = r[[i]]
     #nodes = find_nodes(tokens, )
     #nodes = do.call(r[[i]], args = list(tokens=tokens, block=block, check=check, e=parent.frame()))
-    l = c(args$lookup, args$nested, list(tokens=tokens, select=args$select, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME, e=parent.frame()))
+    l = c(args$lookup, args$nested, list(tokens=tokens, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME))
     nodes = do.call(find_nodes, args = l)
 
     if (!is.null(nodes)) {

@@ -5,7 +5,8 @@
 \title{Get the parents or children of a set of ids}
 \usage{
 token_family(tokens, ids, level = "children", depth = Inf,
-  minimal = F, block = NULL, replace = F, show_level = F)
+  minimal = F, block = NULL, replace = F, show_level = F,
+  lookup = NULL, g_id = NULL, filter_each = F)
 }
 \arguments{
 \item{tokens}{The tokenIndex}
@@ -23,6 +24,10 @@ token_family(tokens, ids, level = "children", depth = Inf,
 \item{replace}{If TRUE, re-use nodes in deep_family()}
 
 \item{show_level}{}
+
+\item{lookup}{filter tokens by lookup values. Will be applied at each level (if depth > 1)}
+
+\item{g_id}{filter tokens by id. See lookup}
 }
 \description{
 Get the parents or children of a set of ids

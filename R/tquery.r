@@ -2,9 +2,8 @@
 #' Create a query for dependency based parse trees in a data.table (CoNLL-U or similar format).
 #'
 #' @description
-#' There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
-#' queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
-#' The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).
+#' To find nodes you can use named arguments, where the names are column names (in the data.table on which the
+#' queries will be used) and the values are vectors with lookup values. 
 #' 
 #' Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
 #' These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
@@ -21,10 +20,6 @@
 #'                
 #'                To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 #'                These functions have the same query arguments as tquery, but with some additional arguments. 
-#' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
-#'                WARNING!! since the expression will only be evaluated when the query is performed, any names used in the expression that are not columns in the data.table 
-#'                need to be in the environment from where the query is performed. Alternatively, you can ask to evaluate specific names when making the tquery, by marking them 
-#'                as .(name). For example, if the name VERBS refers to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.
 #' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
@@ -50,14 +45,14 @@
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows tquery
 #' @export
-tquery <- function(..., select=NULL, NOT=NULL, g_id=NULL, save=NA) {
-  select = deparse(bquote_s(substitute(select), where = parent.frame()))
+tquery <- function(..., NOT=NULL, g_id=NULL, save=NA) {
+  #select = deparse(bquote_s(substitute(select), where = parent.frame()))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], req=T, NOT=F, depth=0)
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], req=T, NOT=F, depth=0)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, req=T, NOT=F, depth=0)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, req=T, NOT=F, depth=0)
   }
   check_duplicate_names(q)
   class(q) = c('tQuery', class(q))
@@ -76,8 +71,7 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #' Should only be used inside of the \link{tquery} function.
 #' Enables searching for parents or children, either direct (depth = 1) or until a given depth (depth 2 for children and grandchildren, Inf (infinite) for all).
 #' 
-#' Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have parents/children.
-#' If select is used to pass an expression, the node must have parents/children for which the expression is TRUE.
+#' Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
 #' The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 #' 
 #' the not_children and not_parents functions will make the matched children/parents a NOT condition. 
@@ -92,11 +86,6 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #'                
 #'                To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 #'                These functions have the same query arguments as tquery, but with some additional arguments. 
-#' @param select  An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
-#'                However, this has two limitations. Firstly, select should not rely on absolute positions (a logical vector or indices). Secondly, since the expression will only be evaluated
-#'                when the query is performed, any names used in the expression that are not columns in the data.table need to be in the environment when the search is performed.
-#'                A solution for the second limitation is to explicitly tell tquery to evalute these names immediately, by marking them as .(name). For example, if the name VERBS refers 
-#'                to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.
 #' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
@@ -104,6 +93,10 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #'                make the object optional.
 #' @param depth   A positive integer, determining how deep parents/children are sought. The default, 1, 
 #'                means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
+#'                All parents/children must meet the filtering conditions (... or g_id)
+#' @param connected controlls behaviour if depth > 1 and filters are used. If FALSE (default) all parents/children to the given depth are retrieved, and then filtered. 
+#'                  This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
+#'                  If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved. 
 #'
 #' @details 
 #' Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
@@ -124,17 +117,17 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
-  select = deparse(bquote_s(substitute(select)))
+  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
   }
   
   
@@ -145,16 +138,16 @@ children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
 
 #' @rdname nested_nodes
 #' @export
-not_children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+not_children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   NOT = T
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
-  select = deparse(bquote_s(substitute(select)))
+  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
   }
   
   
@@ -165,17 +158,17 @@ not_children <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
 
 #' @rdname nested_nodes
 #' @export
-parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
-  select = deparse(bquote_s(substitute(select)))
+  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
   }
   
   class(q) = c('tQueryParent', class(q))
@@ -184,17 +177,17 @@ parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
 
 #' @rdname nested_nodes
 #' @export
-not_parents <- function(..., select=NULL, g_id=NULL, save=NA, req=T, depth=1) {
+not_parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   NOT = T
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
-  select = deparse(bquote_s(substitute(select)))
+  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(select = select, g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
-    q = list(select = select, g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
   }
   
   class(q) = c('tQueryParent', class(q))

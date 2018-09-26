@@ -27,11 +27,11 @@ recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery
       cat('req=F')
       first = F
     }  
-    if (!x$select == 'NULL') {
-      if (!first) cat(', ') else cat(' ')
-      cat('select=', abbrev_str(x$select, max_char))
-      first = F
-    }  
+    #if (!x$select == 'NULL') {
+    #  if (!first) cat(', ') else cat(' ')
+    #  cat('select=', abbrev_str(x$select, max_char))
+    #  first = F
+    #}  
     if (x$depth > 1) {
       if (!first) cat(', ') else cat(' ')
       cat('depth=', x$depth)
@@ -73,9 +73,9 @@ get_print_data <- function(x, d=c(0,0)) {
 #'
 #' @method print tQuery
 #' @examples
-#' q = tquery(select = lemma %in% .VIND_VERBS, 
+#' q = tquery(lemma = .VIND_VERBS, 
 #'                    children(save = 'source', p_rel=.SUBJECT_REL),
-#'                    children(p_rel='vc', select = POS %in% c('C', 'comp'),
+#'                    children(p_rel='vc', POS = c('C', 'comp'),
 #'                             children(save='quote', p_rel=.SUBJECT_BODY)))
 #' q 
 #' @export

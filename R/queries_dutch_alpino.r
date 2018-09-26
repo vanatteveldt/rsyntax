@@ -11,9 +11,11 @@ DUTCH_SAY_VERBS = c("zeggen", "stellen", "roepen", "schrijven", "denken", "vasts
 alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
   # x zegt dat y
   zegtdat = tquery(lemma = verbs, 
-                        children(save = 'source', relation=c('su')),
-                        children(relation='vc', POS = c('C', 'comp'),
-                                 children(save= 'quote', relation=c('body'))))
+                   children(save = 'source', relation=c('su')),
+                   children(relation='vc', POS = c('C', 'comp'),
+                            children(save= 'quote', relation=c('body'))),
+                   not_parents(lemma=c('kun','moet','zal')))   ## exclude "kun/moet/zal je zeggen dat ..."   
+
   
   # x stelt: y
   ystelt = tquery(lemma = verbs, 
@@ -39,14 +41,16 @@ alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
   
   # x is het er ook mee eens: y
   impliciet = tquery(
-                          children(lemma = quote_punctuation),
-                          children(save='quote', relation=c('tag','nucl','sat')),
-                          children(save='source', relation=c('su')))
+    children(lemma = c('"', "'")),
+    children(save='quote', relation=c('tag','nucl','sat')),
+    children(save='source', relation=c('su')))
   
   # x: y
   impliciet2 = tquery(save='source',
-                           children(lemma = quote_punctuation),
-                           children(save='quote', relation=c('tag','nucl','sat')))
+                      children(lemma = ':'),
+                      children(save='quote', relation=c('tag','nucl','sat')),
+                      not_children(relation='su'))
+  
   
   ## order matters
   list(zegtdat=zegtdat, ystelt=ystelt, xstelt=xstelt, volgens=volgens, noemt=noemt, impliciet=impliciet, impliciet2=impliciet2)

@@ -4,7 +4,7 @@
 \alias{tquery}
 \title{Create a query for dependency based parse trees in a data.table (CoNLL-U or similar format).}
 \usage{
-tquery(..., select = NULL, NOT = NULL, g_id = NULL, save = NA)
+tquery(..., NOT = NULL, g_id = NULL, save = NA)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -18,11 +18,6 @@ If multiple name-value pairs are given, they are considered as AND statements, b
 To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
 These functions have the same query arguments as tquery, but with some additional arguments.}
 
-\item{select}{An expression to select specific parents/children, which can use any columns in the token data (similar to the subset argument in \link{subset.data.frame}).
-WARNING!! since the expression will only be evaluated when the query is performed, any names used in the expression that are not columns in the data.table 
-need to be in the environment from where the query is performed. Alternatively, you can ask to evaluate specific names when making the tquery, by marking them 
-as .(name). For example, if the name VERBS refers to a character vector of verbs, using 'lemma \%in\% .(VERBS)' will replace .(VERBS) with the actual vector.}
-
 \item{g_id}{Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id.}
 
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
@@ -32,9 +27,8 @@ If NA, the column is not returned.}
 A tQuery object, that can be used with the \link{apply_queries} function.
 }
 \description{
-There are two ways to query nodes (i.e. rows). Firstly, you can use named arguments, where the names are column names (in the data.table on which the
-queries will be used) and the values are vectors with lookup values. Secondly, you can use the select arguments to use logical expressions.   
-The select argument is more versatile (but see the parameter details for limitations), whereas the named argument approach is more explicit and uses binary search (which is much faster).
+To find nodes you can use named arguments, where the names are column names (in the data.table on which the
+queries will be used) and the values are vectors with lookup values. 
 
 Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
 These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 

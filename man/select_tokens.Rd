@@ -4,7 +4,7 @@
 \alias{select_tokens}
 \title{Select which tokens to add}
 \usage{
-select_tokens(tokens, ids, q, e, block = NULL)
+select_tokens(tokens, ids, q, block = NULL)
 }
 \arguments{
 \item{tokens}{The tokenIndex}
@@ -12,8 +12,6 @@ select_tokens(tokens, ids, q, e, block = NULL)
 \item{ids}{A data.table with global ids (doc_id,sentence,token_id).}
 
 \item{q}{a query (possibly nested in another query, or containing nested queries)}
-
-\item{e}{an environment (in case query contains $select)}
 
 \item{block}{A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search}
 }

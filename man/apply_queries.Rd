@@ -31,7 +31,7 @@ Apply queries created with \link{tquery}
 .QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
 .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 
-quotes_direct = tquery(select = lemma \%in\% .SAY_VERBS,
+quotes_direct = tquery(lemma = .SAY_VERBS,
                          children(save = 'source', p_rel = .SUBJECT_RELS),
                          children(save = 'quote', p_rel = .QUOTE_RELS))
 quotes_direct ## print shows tquery

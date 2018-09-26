@@ -6,7 +6,7 @@ test_that("find_nodes works", {
   
   nrow(find_nodes(tokens, lemma__N = "Rutte"))
   
-  dat = find_nodes(tokens, save='id', select = lemma == 'dat')
+  dat = find_nodes(tokens, save='id', lemma = 'dat')
   expect_equal(nrow(dat), 1)
   expect_equal(dat$id, 45)
   
@@ -32,7 +32,7 @@ test_that("find_nodes works", {
 
   # get parents
   parents = find_nodes(tokens, relation="vc", 
-                       parents(save='parent', select = POS == 'verb'))
+                       parents(save='parent', POS = 'verb'))
 
   
   expect_equal(nrow(parents), 3)
