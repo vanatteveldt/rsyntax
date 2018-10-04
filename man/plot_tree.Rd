@@ -5,15 +5,18 @@
 \title{Create an igraph tree from a sentence}
 \usage{
 plot_tree(tokens, ..., id = T, sentence_i = 1, doc_id = NULL,
-  sentence = NULL, allign_text = T, ignore_rel = NULL,
-  all_lower = F, all_abbrev = NULL, bypass = NULL,
-  link_children = NULL, textsize = 1, spacing = 1, use_color = T,
-  max_curve = 0.3, palette = terrain.colors)
+  sentence = NULL, annotations = NULL, allign_text = T,
+  ignore_rel = NULL, all_lower = F, all_abbrev = NULL,
+  bypass = NULL, isolate = NULL, link_children = NULL,
+  textsize = 1, spacing = 1, use_color = T, max_curve = 0.3,
+  palette = terrain.colors)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{...}{Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)}
+
+\item{id}{By default (true) the token_id is printed, but maybe you don't like ids.}
 
 \item{sentence_i}{By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)}
 
@@ -42,6 +45,8 @@ plot_tree(tokens, ..., id = T, sentence_i = 1, doc_id = NULL,
 \item{max_curve}{A number for controlling the allowed amount of curve in the edges.}
 
 \item{palette}{A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation}
+
+\item{tqueries}{A tquery or list of tqueries, to annotate nodes}
 }
 \value{
 an igraph graph

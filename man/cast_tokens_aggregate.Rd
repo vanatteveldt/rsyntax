@@ -23,6 +23,9 @@ if the id column contains text instead of unique codes, the collapse_id argument
 
 \item{...}{Additional arguments passed to FUN}
 }
+\value{
+a data.table
+}
 \description{
 Like cast_tokens, but instead of returning the tokens, aggregate one column
 }

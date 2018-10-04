@@ -21,6 +21,9 @@ if the id column contains text instead of unique codes, the collapse_id argument
 \item{columns}{Optionally, specify which column from 'tokens' will be included in the output. If NULL, all columns are returned, but it is recommended 
 to specify only the columns that you want to use for clarity.}
 }
+\value{
+a tokenindex
+}
 \description{
 Cast tokens into sub-sentences based on rsyntax annotations
 }

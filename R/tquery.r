@@ -45,16 +45,24 @@
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows tquery
 #' @export
-tquery <- function(..., NOT=NULL, g_id=NULL, save=NA) {
+tquery <- function(..., g_id=NULL, save=NA) {
   #select = deparse(bquote_s(substitute(select), where = parent.frame()))
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], req=T, NOT=F, depth=0)
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') | sapply(l, is, 'tQueryFill') 
+    for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
+      if (!is.na(save)) {
+        l[[fill_i]]$save = paste(save, 'FILL', sep='_')
+      } else {
+        is_nested = is_nested[-fill_i]
+        l = l[-fill_i]
+      }
+    }
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested])
   } else {
-    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, req=T, NOT=F, depth=0)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL)
   }
-  check_duplicate_names(q)
+  #check_duplicate_names(q)
   class(q) = c('tQuery', class(q))
   q
 }
@@ -72,9 +80,12 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #' Enables searching for parents or children, either direct (depth = 1) or until a given depth (depth 2 for children and grandchildren, Inf (infinite) for all).
 #' 
 #' Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
-#' The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
+#' The save argument is used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 #' 
 #' the not_children and not_parents functions will make the matched children/parents a NOT condition. 
+#' 
+#' The fill() function is used to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
+#' and by default will include all children of the node.
 #'   
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
@@ -124,7 +135,15 @@ children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill') 
+    for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
+      if (!is.na(save)) {
+        l[[fill_i]]$save = paste(save, 'FILL', sep='_')
+      } else {
+        is_nested = is_nested[-fill_i]
+        l = l[-fill_i]
+      }
+    }
     q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
     q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
@@ -138,13 +157,16 @@ children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
 
 #' @rdname nested_nodes
 #' @export
-not_children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
+not_children <- function(..., g_id=NULL, depth=1, connected=F) {
+  save=NA
+  req = T
   NOT = T
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
+    if (any(sapply(l, is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
     q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
     q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
@@ -165,7 +187,15 @@ parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
+    for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
+      if (!is.na(save)) {
+        l[[fill_i]]$save = paste(save, 'FILL', sep='_')
+      } else {
+        is_nested = is_nested[-fill_i]
+        l = l[-fill_i]
+      }
+    }
     q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
     q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
@@ -177,14 +207,17 @@ parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
 
 #' @rdname nested_nodes
 #' @export
-not_parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
+not_parents <- function(..., g_id=NULL, depth=1, connected=F) {
+  save=NA
+  req = T
   NOT = T
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
+    if (any(sapply(l, is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
     q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
   } else {
     q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
@@ -193,4 +226,25 @@ not_parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
   class(q) = c('tQueryParent', class(q))
   q
 }
+
+
+#' @rdname nested_nodes
+#' @export
+fill <- function(..., g_id=NULL, depth=Inf, connected=F) {
+  #select = deparse(bquote_s(substitute(select)))
+  l = list(...)
+  if (length(l) > 0) {
+    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
+    if (any(is_nested)) stop('Cannot use nested queries (children(), parents(), etc.) in fill()')
+    q = list(g_id=g_id, save='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=F, NOT=F, depth=depth, connected=connected)
+  } else {
+    q = list(g_id=g_id, save='fill', lookup =NULL, nested=NULL, level = 'children', req=F, NOT=F, depth=depth, connected=connected)
+  }
+  
+  
+  class(q) = c('tQueryFill', class(q))
+  q
+}
+
+
 

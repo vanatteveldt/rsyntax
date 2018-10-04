@@ -4,9 +4,8 @@
 \alias{annotate_nodes}
 \title{Annotate a tokenlist based on rsyntaxNodes}
 \usage{
-annotate_nodes(tokens, nodes, column, rm_dup = T, fill = F,
-  fill_block = NULL, check = F, with_tquery = F, show_fill = F,
-  concat_dup = T)
+annotate_nodes(tokens, nodes, column, unique_fill = F, concat_dup = T,
+  show_fill = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -15,27 +14,15 @@ annotate_nodes(tokens, nodes, column, rm_dup = T, fill = F,
 
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id}
 
-\item{rm_dup}{If true (default), remove duplicate nodes (keeping the first match). Otherwise, rows in tokens will be repeated for each match. If the concat_dup argument is true (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.}
+\item{unique_fill}{If TRUE, only the fill value of the closest parent will be used, and nodes that are already directly matched will not be filled.}
 
-\item{fill}{If TRUE, the children for each id are added recursively (children of children etc.). If this leads to
-duplicate ids (if an id in nodes is a child of another id in nodes), the most direct children are kept.
-For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only added as a child of 2.}
+\item{concat_dup}{If TRUE (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.}
 
-\item{fill_block}{Optionally, another data.table of nodes (as created with \link{find_nodes}) or a list of data.tables, used to block the fill process. That is, the nodes in block and all their descendants are not used in fill.}
-
-\item{check}{For testing queries. If TRUE, give a warning if there are duplicates in the data (in which case duplicates are deleted)}
-
-\item{with_tquery}{For testing queries. If TRUE, add a column that shows the name of the specific tquery that was used. This only works if 'queries' is a named list.}
-
-\item{concat_dup}{see rm_dup arugment.}
+\item{show_fill}{if TRUE, return column with fill level}
 }
 \description{
 Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
 Two columns will be added.
 One column contains the ids for each hit. The other column contains the annotations.
 Only nodes that are given a name in the tquery (using the 'save' parameter) will be added as annotation.
-}
-\details{
-Note that while queries only find 1 node for each saved component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
-all children of these nodes are also annotated (if fill is TRUE). If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 }

@@ -47,6 +47,8 @@ as_tokenindex <- function(tokens, doc_id='doc_id', sentence='sentence', token_id
     is_own_parent = tokens$parent == tokens$token_id
     is_own_parent[is.na(is_own_parent)] = F
     if (any(is_own_parent)) tokens$parent[is_own_parent] = NA
+    levels(tokens$relation) = union(levels(tokens$relation), 'ROOT')
+    tokens$relation[is.na(tokens$parent)] = 'ROOT'
   }
   
   has_keys = data.table::key(tokens)

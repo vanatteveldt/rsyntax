@@ -15,10 +15,9 @@ get_clauses <- function(tokens, block=NULL){
   check = list(...)
   for(name in names(check)) {
     expected = as.character(check[[name]])
-    actual = get_nodes(tokens, nodes, fill = F, token_cols = 'lemma')
-    #print(actual)
-    actual = as.character(actual$lemma[actual$.ROLE == name])
-    #print(paste(name, '=', actual))
+    actual = get_nodes(tokens, nodes, token_cols = 'token')
+    #cat(name, ': ', as.character(actual$token[actual$.ROLE == name]), '\n')
+    actual = as.character(actual$token[actual$.ROLE == name])
     expect_equal(expected, actual)
   }
 }
@@ -29,25 +28,25 @@ test_that("extracting quotes works with coreNLP", {
   library(testthat)
   #John says Mary is great.
   quotes = get_quotes(tokens[tokens$sentence == 1,])
-  testthat::expect_equal(nrow(quotes), 2)
-  .check(tokens, quotes, source="John", verb="say")
+  testthat::expect_equal(nrow(quotes), 6)
+  .check(tokens, quotes, source="John", verb="says", quote=c("Mary",'is','great','.'))
   
   #  Pete promised to say he loves Mary
   quotes = get_quotes(tokens[tokens$sentence == 2,])
-  testthat::expect_equal(nrow(quotes), 2)
-  .check(tokens, quotes, source="Pete", verb="promise")
+  testthat::expect_equal(nrow(quotes), 8)
+  .check(tokens, quotes, source="Pete", verb="promised", quote=c('to','say','he','loves','Mary','.'))
   
   # According to Mark, he loves Mary.
   quotes = get_quotes(tokens[tokens$sentence == 3,])
-  testthat::expect_equal(nrow(quotes), 1)
-  .check(tokens, quotes, source="Mark", verb='accord', quote="love")
+  testthat::expect_equal(nrow(quotes), 8)
+  .check(tokens, quotes, source="Mark", verb=c('According','to'), quote=c(',','he','loves','Mary','.'))
   
   # John Loves Mary
   quotes = get_quotes(tokens[tokens$sentence >= 4,])
   testthat::expect_equal(nrow(quotes), 0)
 
   all_quotes = get_quotes(tokens)
-  testthat::expect_equal(nrow(all_quotes), 5)
+  testthat::expect_equal(nrow(all_quotes), 22)
 })
 
 test_that("extracting clauses works with coreNLP", {
@@ -55,18 +54,18 @@ test_that("extracting clauses works with coreNLP", {
   
   # John loves Mary
   clauses = get_clauses(tokens[tokens$sentence == 4,])
-  testthat::expect_equal(nrow(clauses), 1)
-  clauses
-  .check(tokens, clauses, subject="John", predicate="love", object='Mary')
+  testthat::expect_equal(nrow(clauses), 4)
+  .check(tokens, clauses, subject="John", predicate=c("loves",'.'), object='Mary')
   
   # Mary is loved by John
   clauses = get_clauses(tokens[tokens$sentence == 5,])
-  testthat::expect_equal(nrow(clauses), 1)
-  .check(tokens, clauses, subject="John", predicate="love", object='Mary')
+  annotate(tokens[tokens$sentence == 5,], corenlp_clause_queries(), 'test')
+  testthat::expect_equal(nrow(clauses), 6)
+  .check(tokens, clauses, subject=c("by","John"), predicate=c("is","loved","."), object='Mary')
   
   # Mary is loved (passive without subject)
   clauses = get_clauses(tokens[tokens$sentence == 6,])
-  testthat::expect_equal(nrow(clauses), 1)
-  .check(tokens, clauses, predicate="love", object='Mary')
+  testthat::expect_equal(nrow(clauses), 4)
+  .check(tokens, clauses, predicate=c("is","loved","."), object='Mary')
   
 })

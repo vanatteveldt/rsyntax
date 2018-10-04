@@ -17,12 +17,12 @@ recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery
       cat('  ', x$save, rep(' ', pd[2] - nchar(x$save)), '  ', sep='') else cat('  ', rep(' ', pd[2]), '  ', sep='')
 
     first = T    
-    if (x$NOT) {
+    if ('NOT' %in% names(x) && x$NOT) {
       if (!first) cat(', ') else cat(' ')
       cat('NOT=T')
       first = F
     }
-    if (!x$req) {
+    if ('req' %in% names(x) && !x$req) {
       if (!first) cat(', ') else cat(' ')
       cat('req=F')
       first = F
@@ -32,7 +32,7 @@ recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery
     #  cat('select=', abbrev_str(x$select, max_char))
     #  first = F
     #}  
-    if (x$depth > 1) {
+    if ('depth' %in% names(x) && x$depth > 1) {
       if (!first) cat(', ') else cat(' ')
       cat('depth=', x$depth)
       first = F

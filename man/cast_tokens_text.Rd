@@ -19,6 +19,9 @@ if the id column contains text instead of unique codes, the collapse_id argument
 
 \item{collapse_id}{see id}
 }
+\value{
+a data.table
+}
 \description{
 Like cast_tokens, but prints for easier inspection
 }

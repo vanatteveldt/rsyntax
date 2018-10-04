@@ -4,7 +4,8 @@
 \alias{apply_queries}
 \title{Apply queries created with \link{tquery}}
 \usage{
-apply_queries(tokens, ..., as_chain = F, block = NULL, check = T)
+apply_queries(tokens, ..., as_chain = F, chain_fill = F,
+  block = NULL, check = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}

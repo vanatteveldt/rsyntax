@@ -9,10 +9,8 @@
 #' @param columns      Optionally, specify which column from 'tokens' will be included in the output. If NULL, all columns are returned, but it is recommended 
 #'                     to specify only the columns that you want to use for clarity.
 #'
-#' @return
+#' @return a tokenindex
 #' @export
-#'
-#' @examples
 cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL, rm.na=T){
   mode = if (collapse_id) 'collapse' else 'each'
   out = NULL
@@ -51,10 +49,8 @@ cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL, rm.na=T){
 #' @param collapse_id  see id
 #' @param ...          Additional arguments passed to FUN
 #'
-#' @return
+#' @return a data.table
 #' @export
-#'
-#' @examples
 cast_tokens_dfm <- function(tokens, x, FUN, by, id, collapse_id=F, ...){
   out = cast_tokens(tokens, by=by, id=id, collapse_id=collapse_id, columns=x)
   docs = as.factor(out$subsent_id)
@@ -83,10 +79,8 @@ cast_tokens_dfm <- function(tokens, x, FUN, by, id, collapse_id=F, ...){
 #' @param collapse_id  see id
 #' @param ...          Additional arguments passed to FUN
 #'
-#' @return
+#' @return a data.table
 #' @export
-#'
-#' @examples
 cast_tokens_aggregate <- function(tokens, x, FUN, by, id, collapse_id=F, ...){
   out = cast_tokens(tokens, by=by, id=id, collapse_id=collapse_id, columns=x)
   cols = colnames(out)
@@ -106,10 +100,8 @@ cast_tokens_aggregate <- function(tokens, x, FUN, by, id, collapse_id=F, ...){
 #'                     if the id column contains text instead of unique codes, the collapse_id argument can be used to collapse the text into an id.
 #' @param collapse_id  see id
 #' 
-#' @return
+#' @return a data.table
 #' @export
-#'
-#' @examples
 cast_tokens_text <- function(tokens, text, by, id, collapse_id=F){
   out = cast_tokens(tokens, by=by, id=id, collapse_id=collapse_id, columns=text)
   cols = colnames(out)

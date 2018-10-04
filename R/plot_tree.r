@@ -28,7 +28,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' 
 #' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param ...         Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)  
-#' @parma id          By default (true) the token_id is printed, but maybe you don't like ids.
+#' @param id          By default (true) the token_id is printed, but maybe you don't like ids.
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
@@ -36,6 +36,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
 #' @param all_lower   If TRUE, make all text lowercase
 #' @param all_abbrev  If an integer, abbreviate all text, with the number being the target number of characters. 
+#' @param tqueries    A tquery or list of tqueries, to annotate nodes
 #' @param bypass      Optionally, a character vector specifying one or multiple relations. If a node has this relation to its parent, it will bypass the parent by adopting the parent's parent id and relation. Using bypass and link_children makes it possible to reshape the tree to deal with the pesky recursive nature of language.
 #' @param link_children Optionally, a character vector specifying one or multiple relations. If bypass is used, children of the parent nodes with this relation will adopted. 
 #' @param textsize    A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number. 
@@ -46,14 +47,14 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, bypass=NULL, link_children=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
+plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL, annotations=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, bypass=NULL, isolate=NULL, link_children=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
   plot.new()
+  
   tokens = as_tokenindex(tokens) 
   nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
   sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
-  if (!is.null(bypass)) {
-    nodes = reshape_bypass(nodes, bypass, link_children = link_children)
-  }
+  
+  nodes = simplify_tree(nodes, bypass=bypass, isolate=isolate, link_children = link_children)
   
   l = tidyselect::quos(...)
   text_cols = if (id) list(nodes$token_id) else list()
@@ -82,18 +83,31 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   }
   
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
-
+  V(g)$id = as.numeric(V(g)$name)
+  
+  ## order nodes, split by roots
+  comps = igraph::decompose(g)
+  if (length(comps) > 1) {
+    reorder = unlist(sapply(comps, function(x) sort(V(x)$id)))
+    g = permute(g, match(V(g)$id, reorder))
+    text = text[match(reorder, tokens$token_id)]
+  }
+  
   root = find_roots(g)
   g$layout = igraph::layout_as_tree(g, root = root)
+  
+  #plot(g)
+  #return(NULL)
+  
   if (!is.null(ignore_rel)) g = delete.edges(g, which(get.edge.attribute(g, 'relation') %in% ignore_rel))
   co = g$layout ## vertex coordinates
+  
   
   ## arrange horizontal positions
   textwidth = strwidth(text)
   relwidth = strwidth(V(g)$label)
   
   width = ifelse(textwidth > relwidth, textwidth, relwidth)
-  #co[,1] = 1:nrow(co) / (nrow(co) / 2) - 1
   right_allign = cumsum(width)
   left_allign = c(0,right_allign[-length(right_allign)])
   co[,1] = rescale_var(left_allign, new_min = -1, new_max = 1, x_min = 0, x_max=max(right_allign))
@@ -107,7 +121,6 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   E(g)$curved = curve
   E(g)$arrow.size = 1
   E(g)$color = 'darkgrey'
-
   
   ## arrange vertical positions
   levels = max(co[,2]) - min(co[,2])
@@ -135,7 +148,7 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   height = (max(strheight(V(g)$label), strheight('I')) + strheight('I')*0.1) * 100
   V(g)$label.cex = cex
   V(g)$label.color = 'black'
-  V(g)$shape = 'crectangle'
+  V(g)$shape = 'rectangle'
   V(g)$size = width
   V(g)$size2 = height
   V(g)$color = 'white'
@@ -153,7 +166,11 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   } else hl = rep(F, vcount(g))
   
   if (use_color) {
-    V(g)$color = festival(V(g)$label, palette)
+    if (is.null(annotations)) {
+      V(g)$color = festival(V(g)$label, palette)
+    } else {
+      V(g)$color = festival(nodes[[annotations]], palette)
+    }
     E(g)$color = V(g)$color[e[,2]]
     V(g)$frame.color[hl] = 'red'
     E(g)$lty = ifelse(hl[e[,2]], 2, 1)
@@ -186,13 +203,13 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
 }
 
 festival <- function(labels, palette=palette){
-  pal = palette(10000)
+  pal = palette(1000)
   color = NA
   for (label in labels) {
     if (is.na(label)) next
     if (label == '') next
-    labelint = sum(utf8ToInt(label)^(nchar(label)))
-    labelint = labelint %% 10000
+    labelint = sum(utf8ToInt(label)^2)
+    labelint = labelint %% 1000
     mean(utf8ToInt(paste(c(letters,LETTERS), collapse='')))
     color[labels == label] = pal[labelint]
   }
@@ -201,6 +218,7 @@ festival <- function(labels, palette=palette){
 
 find_roots <- function(g) {
   comps = igraph::decompose(g)
+  
   roots = c()
   for (i in 1:length(comps)) {
     comp = comps[[i]]
@@ -229,20 +247,34 @@ rescale_var <- function(x, new_min=0, new_max=1, x_min=min(x), x_max=max(x)){
 
 
 function() {
-  ## !!!!!!!!!!! fam match gaat nog niet goed (transform_tree.r)
-  ## de match is niet volledig (geen replace)
-  ## ook, eerst hoogste link_children ophalen, dan lagere
-  ## plot_tree(tokens, token, tolower(pos), bypass=c('dep','conj','advcl','npadvmod'), link_children='nsubj')
-  
   library(spacyr)    
-  tokens = spacy_parse('"Kenny said: "Steve and Patrick, who were not very nice, or friendly, hit John, kissed Mary, and were kicked by Bob."', dependency=T)
+  tokens = spacy_parse('Steve and Bob said that Kenny, who was not very nice, kissed Anna.', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, pos)
+  plot_tree(tokens, token, pos, bypass='conj', isolate='relcl', link_children=c('nsubj'))
+  
+  tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, kissed Mary, and were kicked by Bob."', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  
+  nodes = apply_queries(tokens2, spacy_english_clause_queries())
+  head(nodes,20)
+
+  tokens2 = reshape_bypass(tokens, bypass=c('conj','advcl','dep','relcl'), link_children=c('nsubj', 'npadvmod'))
+  tokens2 = annotate(tokens2, spacy_english_quote_queries(), 'quotes')
+  tokens2 = annotate(tokens2, spacy_english_clause_queries(), 'clauses', unique_fill = F)
+  plot_tree(tokens2, token)
+  tokens2
+  View(tokens)
+  
   plot_tree(tokens, token, lemma, tolower(pos))
   
-  plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl','dep'), link_children=c('nsubj', 'npadvmod'))
+  plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl','dep','relcl'), link_children=c('nsubj', 'npadvmod'))
   plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl'), link_children='nsubj', use_color=F)
   plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl'), link_children='nsubj', use_color=F, ignore_rel='punct')
   plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl'), link_children='nsubj', use_color=F, ignore_rel='punct', allign_text=F)
+  
+  viewer <- getOption("viewer")
+  viewer('Rplot.pdf')
   
   tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, punched Ken, kissed Mary and punched Ben."', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
@@ -272,6 +304,17 @@ function() {
   plot_tree(tokens, text=c('token_id','token','pos'), bypass='conj', link_children = 'nsubj', ignore_rel = 'punct')
   tokens
   
+  tokens = spacy_parse('"John kissed Mary because he loves her.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos))
+  
+  
+  tokens = spacy_parse('Steve and Bob said that Kenny, who was not very nice, kissed Anna.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, pos)
+  plot_tree(tokens, token, pos, bypass='conj', link_children=c('nsubj'))
+  
+  
   tokens = spacy_parse('Steve said that Bob loved Mary and John', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, text=c('token_id','token'))
@@ -284,6 +327,17 @@ function() {
   tokens = as_tokenindex(tokens_corenlp)
   tokens = tokens[7:14,]
   plot_tree(tokens, text='token', labels = c('POS'))
+  
+  
+  
+  tokens = spacy_parse('"Kenny said that Steve kissed Mary', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos))
+  
+  tokens = spacy_parse('"Kenny hates that Mary got hit', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos))
+  
   
   tokens
   
@@ -336,4 +390,19 @@ function() {
   text('test')
   label = vertex.attributes(g)
   g$layout
+  
+  
+  library(nlpiper)
+  options(nlpiper.token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ2ZXJzaW9uIjoxLCJpYXQiOjE1Mjg5NjcxMTF9.LTUgVH3oJhf1GN795d5ewa5yIh1DGq7H5pIBTQeybA4")
+  options(nlpiper.server="http://nlpipe.kasperwelbers.com")
+  
+  text = 'Ik moet zeggen. Wij moeten zeggen.'
+  tokens = nlpiper::process("alpinocoref", format = 'csv',
+                            text = text)
+  tokens
+  plot_tree(tokens, token, POS)
+
+  library(corpustools)
+  tc = create_tcorpus(text, udpipe_model='dutch',use_parser = T)    
+  plot_tree(tc$tokens, token, POS)
 }

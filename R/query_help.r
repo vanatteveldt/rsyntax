@@ -8,10 +8,7 @@
 #' @param depth     An integer for how deep to search. 1 is only children, 2 includes grandchilderen, 3 includes grandgrandchildren, etc.
 #' @param group_cols Optionally, names of columns in tokens to group the results by. Groups are aggregated, and the number of times (and percentage) of each group is given. 
 #'
-#' @return
 #' @export
-#'
-#' @examples
 inspect_family <- function(tokens, query, node, family=c('family','children','parents'), depth=1, group_cols=NULL) {
   family = match.arg(family)
   ids = apply_queries(tokens, query)

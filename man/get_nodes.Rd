@@ -4,8 +4,8 @@
 \alias{get_nodes}
 \title{Transform the nodes to long format and match with token data}
 \usage{
-get_nodes(tokens, nodes, use = NULL, fill = T,
-  token_cols = c("token"), block = NULL, show_fill = F)
+get_nodes(tokens, nodes, use = NULL, token_cols = c("token"),
+  concat_dup = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -16,15 +16,7 @@ get_nodes(tokens, nodes, use = NULL, fill = T,
 from subsetting the columns in 'nodes' beforehand if fill is TRUE. When the children are collected,
 the ids from the not-used columns are still blocked (see 'block')}
 
-\item{fill}{If TRUE, the children for each id are recursively (children of children etc.) added. If this leads to
-duplicate ids (if an id in nodes is a child of another id in nodes), the most direct children are kept.
-For example, if 1 -> 2 -> 3, and both 1 and 2 are in 'nodes', then 3 is only added as a child of 2.}
-
 \item{token_cols}{A character vector, specifying which columns from tokens to include in the output}
-
-\item{block}{Optionally, another set of nodes, of which the nodes that are already in used will be blocked.}
-
-\item{show_fill}{If TRUE, add a .FILL column that indicates which tokens were added with fill}
 }
 \value{
 A data.table with the nodes in long format, and the specified token_cols attached

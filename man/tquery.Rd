@@ -4,7 +4,7 @@
 \alias{tquery}
 \title{Create a query for dependency based parse trees in a data.table (CoNLL-U or similar format).}
 \usage{
-tquery(..., NOT = NULL, g_id = NULL, save = NA)
+tquery(..., g_id = NULL, save = NA)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.

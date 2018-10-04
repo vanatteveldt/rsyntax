@@ -6,19 +6,20 @@
 \alias{not_children}
 \alias{parents}
 \alias{not_parents}
+\alias{fill}
 \title{Search for parents or children in tquery}
 \usage{
 children(..., g_id = NULL, save = NA, req = T, depth = 1,
   connected = F)
 
-not_children(..., g_id = NULL, save = NA, req = T, depth = 1,
-  connected = F)
+not_children(..., g_id = NULL, depth = 1, connected = F)
 
 parents(..., g_id = NULL, save = NA, req = T, depth = 1,
   connected = F)
 
-not_parents(..., g_id = NULL, save = NA, req = T, depth = 1,
-  connected = F)
+not_parents(..., g_id = NULL, depth = 1, connected = F)
+
+fill(..., g_id = NULL, depth = Inf, connected = F)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -57,9 +58,12 @@ Enables searching for parents or children, either direct (depth = 1) or until a 
 }
 \details{
 Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
-The save argument can be used to remember the global token ids (.G_ID) of the parents/children under a given column name.
+The save argument is used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 
 the not_children and not_parents functions will make the matched children/parents a NOT condition.
+
+The fill() function is used to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
+and by default will include all children of the node.
 
 
 Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way

@@ -28,7 +28,7 @@
 #' annotate(tokens, nodes, column = 'example')
 #' 
 #' @export
-apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
+apply_queries <- function(tokens, ..., as_chain=F, chain_fill=F, block=NULL, check=F) {
   r = list(...)
   
   is_tquery = sapply(r, is, 'tQuery')
@@ -41,15 +41,14 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=T) {
     if (is.null(.TQUERY_NAME)) .TQUERY_NAME = ''
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', paste0('tq', i), as.character(.TQUERY_NAME))
-    args = r[[i]]
-    #nodes = find_nodes(tokens, )
-    #nodes = do.call(r[[i]], args = list(tokens=tokens, block=block, check=check, e=parent.frame()))
-    l = c(args$lookup, args$nested, list(tokens=tokens, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME))
-    nodes = do.call(find_nodes, args = l)
-
+    
+    #args = r[[i]]
+    #l = c(args$lookup, args$nested, list(tokens=tokens, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME))
+    #nodes = do.call(find_nodes, args = l)
+    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME)
+    
     if (!is.null(nodes)) {
-      #nodes[,.TQUERY := .TQUERY_NAME]
-      if (as_chain) block = get_long_ids(block, nodes)
+      if (as_chain) block = get_long_ids(block, nodes, with_fill=chain_fill)
       out[[i]] = nodes  
     }
   }
