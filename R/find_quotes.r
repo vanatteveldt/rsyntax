@@ -37,7 +37,7 @@ add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='so
   quotes = tokens[!is.na(is_quote),]
   quotes$.QUOTE = is_quote[!is.na(is_quote)]
   
-  tokens = add_extended_source(tokens, is_quote, quotes, quote_col, quote_val) ## adds by reference
+  #tokens = add_extended_source(tokens, is_quote, quotes, quote_col, quote_val) ## adds by reference
   if (!is.null(tqueries))
     tokens = add_new_source(tokens, is_quote, quotes, quote_col, source_val, quote_val, tqueries, lag_sentences) ## adds by reference
   tokens[]
@@ -55,77 +55,6 @@ remove_nested_source <- function(tokens, is_quote, quote_col, source_val) {
   tokens
 }
 
-add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quote_val, tqueries, lag_sentences=1) {
-  if (lag_sentences < 0) stop('lag_sentences must be 0 or higher')
-  quote_id_col = paste0(quote_col,'_id')
-  uquotes = unique(subset(quotes, select = c('doc_id','sentence','token_id',quote_id_col,quote_col,'.QUOTE')))
-
-  #source_in_quote = !is.na(is_quote) & tokens[[quote_col]] == source_val
-  #print(tapply(source_in_quote, tokens[[quote_id_col]], FUN=mean))
-  
-  #print(tapply(!is.na(is_quote)), tokens[[quote_id_col]], FUN=mean))
-  already_coded = uquotes[!is.na(uquotes[[quote_col]]),]
-  has_source = unique(already_coded$.QUOTE)
-  no_source = uquotes[!uquotes$.QUOTE %in% has_source,]
-  no_source = unique(no_source, by=c('doc_id','.QUOTE'))
-  
-  candidates = select_candidates(tokens, is_quote, tqueries)
-  
-
-  no_source$start_sentence = no_source$sentence
-  for (i in 0:lag_sentences) {
-    no_source$sentence = no_source$start_sentence - i
-    if (!any(no_source$sentence >= 0)) break
-    sent = merge(no_source, candidates, by=c('doc_id','sentence'))
-    select_ids = unique(sent, by=c('.QUOTE'))$.ID
-    sent = sent[list(select_ids), on='.ID']
-    
-    if (nrow(sent) > 0) 
-      tokens = add_selected_sources(tokens, sent, is_quote, quote_col, source_val, quote_val)
-    
-    no_source = no_source[!no_source$.QUOTE %in% sent$.QUOTE,]
-  }
-  
-  tokens
-}
-
-select_candidates <- function(tokens, is_quote, tqueries) {
-  candidates = apply_queries(tokens, tqueries)
-  candidate_in_quote = subset(tokens, !is.na(is_quote), select=c('doc_id','sentence','token_id'))
-  candidates = candidates[!candidate_in_quote,on=c('doc_id','sentence','token_id')]
-  data.table::data.table(doc_id=candidates$doc_id, sentence=candidates$sentence, candidate_id=candidates$token_id, .ROLE=candidates$.ROLE, .ID=candidates$.ID)
-}
-
-add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_val, quote_val) {
-  quote_id_col = paste0(quote_col,'_id')
-  
-  sources$save = as.character(sources$.ROLE)
-  sources$i = tokens[list(sources$doc_id, sources$sentence, sources$candidate_id), on=c('doc_id','sentence','token_id'),which=T]
-  
-  ## prepare quotes
-  matched_source = sources[match(is_quote, sources$.QUOTE)]
-  matched_source$save = as.character(quote_val)
-  matched_source$i = 1:nrow(matched_source)
-  
-  ## merge
-  sources = rbind(sources,matched_source[!is.na(matched_source$doc_id)])
-  sources$new_id = paste0('.spanquote#', sources$.QUOTE)
-  
-  ## add
-  replace_col = as.character(tokens[sources$i,][[quote_col]])
-  replace_id_col = as.character(tokens[sources$i,][[quote_id_col]])
-  
-  already_used = !is.na(replace_col)
-  replace_col = ifelse(already_used, paste(replace_col, sources$save, sep=','), sources$save)
-  replace_id_col = ifelse(already_used, paste(replace_id_col, sources$new_id, sep=','), sources$new_id)
-  
-  levels(tokens[[quote_col]]) = union(levels(tokens[[quote_col]]), unique(replace_col))
-  levels(tokens[[quote_id_col]]) = union(levels(tokens[[quote_id_col]]), unique(replace_id_col))
-  tokens[sources$i, (quote_col) := replace_col]
-  tokens[sources$i, (quote_id_col) := replace_id_col]
-  
-  tokens
-}
 
 add_extended_source <- function(tokens, is_quote, quotes, quote_col, quote_val) {
   quote_id_col = paste0(quote_col,'_id')
@@ -146,6 +75,86 @@ add_extended_source <- function(tokens, is_quote, quotes, quote_col, quote_val) 
   tokens
 }
 
+add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quote_val, tqueries, lag_sentences=1) {
+  if (lag_sentences < 0) stop('lag_sentences must be 0 or higher')
+  quote_id_col = paste0(quote_col,'_id')
+  uquotes = unique(subset(quotes, select = c('doc_id','sentence','token_id',quote_id_col,quote_col,'.QUOTE')))
+
+  
+  already_coded = tapply(!is.na(uquotes[[quote_col]]), uquotes$.QUOTE, FUN=mean)
+  has_source = as.numeric(names(already_coded)[already_coded == 1])
+  #already_coded = uquotes[!is.na(uquotes[[quote_col]]),]
+  #has_source = unique(already_coded$.QUOTE)
+  no_source = uquotes[!uquotes$.QUOTE %in% has_source,]
+  no_source = unique(no_source, by=c('doc_id','.QUOTE'))
+  
+  candidates = select_candidates(tokens, is_quote, quote_col, source_val, tqueries)
+  
+
+  no_source$start_sentence = no_source$sentence
+  for (i in 0:lag_sentences) {
+    no_source$sentence = no_source$start_sentence - i
+    if (!any(no_source$sentence >= 0)) break
+    sent = merge(no_source, candidates, by=c('doc_id','sentence'))
+    select_ids = unique(sent, by=c('.QUOTE'))$.ID
+    sent = sent[list(select_ids), on='.ID']
+    #sent = sent[!sent$.ROLE == quote_val,]
+    if (nrow(sent) > 0) 
+      tokens = add_selected_sources(tokens, sent, is_quote, quote_col, source_val, quote_val)
+    
+    no_source = no_source[!no_source$.QUOTE %in% sent$.QUOTE,]
+  }
+  
+  tokens
+}
+
+select_candidates <- function(tokens, is_quote, quote_col, source_val, tqueries) {
+  quote_id_col = paste0(quote_col,'_id')
+  #is_source = tokens[!is.na(tokens[[quote_col]]),]  ## use any value for quote_col, but need to filter out quote value before add_selected_sources
+  is_source = tokens[!is.na(tokens[[quote_col]]) & tokens[[quote_col]] == source_val,]
+  is_source = data.table::data.table(doc_id=is_source$doc_id, sentence=is_source$sentence, candidate_id=is_source$token_id,
+                                     .ROLE=source_val, .ID=is_source[[quote_id_col]])
+
+  candidates = apply_queries(tokens, tqueries)
+  candidate_in_quote = subset(tokens, !is.na(is_quote), select=c('doc_id','sentence','token_id'))
+  candidates = candidates[!candidate_in_quote,on=c('doc_id','sentence','token_id')]
+  candidates = data.table::data.table(doc_id=candidates$doc_id, sentence=candidates$sentence, candidate_id=candidates$token_id, 
+                                      .ROLE=candidates$.ROLE, .ID=candidates$.ID)
+  
+  rbind(is_source, candidates)
+}
+
+add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_val, quote_val) {
+  quote_id_col = paste0(quote_col,'_id')
+  
+  sources$save = as.character(sources$.ROLE)
+  sources$i = tokens[list(sources$doc_id, sources$sentence, sources$candidate_id), on=c('doc_id','sentence','token_id'),which=T]
+  
+  ## prepare quotes
+  matched_source = sources[match(is_quote, sources$.QUOTE)]
+  matched_source$save = as.character(quote_val)
+  matched_source$i = 1:nrow(matched_source)
+  
+  ## merge
+  sources = rbind(sources,matched_source[!is.na(matched_source$doc_id)])
+  #sources$new_id = paste0('.spanquote#', sources$.QUOTE)
+  sources$new_id = as.character(sources$.ID)
+  
+  ## add
+  replace_col = as.character(tokens[sources$i,][[quote_col]])
+  replace_id_col = as.character(tokens[sources$i,][[quote_id_col]])
+  
+  already_used = !is.na(replace_id_col) & !(replace_id_col == sources$new_id)
+  replace_col = ifelse(already_used, paste(replace_col, sources$save, sep=','), sources$save)
+  replace_id_col = ifelse(already_used, paste(replace_id_col, sources$new_id, sep=','), sources$new_id)
+  
+  levels(tokens[[quote_col]]) = union(levels(tokens[[quote_col]]), unique(replace_col))
+  levels(tokens[[quote_id_col]]) = union(levels(tokens[[quote_id_col]]), unique(replace_id_col))
+  tokens[sources$i, (quote_col) := replace_col]
+  tokens[sources$i, (quote_id_col) := replace_id_col]
+  
+  tokens
+}
 
 get_quote_positions <- function(tokens, text_col, par_col=NULL, space_col=NULL) {
   par = get_paragraph(tokens, text_col, par_col, space_col)
@@ -183,16 +192,18 @@ get_paragraph <- function(tokens, text_col, par_col, space_col) {
 }
 
 function(){
+  library(tokenbrowser)
+  
   tokens = read.csv('~/projects/bron_extractie_demo/tokens.csv')
   tokens = annotate(tokens, alpino_quote_queries(), column='quotes')
   
-  tqueries = list(tquery(POS = 'verb*', lemma = rsyntax:::DUTCH_SAY_VERBS, children(relation='su', save='source', fill())),
-                  tquery(POS = 'verb*', children(relation='su', save='source', fill())))
-  #View(apply_queries(tokens, tqueries))
+  tqueries = list(span1 = tquery(POS = 'verb*', lemma = rsyntax:::DUTCH_SAY_VERBS, children(relation='su', save='source')),
+                  span2 = tquery(POS = 'verb*', children(relation='su', save='source')))
   
   tokens = add_span_quotes(tokens, 'token', quote_col = 'quotes', source_val = 'source', quote_val = 'quote', tqueries=tqueries)
   
   url = syntax_reader(tokens, 'quotes', 'source', 'quote')
   view_reader(url)
+  browseURL(url)
   View(tokens)
 }

@@ -6,34 +6,34 @@ test_that("find_nodes works", {
   
   #dat = find_nodes(tokens, save='id', lemma = 'dat')
   dat = find_nodes(tokens, 
-                    tquery(save='id',lemma='dat'))
+                    tquery(save='id',lemma='dat', fill=F))
   
   expect_equal(nrow(dat), 1)
   expect_equal(dat$token_id, 45)
   
   vcs = find_nodes(tokens, 
-                    tquery(save='parent', relation='vc'))
+                    tquery(save='parent', relation='vc', fill=F))
   expect_equal(nrow(vcs), 3)
   expect_equal(sort(vcs$token_id), c(7,45,54))
 
   body = find_nodes(tokens, 
-                     tquery(save='id', relation="vc", 
-                            children(save='b', relation='body')))
+                     tquery(save='id', relation="vc", fill=F,
+                            children(save='b', relation='body', fill=F)))
   expect_equal(nrow(body), 2)
 
   # can we get_children with children?
   children = find_nodes(tokens, 
-                         tquery(children(save='child', relation="body",
-                                         children(save='grandchild', relation='vc'))))
+                         tquery(children(save='child', relation="body", fill=F,
+                                         children(save='grandchild', relation='vc', fill=F))))
   expect_equal(nrow(children), 2)
   
   nodes = find_nodes(tokens, 
-                      tquery(save='test', relation='su',
-                             children(save='child')))
+                      tquery(save='test', relation='su', fill=F,
+                             children(save='child', fill=F)))
 
   # get parents
   parents = find_nodes(tokens, 
-                        tquery(relation="vc", parents(save='parent', POS = 'verb')))
+                        tquery(relation="vc", parents(save='parent', POS = 'verb', fill=F)))
 
   
   expect_equal(nrow(parents), 3)
@@ -41,11 +41,11 @@ test_that("find_nodes works", {
   
   # get parents, grandparents, children and grandchildren
   family = find_nodes(tokens, 
-                       tquery(relation='vc',
-                              parents(save='parent',
-                                      parents(save='grandparent')),
-                              children(save='child', relation='obj1',
-                                       children(save='grandchild', relation='mod'))))
+                       tquery(relation='vc', fill=F,
+                              parents(save='parent', fill=F,
+                                      parents(save='grandparent', fill=F)),
+                              children(save='child', relation='obj1', fill=F,
+                                       children(save='grandchild', relation='mod', fill=F))))
   
   expect_equal(nrow(family), 4)
   expect_equal(family$token_id, c(53,45,51,50))

@@ -10,12 +10,12 @@
 \title{Search for parents or children in tquery}
 \usage{
 children(..., g_id = NULL, save = NA, req = T, depth = 1,
-  connected = F)
+  connected = F, fill = T)
 
 not_children(..., g_id = NULL, depth = 1, connected = F)
 
 parents(..., g_id = NULL, save = NA, req = T, depth = 1,
-  connected = F)
+  connected = F, fill = T)
 
 not_parents(..., g_id = NULL, depth = 1, connected = F)
 

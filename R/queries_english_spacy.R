@@ -9,13 +9,13 @@ ENGLISH_SAY_VERBS = c("tell", "show", "acknowledge", "admit", "affirm", "allege"
 #' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
 spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
-  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='quote', fill(),
-                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source', fill()))
+  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='quote',
+                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'))
   
   nosrc = tquery(pos='VERB*', 
-                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source', fill()),
-                 children(lemma = verbs, lemma__N = exclude_verbs, relation='xcomp', save='verb', fill(),
-                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), save='quote', fill())))
+                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
+                 children(lemma = verbs, lemma__N = exclude_verbs, relation='xcomp', save='verb',
+                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), save='quote')))
   
   according = tquery(save='quote',
                      children(relation='nmod:according_to', save='source',
@@ -43,25 +43,25 @@ spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_V
   subject_name = if (with_subject) 'subject' else NA
   object_name = if (with_object) 'object' else NA
   
-  direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate', fill(),
+  direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
                   not_children(relation = 'auxpass'),
-                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, fill(), req=sub_req),
-                  children(relation = c('dobj'), save=object_name, fill(), req=ob_req)) 
+                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                  children(relation = c('dobj'), save=object_name, req=ob_req)) 
   
-  passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate', fill(),
+  passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
                    children(relation = 'auxpass'),
-                   children(relation = c('su','nsubj','agent','nmod:agent'), save=subject_name, fill(), req=sub_req),
-                   children(relation = c('nsubjpass','pobj'), save=object_name, fill(), req=ob_req)) 
+                   children(relation = c('su','nsubj','agent','nmod:agent'), save=subject_name, req=sub_req),
+                   children(relation = c('nsubjpass','pobj'), save=object_name, req=ob_req)) 
   
   copula_direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, 
-                         parents(save='predicate', fill(),
-                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name,fill(), req=sub_req),
-                                 children(relation = c('dobj'), save=object_name, fill(), req=ob_req))) 
+                         parents(save='predicate',
+                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                                 children(relation = c('dobj'), save=object_name, req=ob_req))) 
   
   copula_passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs,
-                          parents(save='predicate', fill(),
-                                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, fill(), req=sub_req),
-                                  children(relation = c('dobj'), save=object_name, fill(), req=ob_req))) 
+                          parents(save='predicate',
+                                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                                  children(relation = c('dobj'), save=object_name, req=ob_req))) 
   
   
   list(d=direct, p=passive, cd=copula_direct, cp=copula_passive)

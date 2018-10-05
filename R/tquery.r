@@ -45,9 +45,21 @@
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows tquery
 #' @export
-tquery <- function(..., g_id=NULL, save=NA) {
+tquery <- function(..., g_id=NULL, save=NA, fill=T) {
   #select = deparse(bquote_s(substitute(select), where = parent.frame()))
+  
   l = list(...)
+  
+  if (any(sapply(l, is, 'tQueryFill'))) stop('fill() can only be passed to the fill argument')
+  
+  if (!is.na(save)) {
+    if (is.logical(fill)) {
+      if (fill) l[['']] = fill()
+    } else {
+      if (is(fill, 'tQueryFill')) l[['']] = fill
+    }
+  }
+  
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') | sapply(l, is, 'tQueryFill') 
     for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
@@ -128,12 +140,22 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
+children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
-  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
+  if (any(sapply(l, is, 'tQueryFill'))) stop('fill() can only be passed to the fill argument')
+  
+  if (!is.na(save)) {
+    if (is.logical(fill)) {
+      if (fill) l[['']] = fill()
+    } else {
+      if (is(fill, 'tQueryFill')) l[['']] = fill
+    }
+  }
+  
+  
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill') 
     for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
@@ -162,7 +184,7 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F) {
   req = T
   NOT = T
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
-  #select = deparse(bquote_s(substitute(select)))
+  
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
@@ -180,12 +202,22 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F) {
 
 #' @rdname nested_nodes
 #' @export
-parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F) {
+parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
-  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
+
+  if (any(sapply(l, is, 'tQueryFill'))) stop('fill() can only be passed to the fill argument')
+  
+  if (!is.na(save)) {
+    if (is.logical(fill)) {
+      if (fill) l[['']] = fill()
+    } else {
+      if (is(fill, 'tQueryFill')) l[['']] = fill
+    }
+  }
+    
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
     for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
@@ -213,7 +245,6 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=F) {
   NOT = T
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   
-  #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')

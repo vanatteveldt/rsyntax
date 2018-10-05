@@ -47,8 +47,8 @@ test_that("extracting sources works", {
   
   # 4 : Minister Spies zei dat de PvdA een " Kapitale blunder " had begaan . 
   quotes = get_quotes(tokens[tokens$sentence == 4,])
-  expect_equal(nrow(quotes), 10)
-  .check(tokens, quotes, source=c("Minister","Spies"), verb=c('zei'), quote=c('de','PvdA','een','Kapitale','blunder','had','begaan'))
+  expect_equal(nrow(quotes), 14)
+  .check(tokens, quotes, source=c("Minister","Spies"), verb=c('zei','dat','"','"','.'), quote=c('de','PvdA','een','Kapitale','blunder','had','begaan'))
   
   # 5 : Begrotingstekort is volgens CPB volgend jaar 3.7 procent . 
   quotes = get_quotes(tokens[tokens$sentence == 5,])
@@ -57,8 +57,8 @@ test_that("extracting sources works", {
   
   # 6 : Hij veroordeelde het avontuur : " Alsof Nederland een politiek laboratorium is " . 
   quotes = get_quotes(tokens[tokens$sentence == 6,])
-  expect_equal(nrow(quotes), 8)
-  .check(tokens, quotes, source="Hij", verb='veroordeelde', quote=c('Alsof','Nederland','een','politiek','laboratorium','is'))
+  expect_equal(nrow(quotes), 14)
+  .check(tokens, quotes, source="Hij", verb=c('veroordeelde','het','avontuur',':','"','"','.'), quote=c('Alsof','Nederland','een','politiek','laboratorium','is'))
   
   # 7 : VVD : Doe recht aan alle werkenden , betaald of onbetaald . 
   quotes = get_quotes(tokens[tokens$sentence == 7,])
