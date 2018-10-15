@@ -33,7 +33,7 @@ alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
                        children(lemma =  quote_punctuation))
   
   # y, stelt x
-  xstelt = tquery(save='quote', fill = fill(relation__N='tag'),
+  xstelt = tquery(save='quote', fill(relation__N='tag'),
                        children(save='verb', relation='tag', lemma = verbs,
                                 children(save = 'source', relation=c('su'))))
   

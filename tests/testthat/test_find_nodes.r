@@ -18,7 +18,7 @@ test_that("find_nodes works", {
 
   body = find_nodes(tokens, 
                      tquery(save='id', relation="vc", fill=F,
-                            children(save='b', relation='body', fill=F)))
+                            children(save='id', relation='body', fill=F)))
   expect_equal(nrow(body), 2)
 
   # can we get_children with children?

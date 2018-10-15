@@ -10,12 +10,12 @@
 \title{Search for parents or children in tquery}
 \usage{
 children(..., g_id = NULL, save = NA, req = T, depth = 1,
-  connected = F, fill = T)
+  connected = F, fill = T, block = F)
 
 not_children(..., g_id = NULL, depth = 1, connected = F)
 
 parents(..., g_id = NULL, save = NA, req = T, depth = 1,
-  connected = F, fill = T)
+  connected = F, fill = T, block = F)
 
 not_parents(..., g_id = NULL, depth = 1, connected = F)
 
@@ -48,6 +48,8 @@ All parents/children must meet the filtering conditions (... or g_id)}
 \item{connected}{controlls behaviour if depth > 1 and filters are used. If FALSE (default) all parents/children to the given depth are retrieved, and then filtered. 
 This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
 If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved.}
+
+\item{fill}{Logical. If TRUE (default), the default fill() will be used (see description). To more specifically controll fill, you can nest the \link{fill} function (a special version of the children function)}
 }
 \value{
 Should not be used outside of \link{find_nodes}
@@ -63,7 +65,8 @@ The save argument is used to remember the global token ids (.G_ID) of the parent
 the not_children and not_parents functions will make the matched children/parents a NOT condition.
 
 The fill() function is used to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
-and by default will include all children of the node.
+and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
+assigned to the closest node.
 
 
 Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way

@@ -10,6 +10,8 @@ get_long_ids(..., names = NULL, with_fill = F)
 \item{...}{Either a data.table with the columns doc_id, sentence and token_id, or the output of \link{find_nodes}}
 
 \item{with_fill}{If TRUE, include the ids of the fill nodes}
+
+\item{with_parents}{if TRUE, include the ids of the parent nodes}
 }
 \value{
 A data.table with the columns doc_id, sentence and token_id

@@ -54,7 +54,7 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
   sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
   
-  nodes = simplify_tree(nodes, bypass=bypass, isolate=isolate, link_children = link_children)
+  #nodes = apply_reshapes(nodes, treshape(bypass=bypass, isolate=isolate, link_children = link_children))
   
   l = tidyselect::quos(...)
   text_cols = if (id) list(nodes$token_id) else list()
@@ -62,16 +62,17 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
     if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
     text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
   }
-  
+
   data.table::setcolorder(nodes, union('token_id', colnames(nodes))) ## set token_id first for matching with edges
   
   # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
   edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
-  edges = edges[!edges$relation %in% bypass,]
+  #edges = edges[!edges$relation %in% bypass,]
   
   text = NULL
   for (tc in text_cols) {
     textval = if (!is.null(all_abbrev)) abbreviate(tc, minlength = all_abbrev) else tc
+    textval = ifelse(is.na(textval), '', as.character(textval))
     text = if (is.null(text)) textval else paste(text, textval, sep='\n')
   }
   nodes$label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
@@ -88,11 +89,11 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   ## order nodes, split by roots
   comps = igraph::decompose(g)
   if (length(comps) > 1) {
-    reorder = unlist(sapply(comps, function(x) sort(V(x)$id)))
-    g = permute(g, match(V(g)$id, reorder))
-    text = text[match(reorder, tokens$token_id)]
+    reorder = unlist(sapply(comps, function(x) sort(V(x)$id), simplify = F))
+    g = permute(g, match(as.numeric(V(g)$id), as.numeric(reorder)))
+    text = text[match(as.numeric(reorder), as.numeric(nodes$token_id))]
   }
-  
+
   root = find_roots(g)
   g$layout = igraph::layout_as_tree(g, root = root)
   
@@ -182,9 +183,16 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   
 
   plot(g, layout=co, rescale=FALSE, add=TRUE)
+  
+  
   ## add text and lines
-  if ('.ADDED' %in% vertex_attr_names(g)) {
-    col = ifelse(V(g)$.ADDED, ifelse(use_color, 'red', 'darkgrey'),'black')
+  
+  ## non-integers are added. highlight these in red for clarity
+  added = as.numeric(V(g)$name)
+  added = (round(added) - added) != 0
+  if (any(added)) {
+    
+    col = ifelse(added, ifelse(use_color, 'red', 'darkgrey'),'black')
   } else col = 'black'
   
   if (allign_text) {
@@ -253,8 +261,17 @@ function() {
   plot_tree(tokens, token, pos)
   plot_tree(tokens, token, pos, bypass='conj', isolate='relcl', link_children=c('nsubj'))
   
-  tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, kissed Mary, and were kicked by Bob."', dependency=T)
+  tokens = spacy_parse('"Kenny said: "Steve and Patrick greeted Bob, and were greeted by John."', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, tolower(pos))
+  plot_tree(tokens, token, bypass = 'conj', link_children = 'nsubj')
+  
+  tokens = annotate(tokens, spacy_english_quote_queries(), 'quotes')
+  tokens = simplify_tree(tokens, bypass='conj', link_children='nsubj')
+  tokens = annotate(tokens, spacy_english_clause_queries(with_object = T), 'clauses') 
+  
+  plot_tree(tokens, token, quotes, clauses)
+  
   
   nodes = apply_queries(tokens2, spacy_english_clause_queries())
   head(nodes,20)
@@ -265,8 +282,50 @@ function() {
   plot_tree(tokens2, token)
   tokens2
   View(tokens)
-  
+
+  tokens = spacy_parse('If Democrats win, all bees will die.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, token, lemma, tolower(pos))
+  
+  
+  tokens = spacy_parse('According to Trump, bees will die if Democrats win control of Congress this year.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos))
+  
+  
+  tokens = spacy_parse('John says Mary is great.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, (pos))
+  
+    
+  tokens = spacy_parse('Trump also warned of a wave of crime if Democrats win control of Congress this year.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos))
+  
+  ifthen = tquery(lemma = c("if","when","because"),
+                  parents(pos = 'VERB*', save='reason',
+                          parents(save='consequence')))
+  
+  tokens = annotate(tokens, spacy_english_quote_queries(), column = 'quotes')
+  tokens = annotate(tokens, spacy_english_clause_queries(), column = 'clauses')
+  tokens = annotate(tokens, ifthen, column = 'cause')
+  
+  plot_tree(tokens, token, id = F,(substr(quotes, 0,3)), (substr(clauses, 0,3)), (substr(cause, 0, 3)))
+  plot_tree(tokens, token, quotes, clauses, cause)
+  
+  plot_tree(tokens, token, pos, substr(quotes, 0,1), substr(clauses, 0,3), bypass=c('conj','pobj'))
+
+  cast_tokens_text(tokens, text='token', by = list(quotes='source', cause='consequence', clauses='subject'), id = 'token', collapse_id = T)
+  
+  
+  tokens = spacy_parse('He won controll of the people of congress.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token)
+  
+  View(tokens)
+  cast_tokens_text(tokens, 'token', by=list(clauses='subject'), id = 'token', collapse_id = T)
+  tokens = simplify_tree(tokens, )
+  cast_tokens_text(tokens, 'token', by=list(clauses='subject'), id = 'token', collapse_id = T)
   
   plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl','dep','relcl'), link_children=c('nsubj', 'npadvmod'))
   plot_tree(tokens, token, tolower(pos), bypass=c('conj','advcl'), link_children='nsubj', use_color=F)
@@ -405,4 +464,101 @@ function() {
   library(corpustools)
   tc = create_tcorpus(text, udpipe_model='dutch',use_parser = T)    
   plot_tree(tc$tokens, token, POS)
+  
+  
+  load('~/Dropbox/resteco_preprocessing/backup.rda')
+  text = paste(paste0(en$headline,'.'), en$text, sep='\n\n')[1:5]
+  ##tokens = spacy_parse(text, dependency = T)
+  #tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  #saveRDS(tokens, file='example_backup.rds')
+  
+  tokens = readRDS('example_backup.rds')
+  tokens1 = tokens[list('text5', c(2349,2354)), on=c('doc_id','sentence')]
+  tokens2 = tokens[list('text5', c(2350,2354)), on=c('doc_id','sentence')]
+  tokens1 = annotate(tokens1, spacy_english_clause_queries(), 'clauses')
+  tokens2 = annotate(tokens2, spacy_english_clause_queries(), 'clauses')
+  
+  tokens2
+  
+  tokens = readRDS('example_backup.rds')
+  tokens = annotate(tokens, spacy_english_clause_queries(), 'clauses')
+  tokens
+  
+  ids = data.table::data.table(doc_id='text5',sentence=2354,predicate=6)
+  tquery = spacy_english_clause_queries()[[2]]
+  rec_find(tokens2, ids, tquery$nested[4], block = NULL, only_req=F)
+  
+  #tokens = tokens[list('text5'), on=c('doc_id')]
+  ids = data.table::data.table(doc_id='text5',sentence=c(2349, 2354),predicate=c(7,6))
+  tquery = spacy_english_clause_queries()[[2]]
+  rec_find(tokens1, ids, tquery$nested[4], block = NULL, only_req=F)
+  rec_find(tokens2, ids, tquery$nested[4], block = NULL, only_req=F)
+  
+  
+  View(tokens)
+  
+  tokens = annotate(tokens, spacy_english_quote_queries(), 'quotes')
+  
+  tokens
+  tokens[list('text5', 2354), on=c('doc_id','sentence')]
+  
+  tokens$code = NA
+  tokens$code[grep('terror', tokens$token)] = 'terror'
+  test = cast_tokens_text(tokens, text='token', by = list(clauses='subject'), id = 'code')  
+  test
+  
+  View(tokens)
+  
+  unique(tokens$sentence)
+  
+  head(tokens)
+  
+  plot_tree(tokens, token, lemma, substr(quotes,0,2), substr(clauses,0,2), doc_id = 'text3', sentence = 53)
+  plot_tree(tokens, token, lemma, substr(quotes,0,2), substr(clauses,0,2), doc_id = 'text4', sentence = 10)
+  plot_tree(tokens, token, lemma, substr(quotes,0,2), substr(clauses,0,2), doc_id = 'text5', sentence = 2303)
+  plot_tree(tokens, token, lemma, substr(quotes,0,2), substr(clauses,0,2), doc_id = 'text5', sentence = 2354)
+  
+  library(spacyr)
+  tokens2 = spacy_parse('I think allowing terrorist to get away with things is bad for America.', dependency=T)
+  tokens2 = as_tokenindex(tokens2, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  tokens2 = annotate(tokens2, spacy_english_quote_queries(), 'quotes')
+  tokens2 = annotate(tokens2, spacy_english_clause_queries(with_object = T, sub_req = F, ob_req = F), 'clauses')
+  plot_tree(tokens2, token, lemma, substr(quotes,0,2), substr(clauses,0,2), sentence_i = 1)
+  tokens2
+  
+  tokens = readRDS('example_backup.rds')
+  tokens = annotate(tokens, spacy_english_clause_queries(), 'clauses')
+  tokens
+  
+  
+  
+  terror = tquery(token = 'terror')
+  
+  grep('terror', tokens$token)
+  find_nodes(tokens, terror)
+  inspect_family(tokens, terror)
+  
+  
+  library(spacyr)
+  tokens = spacy_parse('Steve and Patrick were kicked by Bob.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos), allign_text = T)
+
+  library(corpustools)  
+  tc= create_tcorpus(sotu_texts)
+  
+  tc$feature_associations('test')  
+  
+  library(spacyr)
+  tokens = spacy_parse('Steve hit Patrick and was not kicked by John.', dependency=T)
+  #tokens = spacy_parse('Steve likes bananas, strawberries and apples.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  
+  plot_tree(tokens,token)
+  apply_reshapes(tokens, treshape(bypass='conj', link_children='nsubj', remove='cc'))
+  plot_tree(tokens, token, lemma, tolower(pos), allign_text = T, bypass='conj', link_children='nsubj')
+  apply_queries(tokens, spacy_english_clause_queries(), as_chain = T)
+  annotate(tokens, spacy_english_clause_queries(), 'clauses')  
+  
+  
 }

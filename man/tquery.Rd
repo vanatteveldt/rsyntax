@@ -4,7 +4,7 @@
 \alias{tquery}
 \title{Create a query for dependency based parse trees in a data.table (CoNLL-U or similar format).}
 \usage{
-tquery(..., g_id = NULL, save = NA, fill = T)
+tquery(..., g_id = NULL, save = NA, fill = T, block = F)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -22,6 +22,8 @@ These functions have the same query arguments as tquery, but with some additiona
 
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
+
+\item{fill}{Logical. If TRUE (default), the default fill() will be used (see description). To more specifically controll fill, you can nest the \link{fill} function (a special version of the children function)}
 }
 \value{
 A tQuery object, that can be used with the \link{apply_queries} function.

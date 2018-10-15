@@ -7,8 +7,13 @@
 #' 
 #' Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
 #' These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
-#' 
+#'
+#' The fill() function (also see fill argument) can be nested to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
+#' and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
+#' assigned to the closest node. 
+#'   
 #' Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
+#'
 #'
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
@@ -23,6 +28,10 @@
 #' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param save    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
+#' @param fill    Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+#'                function (a special version of the children function). 
+#' @param block   Logical. If TRUE, the node will be blocked from being assigned (saved). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+#'                but also don't want to 'save' it. Essentially, block is shorthand for using save and then removing the node afterwards. If block is TRUE, save has to be NA.
 #'                
 #'                
 #' @return        A tQuery object, that can be used with the \link{apply_queries} function.
@@ -45,20 +54,29 @@
 #'                          children(save = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows tquery
 #' @export
-tquery <- function(..., g_id=NULL, save=NA, fill=T) {
+tquery <- function(..., g_id=NULL, save=NA, fill=T, block=F) {
   #select = deparse(bquote_s(substitute(select), where = parent.frame()))
   
   l = list(...)
+  validate_save_name(save)
   
-  if (any(sapply(l, is, 'tQueryFill'))) stop('fill() can only be passed to the fill argument')
-  
-  if (!is.na(save)) {
-    if (is.logical(fill)) {
-      if (fill) l[['']] = fill()
-    } else {
-      if (is(fill, 'tQueryFill')) l[['']] = fill
-    }
+  if (block) {
+    if (!is.na(save)) stop('block cannot be TRUE if save is not NA. Note that block is used to block nodes from being saved or filled (see ?tquery documentation)')
+    save = 'BLOCK'
   }
+  
+  is_fill = if (length(l) > 0) sapply(l, is, 'tQueryFill') else c()
+  if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
+  if (any(is_fill)) {
+    if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
+    if (is.na(save)) {
+      warning('fill() is used in a query where save = NA. This will be ignored, because the children of a node that is not saved would be forgotten anyway')
+      l = l[!is_fill]
+    }
+  } else {
+    if (fill && !is.na(save)) l[['']] = fill() 
+  }
+
   
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') | sapply(l, is, 'tQueryFill') 
@@ -74,17 +92,33 @@ tquery <- function(..., g_id=NULL, save=NA, fill=T) {
   } else {
     q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL)
   }
-  #check_duplicate_names(q)
+  q = safe_names(q)
   class(q) = c('tQuery', class(q))
   q
 }
 
-
-check_duplicate_names <- function(tq, save_names=c()) {
-  if (!is.na(tq$save)) save_names = c(save_names, tq$save)
-  if (anyDuplicated(save_names)) stop('tquery cannot contain duplicate "save" values')
-  for (n in tq$nested) check_duplicate_names(n, save_names)
+validate_save_name <- function(save) {
+  if (!is.na(save)) {
+    if (grepl('#', save)) stop('save name cannot contain a hashtag')
+    if (grepl('\\_FILL', save)) stop('save name cannot contain _FILL')
+    if (grepl('BLOCK', save)) stop('save name cannot contain BLOCK')
+    if (grepl('\\.[A-Z]', save)) stop(sprintf('save name cannot be all-caps and starting with a dot'))
+    if (grepl(',', save)) stop(sprintf('save name cannot contain comma'))
+    forbidden = c('doc_id','sentence','token_id','.ID','.MATCH_ID','.FILL_LEVEL')
+    if (save %in% forbidden) stop(sprintf('save name cannot be one of: %s', paste(forbidden, collapse=', ')))
+  }
 }
+
+safe_names <- function(tq, save_names=c()) {
+  if (!is.na(tq$save)) {
+    already_used = sum(tq$save == save_names)
+    save_names = c(save_names, tq$save)
+    if (already_used > 0) tq$save = paste(tq$save, already_used+1, sep='#')
+  }
+  for (i in seq_along(tq$nested)) tq$nested[[i]] = safe_names(tq$nested[[i]], save_names)
+  tq
+}
+
 
 #' Search for parents or children in tquery
 #'
@@ -97,7 +131,8 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #' the not_children and not_parents functions will make the matched children/parents a NOT condition. 
 #' 
 #' The fill() function is used to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
-#' and by default will include all children of the node.
+#' and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
+#' assigned to the closest node.
 #'   
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
@@ -120,6 +155,10 @@ check_duplicate_names <- function(tq, save_names=c()) {
 #' @param connected controlls behaviour if depth > 1 and filters are used. If FALSE (default) all parents/children to the given depth are retrieved, and then filtered. 
 #'                  This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
 #'                  If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved. 
+#' @param fill    Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+#'                function (a special version of the children function). 
+#' @param block   Logical. If TRUE, the node will be blocked from being assigned (saved). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+#'                but also don't want to 'save' it. Essentially, block is shorthand for using save and then removing the node afterwards. If block is TRUE, save has to be NA.
 #'
 #' @details 
 #' Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
@@ -140,22 +179,30 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T) {
+children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T, block=F) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  validate_save_name(save)
   
   l = list(...)
-  if (any(sapply(l, is, 'tQueryFill'))) stop('fill() can only be passed to the fill argument')
   
-  if (!is.na(save)) {
-    if (is.logical(fill)) {
-      if (fill) l[['']] = fill()
-    } else {
-      if (is(fill, 'tQueryFill')) l[['']] = fill
-    }
+  if (block) {
+    if (!is.na(save)) stop('block cannot be TRUE if save is not NA. Note that block is used to block nodes from being saved or filled (see ?tquery documentation)')
+    save = 'BLOCK'
   }
   
-  
+  is_fill = if (length(l) > 0) sapply(l, is, 'tQueryFill') else c()
+  if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
+  if (any(is_fill)) {
+    if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
+    if (is.na(save)) {
+      warning('fill() is used in a query where save = NA. This will be ignored, because the children of a node that is not saved would be forgotten anyway')
+      l = l[!is_fill]
+    }
+  } else {
+    if (fill && !is.na(save)) l[['']] = fill() 
+  }
+ 
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill') 
     for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
@@ -202,22 +249,33 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F) {
 
 #' @rdname nested_nodes
 #' @export
-parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T) {
+parents <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T, block=F) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  validate_save_name(save)
+  
   
   l = list(...)
-
-  if (any(sapply(l, is, 'tQueryFill'))) stop('fill() can only be passed to the fill argument')
   
-  if (!is.na(save)) {
-    if (is.logical(fill)) {
-      if (fill) l[['']] = fill()
-    } else {
-      if (is(fill, 'tQueryFill')) l[['']] = fill
-    }
+  if (block) {
+    if (!is.na(save)) stop('block cannot be TRUE if save is not NA. Note that block is used to block nodes from being saved or filled (see ?tquery documentation)')
+    save = 'BLOCK'
   }
-    
+
+  
+  is_fill = if (length(l) > 0) sapply(l, is, 'tQueryFill') else c()
+  if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
+  if (any(is_fill)) {
+    if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
+    if (is.na(save)) {
+      warning('fill() is used in a query where save = NA. This will be ignored, because the children of a node that is not saved would be forgotten anyway')
+      l = l[!is_fill]
+    }
+  } else {
+    if (fill && !is.na(save)) l[['']] = fill() 
+  }
+  
+
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
     for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
@@ -272,10 +330,7 @@ fill <- function(..., g_id=NULL, depth=Inf, connected=F) {
     q = list(g_id=g_id, save='fill', lookup =NULL, nested=NULL, level = 'children', req=F, NOT=F, depth=depth, connected=connected)
   }
   
-  
   class(q) = c('tQueryFill', class(q))
   q
 }
-
-
 

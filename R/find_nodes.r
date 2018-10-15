@@ -1,6 +1,5 @@
-find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL) {
+find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, add_unreq=T, melt=T) {
   .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
-  safe_save_name(tquery$save)
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
   
@@ -18,10 +17,10 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL) {
   } 
   if (is.null(nodes)) return(NULL)
   if (nrow(nodes) == 0) return(NULL)
-  
-  nodes = add_unrequired(tokens, nodes, tquery, block=nodes)
+
+  if (add_unreq) nodes = add_unrequired(tokens, nodes, tquery, block=nodes)
   nodes = create_unique_key(nodes, name)
-  nodes = melt_nodes_list(nodes)
+  if (melt) nodes = melt_nodes_list(nodes)
   nodes[]
 }
 
@@ -43,21 +42,24 @@ find_nested <- function(tokens, nodes, tquery, block, only_req) {
   unique(nodes)
 }
 
-add_unrequired <- function(tokens, nodes, tquery, block) {
+add_unrequired <- function(tokens, nodes, tquery, block, level=1) {
   is_req = sapply(tquery$nested, function(x) x$req)
   if (any(is_req)) {
     for (tq in tquery$nested[is_req]) {
-      nodes = add_unrequired(tokens, nodes, tq, block)
+      nodes = add_unrequired(tokens, nodes, tq, block, level+1)
     }
   } 
   if (any(!is_req)) {
-    if (is.na(tquery$save)) return(nodes)
-    if (!tquery$save %in% colnames(nodes)) return(nodes)
-    ids = subset(nodes, select = c('doc_id','sentence',tquery$save))
+    if (is.na(tquery$save)) {
+      print(level)
+      if (level == 1) match_id = '.ID' else return(nodes)
+    } else match_id = tquery$save
+    if (!match_id %in% colnames(nodes)) return(nodes)
+    ids = subset(nodes, select = c('doc_id','sentence',match_id))
     add = rec_find(tokens, ids, tquery$nested[!is_req], block = block, only_req=F)
     if (nrow(add) > 0) {
-      setkeyv(nodes, c('doc_id','sentence',tquery$save))
-      nodes = merge(nodes, add, by.x=c('doc_id','sentence',tquery$save), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=T, allow.cartesian=T)
+      setkeyv(nodes, c('doc_id','sentence',match_id))
+      nodes = merge(nodes, add, by.x=c('doc_id','sentence',match_id), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=T, allow.cartesian=T)
       dropcols = grep('.DROP.*', colnames(nodes), value=T)
       if (length(dropcols) > 0) nodes[, (dropcols) := NULL]
     }
@@ -82,20 +84,10 @@ create_unique_key <- function(nodes, name){
   #} else {
   #  key = paste0(name, '(', nodes$.ID, ')')
   #}        
-  key = paste0(name, '#', match(nodes$.ID, unique(nodes$.ID)))
+  key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', match(nodes$.ID, unique(nodes$.ID)))
   #key = paste0(name, '#', 1:nrow(nodes))
   nodes$.ID = key
   return(nodes)
-}
-
-
-
-safe_save_name <- function(name) {
-  if(grepl('\\.[A-Z]', name)) stop(sprintf('save name cannot be all-caps and starting with a dot'))
-  if(grepl(',', name)) stop(sprintf('save name cannot contain comma'))
-  
-  special_names = c('doc_id','token_id','sentence')
-  if (name %in% special_names) stop(sprintf('save name (%s) cannot be the same as the special tokenIndex column names (%s)', name, paste(special_names, collapse=', ')))
 }
 
 

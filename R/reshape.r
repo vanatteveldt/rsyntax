@@ -21,8 +21,10 @@ cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL, rm.na=T){
     if (!group %in% levels(tokens[[column]])) stop(sprintf('%s is not a valid value in tokens$%s', group, column))
     tg = get_token_group(tokens, column=column, group=group, rows=NULL, group_values=id, mode=mode)
     out = if (is.null(out)) tg else merge(out, tg, by=c('doc_id','sentence','token_id'), all=!rm.na, allow.cartesian=T)
+    #out = if (is.null(out)) tg else merge(out, tg, by.x=paste0(column, '_id'), by.y=c('id'), all=!rm.na, allow.cartesian=T)
   }
   
+
   id_cols = paste(names(by), 'id', sep='_')
   ids = do.call(paste, args = c(as.list(subset(out, select=id_cols)), sep='|'))
   out$subsent_id = match(ids, unique(ids))
@@ -149,6 +151,7 @@ get_token_group <- function(tokens, column, group, rows, group_values, mode) {
   }  else {
     out = subset(tokens, subset=tokens[[column]] %in% rows, select = c('doc_id','sentence','token_id',column_id))
   }
+
   merge(out, ids, by.x = column_id, by.y = 'id', allow.cartesian=T)
 }
 

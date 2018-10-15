@@ -6,7 +6,7 @@ abbrev_str <- function(string, maxlen) {
 
 
 recprint <- function(x, pd, level=1, connector='└', max_char=getOption('tQuery_print_max_char', default=30), ...) {
-  cat(level, ': ', sep='')
+  #cat(level, ': ', sep='')
   if (level > 0) {
     type = if('level' %in% names(x)) ifelse(x$level == 'children', ' c', ' p') else 'root'
     text = paste(paste(rep('  ', level-1), collapse=''), connector, type, ' ', sep='')
@@ -83,9 +83,33 @@ print.tQuery <- function(x, ...) {
   pd = get_print_data(x, c(0,10))
   pd[1] = (pd[1]*3)
   if (pd[1] < 12) pd[1] = 10
-  cat('LEVEL ', rep(' ', pd[1]-3), '  NAME', rep(' ', pd[2]-4), '   FILTER\n', sep='')
+  #cat('LEVEL ', rep(' ', pd[1]-3), '  NAME', rep(' ', pd[2]-4), '   FILTER\n', sep='')
   #if (!is.na(x$save) &! x$save == '') cat(x$save, '\n', sep = '') else cat('...', sep='')
   recprint(x, pd, connector='', ...)
+}
+
+#' S3 print for tReshape class
+#'
+#' @param x a tReshape
+#' @param ... not used
+#'
+#' @method print tReshape
+#' @examples
+#' r = treshape(bypass = 'conj', remove='cc', link_children='nsubj')
+#' r
+#' @export
+print.tReshape <- function(x, ...) {
+  msg = c()
+  for (i in seq_along(x)){
+    if (!is.null(x[[i]])) {
+      if (is.logical(x[[i]])) {
+        if (!x[[i]]) msg = c(msg, paste(names(x)[i], '= FALSE'))
+      } else {
+        msg = c(msg, paste(names(x)[i], paste(x[[i]], collapse=', '), sep=':\t'))
+      }
+    }
+  }  
+  cat(paste(msg, collapse='\n'))
 }
 
 

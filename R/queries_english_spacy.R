@@ -1,4 +1,4 @@
-ENGLISH_SAY_VERBS = c("tell", "show", "acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "proclaim", "promise", "reply", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "write", "add")
+ENGLISH_SAY_VERBS = c("tell", "show", "acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "call", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "post","predict", "proclaim", "promise", "reply", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "think","warn","write", "add")
 
 #' Returns a list with the quote queries for spacy_english_
 #'
@@ -43,29 +43,30 @@ spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_V
   subject_name = if (with_subject) 'subject' else NA
   object_name = if (with_object) 'object' else NA
   
+  passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
+                   children(relation = c('agent','nmod:agent'), save=subject_name, req=sub_req),
+                   children(relation = c('nsubjpass','pobj','nsubj'), save=object_name, req=ob_req)) 
+  
   direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
                   not_children(relation = 'auxpass'),
-                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
+                  children(relation = c('su', 'nsubj'), save=subject_name, req=sub_req),
                   children(relation = c('dobj'), save=object_name, req=ob_req)) 
   
-  passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
-                   children(relation = 'auxpass'),
-                   children(relation = c('su','nsubj','agent','nmod:agent'), save=subject_name, req=sub_req),
-                   children(relation = c('nsubjpass','pobj'), save=object_name, req=ob_req)) 
   
   copula_direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, 
-                         parents(save='predicate',
+                         parents(save='predicate', lemma__N = exclude_verbs,
                                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
                                  children(relation = c('dobj'), save=object_name, req=ob_req))) 
   
   copula_passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs,
-                          parents(save='predicate',
+                          parents(save='predicate', lemma__N = exclude_verbs,
                                   children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
                                   children(relation = c('dobj'), save=object_name, req=ob_req))) 
   
   
-  list(d=direct, p=passive, cd=copula_direct, cp=copula_passive)
+  list(p=passive, d=direct, cd=copula_direct, cp=copula_passive)
 }
+
 
 
 function(){

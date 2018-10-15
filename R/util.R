@@ -65,23 +65,3 @@ tokens_from_coreNLP <- function(a) {
   tokens = plyr::arrange(tokens, sentence, id)
   unique_ids(tokens, context=tokens$sentence)
 }
-
-
-safe_melt <- function(d, variable.name='variable', measure.vars=NULL, ...){
-  ## melt with silly hack for duplicate columns
-  dup = duplicated(colnames(d))
-  
-  if (!any(dup)) return(data.table::melt(d, variable.name=variable.name, measure.vars=measure.vars, ...))
- 
-  dupnames = colnames(d)[dup]
-  dup = colnames(d) %in% dupnames
-  colnames(d)[dup] = paste(colnames(d)[dup], 1:sum(dup), sep='#DUPLICATE#')
-  if (!is.null(measure.vars)) {
-    measure.vars = setdiff(measure.vars, dupnames)
-    measure.vars = c(measure.vars, grep('#DUPLICATE#', colnames(d), fixed = T, value = T))
-  }
-  d = data.table::melt(d, variable.name=variable.name, measure.vars=measure.vars, ...)
-  levels(d[[variable.name]]) = gsub('#DUPLICATE#[0-9]*', '', levels(d[[variable.name]]))
-  d[[variable.name]] = as.factor(as.character(d[[variable.name]]))
-  d
-}

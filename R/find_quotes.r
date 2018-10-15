@@ -192,6 +192,7 @@ get_paragraph <- function(tokens, text_col, par_col, space_col) {
 }
 
 function(){
+  
   library(tokenbrowser)
   
   tokens = read.csv('~/projects/bron_extractie_demo/tokens.csv')
@@ -199,11 +200,16 @@ function(){
   
   tqueries = list(span1 = tquery(POS = 'verb*', lemma = rsyntax:::DUTCH_SAY_VERBS, children(relation='su', save='source')),
                   span2 = tquery(POS = 'verb*', children(relation='su', save='source')))
-  
   tokens = add_span_quotes(tokens, 'token', quote_col = 'quotes', source_val = 'source', quote_val = 'quote', tqueries=tqueries)
   
   url = syntax_reader(tokens, 'quotes', 'source', 'quote')
   view_reader(url)
   browseURL(url)
+  url = syntax_reader(tokens, 'quotes', 'source', 'quote', filename = '~/Documents/bronherkenning.html')
+  
+  
+  library(DT)
+  datatable(tokens, selection = list(mode = 'multiple', select=c(1,2,3)))
+  
   View(tokens)
 }

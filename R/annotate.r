@@ -7,18 +7,21 @@
 #' Note that while queries only find 1 node for each saved component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
 #' all children of these nodes can be annotated by settting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 #' 
-#' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param queries    A tquery or a list of queries, as created with \link{tquery}. 
-#' @param column     The name of the column in which the annotations are added. The unique ids are added as column_id
-#' @param as_chain If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument). 
-#' @param block      Optionally, specify ids (doc_id - sentence - token_id triples) that are blocked from querying and filling (ignoring the id and recursive searches through the id). 
+#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param queries     A tquery or a list of queries, as created with \link{tquery}. 
+#' @param column      The name of the column in which the annotations are added. The unique ids are added as column_id
+#' @param as_chain    If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument). 
+#' @param block       Optionally, specify ids (doc_id - sentence - token_id triples) that are blocked from querying and filling (ignoring the id and recursive searches through the id). 
 #' @param unique_fill If TRUE, only the fill value of the closest parent will be used, and nodes that are already directly matched will not be filled.
-#' @param concat_dup If TRUE (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.
-#' @param show_fill if TRUE, return column with fill level
+#' @param concat_dup  If TRUE (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.
+#' @param show_fill   if TRUE, return column with fill level
 #' 
 #' @export
 annotate <- function(tokens, queries, column, as_chain=T, block=NULL, unique_fill=F, concat_dup=T, show_fill=F) {
   tokens = as_tokenindex(tokens)
+  #if (!is.null(bypass) || !is.null(isolate)) {
+  #  tokens = simplify_tree(tokens, bypass=bypass, isolate=isolate, link_children = link_children)
+  #}
   nodes = apply_queries(tokens, queries, as_chain=as_chain, block=block)
   if (nrow(nodes) == 0) {
     message('No nodes found')

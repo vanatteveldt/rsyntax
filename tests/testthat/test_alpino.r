@@ -15,7 +15,7 @@ get_clauses <- function(tokens, block=NULL){
   for(name in names(check)) {
     expected = as.character(check[[name]])
     actual = get_nodes(tokens, nodes, token_cols = 'token')
-    #cat(name, ': ', as.character(actual$token[actual$.ROLE == name]), '\n')
+    #at(name, ': ', as.character(actual$token[actual$.ROLE == name]), '\n')
     actual = as.character(actual$token[actual$.ROLE == name])
     expect_equal(expected, actual)
   }

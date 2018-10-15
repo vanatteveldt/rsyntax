@@ -12,9 +12,10 @@ Depends:
     colorspace,
     tidyselect,
     stringi,
-    Matrix
+    Matrix,
+    magrittr
 Imports:
-    data.table,
+    data.table (>= 1.11.8),
 LazyData: true
 Description: R library to help dealing with syntactic structure
 License: MIT license

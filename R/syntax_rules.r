@@ -28,7 +28,7 @@
 #' annotate(tokens, nodes, column = 'example')
 #' 
 #' @export
-apply_queries <- function(tokens, ..., as_chain=F, chain_fill=F, block=NULL, check=F) {
+apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F) {
   r = list(...)
   
   is_tquery = sapply(r, is, 'tQuery')
@@ -37,22 +37,33 @@ apply_queries <- function(tokens, ..., as_chain=F, chain_fill=F, block=NULL, che
   out = vector('list', length(r))
   
   for (i in 1:length(r)){
+    if (!is(r[[i]], 'tQuery')) next
     .TQUERY_NAME = names(r)[i]
     if (is.null(.TQUERY_NAME)) .TQUERY_NAME = ''
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', paste0('tq', i), as.character(.TQUERY_NAME))
     
-    #args = r[[i]]
-    #l = c(args$lookup, args$nested, list(tokens=tokens, g_id=args$g_id, save=args$save, block=block, check=check, name=.TQUERY_NAME))
-    #nodes = do.call(find_nodes, args = l)
-    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME)
-    
+    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, add_unreq = F, melt = F)
+   
     if (!is.null(nodes)) {
-      if (as_chain) block = get_long_ids(block, nodes, with_fill=chain_fill)
+      if (as_chain) block = get_long_ids(block, nodes)
       out[[i]] = nodes  
     }
   }
+  
+  
+  for (i in 1:length(r)) {
+    if (is.null(out[[i]])) next
+    out[[i]] = add_unrequired(tokens, out[[i]], r[[i]], block=block)
+    out[[i]] = melt_nodes_list(out[[i]])
+  }
+  
+
   nodes = data.table::rbindlist(out, fill=T)
+  #if (chain && !chain_fill && '.FILL_LEVEL' %in% colnames(d)) {
+  #  data.table::setorder(d, '.FILL_LEVEL') 
+  #  d = 
+  #}
   class(nodes) = c('rsyntaxNodes', class(nodes))
   nodes
 } 
