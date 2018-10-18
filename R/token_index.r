@@ -58,16 +58,26 @@ as_tokenindex <- function(tokens, doc_id='doc_id', sentence='sentence', token_id
   if (!'relation' %in% has_indices) data.table::setindexv(tokens, 'relation')
   
   if (new_index) {
-    check_tokens(tokens)
+    tokens = fix_missing_parents(tokens)
     data.table::setattr(tokens, name = 'class', c('tokenIndex', class(tokens)))
   }
   
   tokens
 }
 
-check_tokens <- function(tokens) {
-  missing_parents = tokens[!tokens[,c('doc_id','sentence','token_id'), with=F], on=c('doc_id','sentence','token_id')]
-  if (nrow(missing_parents) > 0) warning(sprintf('There are %s tokens with missing parents', nrow(missing_parents)))
+fix_missing_parents <- function(tokens, warn=T) {
+  parent_ids = na.omit(unique(tokens[,c('doc_id','sentence','parent')]))
+  data.table::setnames(parent_ids, old='parent', new='token_id')
+  missing_parents = parent_ids[!tokens, on=c('doc_id','sentence','token_id')]
+  if (warn && nrow(missing_parents) > 0) warning(sprintf('There are %s tokens with missing parents. These have now been made roots (parent = NA, relation="ROOT")', length(missing_parents)))
+  
+  if (nrow(missing_parents) > 0) {
+    data.table::setnames(missing_parents, old='token_id', new='parent')
+    i = tokens[missing_parents, on=c('doc_id','sentence','parent'), which=T]
+    tokens[i, parent := NA]
+    tokens[i, relation := "ROOT"]
+  }
+  tokens
 }
 
 

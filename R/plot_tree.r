@@ -29,6 +29,8 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param ...         Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)  
 #' @param id          By default (true) the token_id is printed, but maybe you don't like ids.
+#' @param treshape    A \link{treshape} or list of treshapes, to reshape the dependency tree
+#' @param tqueries    A \link{tquery} or list of tqueries, to annotate nodes. Queries will be applied after the treshape transformations. Can also be a named list of lists, where each entry is a seperately annotated list of tqueries. 
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
@@ -36,9 +38,6 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
 #' @param all_lower   If TRUE, make all text lowercase
 #' @param all_abbrev  If an integer, abbreviate all text, with the number being the target number of characters. 
-#' @param tqueries    A tquery or list of tqueries, to annotate nodes
-#' @param bypass      Optionally, a character vector specifying one or multiple relations. If a node has this relation to its parent, it will bypass the parent by adopting the parent's parent id and relation. Using bypass and link_children makes it possible to reshape the tree to deal with the pesky recursive nature of language.
-#' @param link_children Optionally, a character vector specifying one or multiple relations. If bypass is used, children of the parent nodes with this relation will adopted. 
 #' @param textsize    A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number. 
 #' @param spacing     A number for scaling the distance between words (between 0 and infinity) 
 #' @param use_color   If true, use colors
@@ -47,14 +46,14 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL, annotations=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, bypass=NULL, isolate=NULL, link_children=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
+plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i=1, doc_id=NULL, sentence=NULL, annotations=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
   plot.new()
   
   tokens = as_tokenindex(tokens) 
   nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
   sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
   
-  #nodes = apply_reshapes(nodes, treshape(bypass=bypass, isolate=isolate, link_children = link_children))
+  if (!is.null(treshape)) nodes = apply_reshapes(nodes, treshape)
   
   l = tidyselect::quos(...)
   text_cols = if (id) list(nodes$token_id) else list()
@@ -62,6 +61,27 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
     if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
     text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
   }
+  
+  
+  #if (!is.null(tqueries)) {
+  #  if (is.list(tqueries)) {
+  #    is_list = sapply(tqueries, is.list)
+  #    if (any(is_list)) {
+  #      for (i in seq_along(tqueries)) {
+  #        nodes = annotate(nodes, tqueries, paste0'annotate')
+  #        text_cols[['annotate']] = nodes$annotate
+  #      }
+  #    }
+  #  }
+  
+  if (!is.null(tqueries)) {    
+    nodes = annotate(nodes, tqueries, 'annotate')
+    text_cols[['annotate']] = nodes$annotate
+  }
+  
+  #nodes = apply_reshapes(nodes, treshape(bypass=bypass, isolate=isolate, link_children = link_children))
+  
+
 
   data.table::setcolorder(nodes, union('token_id', colnames(nodes))) ## set token_id first for matching with edges
   
@@ -89,11 +109,13 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   ## order nodes, split by roots
   comps = igraph::decompose(g)
   if (length(comps) > 1) {
-    reorder = unlist(sapply(comps, function(x) sort(V(x)$id), simplify = F))
+    reorder_list = sapply(comps, function(x) sort(V(x)$id), simplify = F)
+    reorder = unlist(reorder_list)
     g = permute(g, match(as.numeric(V(g)$id), as.numeric(reorder)))
     text = text[match(as.numeric(reorder), as.numeric(nodes$token_id))]
-  }
-
+    tree_boundaries = sapply(reorder_list, length)
+  } else tree_boundaries = NULL
+  
   root = find_roots(g)
   g$layout = igraph::layout_as_tree(g, root = root)
   
@@ -107,8 +129,12 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   ## arrange horizontal positions
   textwidth = strwidth(text)
   relwidth = strwidth(V(g)$label)
+  relwidth = centered_width(relwidth) ## relwidth is annoying, because nodes are centered. Therefore, use halved length of current node and next
   
   width = ifelse(textwidth > relwidth, textwidth, relwidth)
+  width = width_boundaries(width, tree_boundaries)
+  
+  
   right_allign = cumsum(width)
   left_allign = c(0,right_allign[-length(right_allign)])
   co[,1] = rescale_var(left_allign, new_min = -1, new_max = 1, x_min = 0, x_max=max(right_allign))
@@ -136,8 +162,11 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
   plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(co[,1]),ylim=extendrange(c(-1,1)))
   
   width_label = strwidth(V(g)$label, units='inches')
+  width_label = centered_width(width_label)
   width_text = strwidth(text, units='inches')
-  need_width = sum(ifelse(width_label > width_text, width_label, width_text))
+  need_width = ifelse(width_label > width_text, width_label, width_text)
+  need_width = width_boundaries(need_width, tree_boundaries)
+  need_width = sum(need_width)
   need_width = need_width + (strwidth('  ', units='inches') * spacing * vcount(g))
   
   max_width = dev.size(units = 'in')[1]
@@ -201,24 +230,39 @@ plot_tree <-function(tokens, ..., id=T, sentence_i=1, doc_id=NULL, sentence=NULL
     texty = co[,2]
   }
     
-    
   text(co[,1]-(0.02*cex), texty, labels=text, 
        col = col, 
        cex=cex, adj=c(0,1.5))
+  
+  #if (!is.null(tree_boundaries)) {
+  #  print(tree_boundaries)
+  #}
   
   message(sentmes)
   if (allign_text) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
 }
 
+width_boundaries <- function(width, tree_boundaries) {
+   if (!is.null(tree_boundaries)) {
+    ## add space between isolated trees
+    tree_boundaries = tree_boundaries[-length(tree_boundaries)]  ## don't add space after last tree
+    tree_boundaries = cumsum(tree_boundaries)
+    width[tree_boundaries] = width[tree_boundaries] * 1.5
+   }
+  width
+}
+
+centered_width <- function(width) (width / 2) + data.table::shift(width / 2, type = 'lead', fill=0)
+
+  
 festival <- function(labels, palette=palette){
-  pal = palette(1000)
+  pal = palette(256)
   color = NA
   for (label in labels) {
     if (is.na(label)) next
     if (label == '') next
-    labelint = sum(utf8ToInt(label)^2)
-    labelint = labelint %% 1000
-    mean(utf8ToInt(paste(c(letters,LETTERS), collapse='')))
+    hash = digest::digest(label, 'xxhash32')
+    labelint = strtoi(substr(hash, 2,3), 16)
     color[labels == label] = pal[labelint]
   }
   color
@@ -337,7 +381,7 @@ function() {
   
   tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, punched Ken, kissed Mary and punched Ben."', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-  plot_tree(tokens, token, tolower(pos))
+  plot_tree(tokens, token, tolower(pos),allign_text = T)
   
   inspect_family(tokens, query = tquery(relation='conj', save='conj'), node='conj')
   
@@ -389,9 +433,20 @@ function() {
   
   
   
-  tokens = spacy_parse('"Kenny said that Steve kissed Mary', dependency=T)
+  tokens = spacy_parse('"Bob hits Steve and kissed Jan', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, token, lemma, tolower(pos))
+  
+  subject_rels = c('nsubj','su', 'nsubjpass','pobj','nsubj')
+  isolate = treshape_isolate(relation=c('appos','relcl'), copy_parent = T)
+  link = treshape_link(relation = 'conj', link_children=subject_rels)
+  bypass = treshape_bypass(relation='conj')
+  rm = treshape_remove(relation=c('punct','cc'), not_children())
+  
+
+  plot_tree(tokens, token, pos, treshape = bypass)
+  plot_tree(tokens, token, pos, treshape = link)
+  
   
   tokens = spacy_parse('"Kenny hates that Mary got hit', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
@@ -494,9 +549,6 @@ function() {
   rec_find(tokens1, ids, tquery$nested[4], block = NULL, only_req=F)
   rec_find(tokens2, ids, tquery$nested[4], block = NULL, only_req=F)
   
-  
-  View(tokens)
-  
   tokens = annotate(tokens, spacy_english_quote_queries(), 'quotes')
   
   tokens
@@ -553,6 +605,8 @@ function() {
   tokens = spacy_parse('Steve hit Patrick and was not kicked by John.', dependency=T)
   #tokens = spacy_parse('Steve likes bananas, strawberries and apples.', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  
+  plot_tree(tokens, token, tqueries = spacy_english_clause_queries())
   
   plot_tree(tokens,token)
   apply_reshapes(tokens, treshape(bypass='conj', link_children='nsubj', remove='cc'))

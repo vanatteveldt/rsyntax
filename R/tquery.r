@@ -179,7 +179,7 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T, block=F) {
+children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=T, block=F, recursive=F) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   validate_save_name(save)
@@ -213,9 +213,9 @@ children <- function(..., g_id=NULL, save=NA, req=T, depth=1, connected=F, fill=
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, save=save, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive)
   } else {
-    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, save=save, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive)
   }
   
   

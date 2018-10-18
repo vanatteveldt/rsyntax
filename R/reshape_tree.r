@@ -63,7 +63,7 @@ apply_reshapes <- function(tokens, ..., copy=T) {
 
 
 reshape_tree <- function(tokens, tr, copy=T) {
-  nodes = find_nodes(tokens, tr$tquery, block=NULL, name='treshape', add_unreq = F, melt = F)
+  nodes = find_nodes(tokens, tr$tquery, block=NULL, name='treshape', fill = F, melt = F)
   if (is.null(nodes)) return(tokens)
   
   parent = NULL; relation = NULL; .REL_LEVEL = NULL; .MATCH_ID = NULL; .ADDED = NULL
@@ -236,6 +236,7 @@ add_link_children <- function(tokens, path, link_children, link_fill, only_lowes
   add[, .LINK_PARENT := NULL]
   rbind(tokens,add)
 }
+
 
 token_sub_id <- function(x, highest=x) {
   x[x == 0] = 0.01 ## in case the token is zero, since 0.0 would mess things up

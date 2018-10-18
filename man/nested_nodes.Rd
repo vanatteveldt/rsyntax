@@ -49,7 +49,11 @@ All parents/children must meet the filtering conditions (... or g_id)}
 This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
 If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved.}
 
-\item{fill}{Logical. If TRUE (default), the default fill() will be used (see description). To more specifically controll fill, you can nest the \link{fill} function (a special version of the children function)}
+\item{fill}{Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+function (a special version of the children function).}
+
+\item{block}{Logical. If TRUE, the node will be blocked from being assigned (saved). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+but also don't want to 'save' it. Essentially, block is shorthand for using save and then removing the node afterwards. If block is TRUE, save has to be NA.}
 }
 \value{
 Should not be used outside of \link{find_nodes}

@@ -9,8 +9,10 @@ ENGLISH_SAY_VERBS = c("tell", "show", "acknowledge", "admit", "affirm", "allege"
 #' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
 spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
-  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='quote',
-                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'))
+  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='verb',
+                  children(relation = c('prep','npadvmod'), block=T),
+                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
+                  children(save='quote'))
   
   nosrc = tquery(pos='VERB*', 
                  children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
@@ -65,6 +67,20 @@ spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_V
   
   
   list(p=passive, d=direct, cd=copula_direct, cp=copula_passive)
+}
+
+spacy_english_reshape <- function() {
+  subject_rels = c('nsubj','su', 'nsubjpass','pobj','nsubj')
+  
+  isolate = treshape_isolate(relation=c('appos','relcl'), copy_parent = T)
+  
+  link = treshape_link(relation = 'conj', link_children=subject_rels)
+  
+  bypass = treshape_bypass(relation='conj')
+  
+  rm = treshape_remove(relation=c('punct','cc'), not_children())
+  
+  list(isolate,link,bypass,rm)
 }
 
 

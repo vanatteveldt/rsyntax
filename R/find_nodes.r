@@ -1,4 +1,4 @@
-find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, add_unreq=T, melt=T) {
+find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, fill=T, melt=T) {
   .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
@@ -8,9 +8,8 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, add_u
   nodes = subset(nodes, select = c('doc_id','sentence','token_id'))
   
   any_req_nested = any(sapply(tquery$nested, function(x) x$req))
-  #any_req_nested = length(tquery$nested) > 0
   if (any_req_nested) {
-    nodes = find_nested(tokens, nodes, tquery, block, only_req=T)
+    nodes = find_nested(tokens, nodes, tquery, block, fill=F)
   } else {
     data.table::setnames(nodes, old = 'token_id', new='.ID')
     if (!is.na(tquery$save)) nodes[,(tquery$save) := .ID]
@@ -18,14 +17,17 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, add_u
   if (is.null(nodes)) return(NULL)
   if (nrow(nodes) == 0) return(NULL)
 
-  if (add_unreq) nodes = add_unrequired(tokens, nodes, tquery, block=nodes)
+  
+  if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
   nodes = create_unique_key(nodes, name)
-  if (melt) nodes = melt_nodes_list(nodes)
+  if (melt) {
+    nodes = melt_nodes_list(nodes)
+  }
   nodes[]
 }
 
-find_nested <- function(tokens, nodes, tquery, block, only_req) {
-  nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, only_req=only_req)
+find_nested <- function(tokens, nodes, tquery, block, fill) {
+  nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill)
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
   data.table::setcolorder(nodes, c('.ID', setdiff(colnames(nodes), '.ID')))
@@ -42,21 +44,22 @@ find_nested <- function(tokens, nodes, tquery, block, only_req) {
   unique(nodes)
 }
 
-add_unrequired <- function(tokens, nodes, tquery, block, level=1) {
-  is_req = sapply(tquery$nested, function(x) x$req)
-  if (any(is_req)) {
-    for (tq in tquery$nested[is_req]) {
-      nodes = add_unrequired(tokens, nodes, tq, block, level+1)
+add_fill <- function(tokens, nodes, tquery, block, level=1) {
+  #is_req = sapply(tquery$nested, function(x) x$req)
+  is_fill = sapply(tquery$nested, is, 'tQueryFill')
+  
+  if (any(!is_fill)) {
+    for (tq in tquery$nested[!is_fill]) {
+      nodes = add_fill(tokens, nodes, tq, block, level+1)
     }
   } 
-  if (any(!is_req)) {
+  if (any(is_fill)) {
     if (is.na(tquery$save)) {
-      print(level)
       if (level == 1) match_id = '.ID' else return(nodes)
     } else match_id = tquery$save
     if (!match_id %in% colnames(nodes)) return(nodes)
     ids = subset(nodes, select = c('doc_id','sentence',match_id))
-    add = rec_find(tokens, ids, tquery$nested[!is_req], block = block, only_req=F)
+    add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))
       nodes = merge(nodes, add, by.x=c('doc_id','sentence',match_id), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=T, allow.cartesian=T)
@@ -74,7 +77,7 @@ function(){
   #tquery = tquery(POS='VB*', save='test', children(save='testing'))
   nodes = find_nodes(tokens, tquery)
   
-  add_unrequired(tokens, nodes, tquery, block)
+  add_fill(tokens, nodes, tquery, block)
   
 }
 

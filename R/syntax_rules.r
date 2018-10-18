@@ -28,7 +28,7 @@
 #' annotate(tokens, nodes, column = 'example')
 #' 
 #' @export
-apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F) {
+apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T) {
   r = list(...)
   
   is_tquery = sapply(r, is, 'tQuery')
@@ -43,7 +43,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F) {
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', paste0('tq', i), as.character(.TQUERY_NAME))
     
-    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, add_unreq = F, melt = F)
+    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, fill=F, melt = F)
    
     if (!is.null(nodes)) {
       if (as_chain) block = get_long_ids(block, nodes)
@@ -54,7 +54,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F) {
   
   for (i in 1:length(r)) {
     if (is.null(out[[i]])) next
-    out[[i]] = add_unrequired(tokens, out[[i]], r[[i]], block=block)
+    if (fill) out[[i]] = add_fill(tokens, out[[i]], r[[i]], block=block)
     out[[i]] = melt_nodes_list(out[[i]])
   }
   

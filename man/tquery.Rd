@@ -23,7 +23,11 @@ These functions have the same query arguments as tquery, but with some additiona
 \item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
-\item{fill}{Logical. If TRUE (default), the default fill() will be used (see description). To more specifically controll fill, you can nest the \link{fill} function (a special version of the children function)}
+\item{fill}{Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+function (a special version of the children function).}
+
+\item{block}{Logical. If TRUE, the node will be blocked from being assigned (saved). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+but also don't want to 'save' it. Essentially, block is shorthand for using save and then removing the node afterwards. If block is TRUE, save has to be NA.}
 }
 \value{
 A tQuery object, that can be used with the \link{apply_queries} function.
@@ -35,6 +39,10 @@ queries will be used) and the values are vectors with lookup values.
 Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
 These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
 
+The fill() function (also see fill argument) can be nested to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
+and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
+assigned to the closest node. 
+  
 Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
 }
 \details{

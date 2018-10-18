@@ -12,16 +12,15 @@ melt_nodes_list <- function(nodes, only_first_fill=T) {
   #browser()
   
   cols = setdiff(colnames(nodes), c('doc_id','sentence','.ID'))
-  cols = setdiff(cols, grep('\\_LEVEL$|\\_PARENT$', cols, value=T))
+  cols = setdiff(cols, grep('\\_LEVEL$', cols, value=T))
   level = paste0(cols, '_LEVEL')
-  parent = paste0(cols, '_PARENT')
   
-  missing = setdiff(c(level,parent), colnames(nodes))
+  missing = setdiff(c(level), colnames(nodes))
   nodes[, (missing) := double()]
   
   nodes = melt(nodes, id.vars=c('doc_id','sentence','.ID'), 
-                      measure.vars=list(cols,level,parent), 
-                      value.name=c('token_id','.FILL_LEVEL','.PARENT'),
+                      measure.vars=list(cols,level), 
+                      value.name=c('token_id','.FILL_LEVEL'),
                       variable.name='.ROLE', variable.factor=T)
   nodes[, .ROLE := factor(.ROLE, labels=cols)]
   nodes = subset(nodes, !is.na(token_id))

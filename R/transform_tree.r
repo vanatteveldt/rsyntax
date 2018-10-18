@@ -82,21 +82,20 @@ unpack_bypass <- function(tokens, bypass, link_children, only_first_level=T, cop
         fam = token_family(tokens, id = unique(add[,c('doc_id','sentence','token_id')]), minimal=F, 
                           level='children', depth = Inf)
 
-
         largest_id = max(nchar(unique(tokens$token_id)))
         fam = merge(fam, data.table(.LINK_PARENT = add$parent, .LINK_CONJ_LEVEL=add$.CONJ_LEVEL, token_id=add$token_id),
                     by.x='.MATCH_ID', by.y='token_id', allow.cartesian=T)
-        #fam_match = match(add$token_id, fam$.MATCH_ID)
-        #print(fam_match)
-        #fam = fam[na.omit(fam_match),]
-        #fam_uberparent = add$parent[!is.na(fam_match)]
+        # fam_match = match(add$token_id, fam$.MATCH_ID)
+        # print(fam_match)
+        # fam = fam[na.omit(fam_match),]
+        # fam_uberparent = add$parent[!is.na(fam_match)]
         add$token_id = (add$parent) + token_sub_id(add$token_id, largest_id)
         
         if (nrow(fam) > 0) {
-          #fam[, .CONJ_LEVEL := add$.CONJ_LEVEL[!is.na(fam_match)]]
+          # fam[, .CONJ_LEVEL := add$.CONJ_LEVEL[!is.na(fam_match)]]
           fam[, .CONJ_LEVEL := fam$.LINK_CONJ_LEVEL,]
-          #fam$token_id = (fam_uberparent) + token_sub_id(fam$token_id, largest_id)
-          #fam$parent = (fam_uberparent) + token_sub_id(fam$parent, largest_id)
+          # fam$token_id = (fam_uberparent) + token_sub_id(fam$token_id, largest_id)
+          # fam$parent = (fam_uberparent) + token_sub_id(fam$parent, largest_id)
           fam$token_id = fam$.LINK_PARENT + token_sub_id(fam$token_id, largest_id)
           fam$parent = fam$.LINK_PARENT + token_sub_id(fam$parent, largest_id)
           add = rbind(add, subset(fam, select=colnames(add)))

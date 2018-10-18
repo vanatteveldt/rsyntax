@@ -6,35 +6,22 @@
 #' @param ids      A data.table with global ids (doc_id,sentence,token_id). 
 #' @param ql       a list of queriers (possibly the list nested in another query, or containing nested queries)
 #' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
-rec_find <- function(tokens, ids, ql, block=NULL, only_req=F) {
+rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
   .DROP = NULL
   out_req = list()
   out_not_req = list()
   for (i in seq_along(ql)) {
     q = ql[[i]]
-    if (only_req && !q$req) next   ## only look for required nodes. unrequired nodes are added afterwards with add_unrequired()
+    #if (only_req && !q$req) next   ## only look for required nodes. unrequired nodes are added afterwards with add_unrequired()
+    if (!fill && is(q, 'tQueryFill')) next   
     
     if (is.na(q$save)) {
       q$save = paste('.DROP', i) ## if save is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
     } 
     
-    selection = select_tokens(tokens, ids=ids, q=q, block=block)
-    if (length(q$nested) > 0 & length(selection) > 0) {
-      nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$save),with=F], ql=q$nested, block=block, only_req=only_req) 
-      ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the save column)
-      is_req = any(sapply(q$nested, function(x) x$req))
-      if (nrow(nested) > 0) {
-        if (is_req) {
-          selection = merge(selection, nested, by.x=c('doc_id','sentence',q$save), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T) 
-        } else {
-          selection = merge(selection, nested, by.x=c('doc_id','sentence',q$save), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all.x=T) 
-        }
-      } else {
-        if (is_req) selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), sentence=numeric(), .DROP = numeric())
-      }
-    } 
-    data.table::setkeyv(selection, c('doc_id','sentence','.MATCH_ID'))
+    selection = rec_selection(tokens, ids, q, block, fill)
     
+
     if (q$NOT) {
       if (nrow(selection) > 0) {
         selection = data.table::fsetdiff(data.table::data.table(ids[,1],ids[,2], .MATCH_ID=ids[[3]]), selection[,c('doc_id','sentence','.MATCH_ID')])
@@ -51,7 +38,7 @@ rec_find <- function(tokens, ids, ql, block=NULL, only_req=F) {
       out_not_req[['']] = selection
     }
   }
-
+  
   has_req = length(out_req) > 0  
   has_not_req = length(out_not_req) > 0  
   
@@ -64,11 +51,31 @@ rec_find <- function(tokens, ids, ql, block=NULL, only_req=F) {
   if (!has_req && !has_not_req)
     out = data.table::data.table()
   
-  if (!q$save == '.DROP' && nrow(out) > 0) {
-    parcol = paste0(q$save, '_PARENT') 
-    out[, (parcol) := .MATCH_ID]
-  }
+  #if (!q$save == '.DROP' && nrow(out) > 0) {
+  #  parcol = paste0(q$save, '_PARENT') 
+  #  out[, (parcol) := .MATCH_ID]
+  #}
   out
+}
+
+rec_selection <- function(tokens, ids, q, block, fill) {
+  selection = select_tokens(tokens, ids=ids, q=q, block=block)
+  if (length(q$nested) > 0 & length(selection) > 0) {
+    nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$save),with=F], ql=q$nested, block=block, fill=fill) 
+    ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the save column)
+    is_req = any(sapply(q$nested, function(x) x$req))
+    if (nrow(nested) > 0) {
+      if (is_req) {
+        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$save), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T) 
+      } else {
+        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$save), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all.x=T) 
+      }
+    } else {
+      if (is_req) selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), sentence=numeric(), .DROP = numeric())
+    }
+  } 
+  data.table::setkeyv(selection, c('doc_id','sentence','.MATCH_ID'))
+  selection
 }
 
 ## merge a list of results where all results are required: req[[1]] AND req[[2]] AND etc.
