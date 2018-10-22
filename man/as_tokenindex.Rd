@@ -4,30 +4,34 @@
 \alias{as_tokenindex}
 \title{Prepare a tokenIndex}
 \usage{
-as_tokenindex(tokens, doc_id = "doc_id", sentence = "sentence",
-  token_id = "token_id", parent = "parent", relation = "relation")
+as_tokenindex(tokens, doc_id = c("doc_id", "document_id"),
+  sentence = c("sentence", "sentence_id"), token_id = c("token_id"),
+  parent = c("parent", "head_token_id"), relation = c("relation",
+  "dep_rel"))
 }
 \arguments{
 \item{tokens}{A data.frame, data.table, or tokenindex.}
 
-\item{doc_id}{The name of the document id columns}
+\item{doc_id}{candidate names for the document id columns}
 
-\item{sentence}{The name of the sentence (id/index) column}
+\item{sentence}{candidate names for sentence (id/index) column}
 
-\item{token_id}{The name of the token id column}
+\item{token_id}{candidate names for the  token id column}
 
-\item{parent}{The name of the parent id column}
+\item{parent}{candidate names for the parent id column}
+
+\item{relation}{candidate names for the relation column}
 }
 \description{
 Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
-Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent) are present.
-Alternative column names can be given.
-}
-\details{
+Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent, relation) are present.
+The names of these columns must be one of the values specified in the respective arguments.
+
 The data will be sorted by the doc_id, sentence and token_id columns.
 Accordingly, it is recommended to use numeric token_id's. 
 Some parsers return token_id's as numbers with a prefix (t_1, w_1), in which case sorting is inconvenient (t_15 > t_100).
 
-The data in the data.frame will not be changed, with two exceptions. First, the columnnames will be changed if the default values are not used.
+The data in the data.frame will not be changed, with three exceptions. First, the columnnames will be changed if the default values are not used.
 Second, if a token has itself as its parent (which in some parsers is used to indicate the root), the parent is set to NA (as used in other parsers) to prevent infinite cycles.
+Third, the data will be sorted by doc_id, sentence, token_id.
 }

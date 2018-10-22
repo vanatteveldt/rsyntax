@@ -46,7 +46,7 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
 #'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i=1, doc_id=NULL, sentence=NULL, annotations=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
+plot_tree <-function(tokens, ..., treshape=NULL, tqueries=NULL, sentence_i=1, doc_id=NULL, sentence=NULL, annotations=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
   plot.new()
   
   tokens = as_tokenindex(tokens) 
@@ -56,23 +56,11 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
   if (!is.null(treshape)) nodes = apply_reshapes(nodes, treshape)
   
   l = tidyselect::quos(...)
-  text_cols = if (id) list(nodes$token_id) else list()
+  text_cols = list()
   for (i in seq_along(l)) {
     if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
     text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
   }
-  
-  
-  #if (!is.null(tqueries)) {
-  #  if (is.list(tqueries)) {
-  #    is_list = sapply(tqueries, is.list)
-  #    if (any(is_list)) {
-  #      for (i in seq_along(tqueries)) {
-  #        nodes = annotate(nodes, tqueries, paste0'annotate')
-  #        text_cols[['annotate']] = nodes$annotate
-  #      }
-  #    }
-  #  }
   
   if (!is.null(tqueries)) {    
     nodes = annotate(nodes, tqueries, 'annotate')
@@ -96,6 +84,8 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
     text = if (is.null(text)) textval else paste(text, textval, sep='\n')
   }
   nodes$label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
+  #nodes$label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
+  
   if (!is.null(ignore_rel)) nodes$label[nodes$label %in% ignore_rel] = ''
   
   if (all_lower) {
@@ -128,7 +118,10 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
   
   ## arrange horizontal positions
   textwidth = strwidth(text)
+  textwidth = centered_width(textwidth)
   relwidth = strwidth(V(g)$label)
+  relwidth2 = strwidth(V(g)$name)
+  relwidth = ifelse(relwidth > relwidth2, relwidth, relwidth2)
   relwidth = centered_width(relwidth) ## relwidth is annoying, because nodes are centered. Therefore, use halved length of current node and next
   
   width = ifelse(textwidth > relwidth, textwidth, relwidth)
@@ -145,17 +138,18 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
   maxcurve = 1 / (1 + exp(-max(abs(vdist))*0.05))
   maxcurve = min(maxcurve, max_curve) # max_curve, with underscore, is a parameter
   curve = rescale_var(abs(vdist)^2, 0, maxcurve) * sign(vdist)
+  #curve = maxcurve * sign(vdist)
   E(g)$curved = curve
-  E(g)$arrow.size = 1
+  E(g)$width = 2
   E(g)$color = 'darkgrey'
   
   ## arrange vertical positions
   levels = max(co[,2]) - min(co[,2])
   maxheight = if (levels > 10) 1 else -0.5 + levels*0.15
   co[,2] = rescale_var(co[,2], new_min = -0.5, new_max = maxheight)
-  #co[,2] = co[,2] + 1
-  E(g)$arrow.size=0.3
+  #E(g)$arrow.size=0.5
   E(g)$arrow.mode=1
+  E(g)$arrow.size=0.5
   
   ## make empty plot to get positions in current plot device
   par(mar=c(0,0,0,0))
@@ -163,18 +157,23 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
   
   width_label = strwidth(V(g)$label, units='inches')
   width_label = centered_width(width_label)
+  width_label2 = strwidth(V(g)$name, units='inches')
+  width_label2 = centered_width(width_label2)
+  width_label = ifelse(width_label > width_label2, width_label, width_label2)
+  
   width_text = strwidth(text, units='inches')
   need_width = ifelse(width_label > width_text, width_label, width_text)
   need_width = width_boundaries(need_width, tree_boundaries)
   need_width = sum(need_width)
-  need_width = need_width + (strwidth('  ', units='inches') * spacing * vcount(g))
+  need_width = need_width + (strwidth('  ', units='inches') * (spacing+0.1) * vcount(g))
   
   max_width = dev.size(units = 'in')[1]
   max_width = max_width * (1 - min(co[,1])) / 2
   cex = if (max_width < need_width) max_width / need_width else 1
   cex = textsize * cex
-    
-  width = (strwidth(V(g)$label, cex=cex) + strwidth(' ', cex=cex)) * 100
+  
+  
+  width = (strwidth(V(g)$label, cex=cex) + strwidth('', cex=cex)) * 100
   height = (max(strheight(V(g)$label), strheight('I')) + strheight('I')*0.1) * 100
   V(g)$label.cex = cex
   V(g)$label.color = 'black'
@@ -205,15 +204,20 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
     V(g)$frame.color[hl] = 'red'
     E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   } else {
-    V(g)$frame.color[hl] =  'grey'
-    V(g)$color[hl] =  'grey'
+    V(g)$color =  'lightgrey'
+    V(g)$frame.color =  'darkgrey'
+    V(g)$frame.color[hl] =  'black'
     E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   }
   
-
+  label = V(g)$label
+  V(g)$label = V(g)$name    ## use id instead of label, and print label above id
+  #V(g)$label = ''
   plot(g, layout=co, rescale=FALSE, add=TRUE)
   
-  
+  text(co[,1], co[,2]+(0.02*cex), labels=label, 
+       col = 'black', cex=cex*0.9, pos=3, font = 3)
+
   ## add text and lines
   
   ## non-integers are added. highlight these in red for clarity
@@ -230,16 +234,18 @@ plot_tree <-function(tokens, ..., id=T, treshape=NULL, tqueries=NULL, sentence_i
     texty = co[,2]
   }
     
-  text(co[,1]-(0.02*cex), texty, labels=text, 
+  text(co[,1], texty-(0.05*cex), labels=text, 
        col = col, 
-       cex=cex, adj=c(0,1.5))
+       cex=cex, pos=1)
   
   #if (!is.null(tree_boundaries)) {
   #  print(tree_boundaries)
   #}
   
   message(sentmes)
-  if (allign_text) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
+  #if (allign_text) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
+  if (allign_text && length(text_cols) > 0) segments(co[,1], min(co[,2]), co[,1], co[,2], lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
+  invisible(tokens)
 }
 
 width_boundaries <- function(width, tree_boundaries) {

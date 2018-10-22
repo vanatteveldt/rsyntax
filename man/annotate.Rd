@@ -4,8 +4,8 @@
 \alias{annotate}
 \title{Annotate a tokenlist based on rsyntax queries}
 \usage{
-annotate(tokens, queries, column, as_chain = T, block = NULL,
-  unique_fill = F, concat_dup = T, show_fill = F)
+annotate(tokens, queries, column, block = NULL, fill = T,
+  overwrite = F, copy = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -14,15 +14,13 @@ annotate(tokens, queries, column, as_chain = T, block = NULL,
 
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as column_id}
 
-\item{as_chain}{If TRUE, Nodes that have already been assigned assigned earlier in the chain will be ignored (see 'block' argument).}
-
 \item{block}{Optionally, specify ids (doc_id - sentence - token_id triples) that are blocked from querying and filling (ignoring the id and recursive searches through the id).}
 
-\item{unique_fill}{If TRUE, only the fill value of the closest parent will be used, and nodes that are already directly matched will not be filled.}
+\item{fill}{Logical. If TRUE (default) also assign the fill nodes (as specified in the tquery). Otherwise these are ignored}
 
-\item{concat_dup}{If TRUE (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.}
+\item{overwrite}{If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries with chain=T}
 
-\item{show_fill}{if TRUE, return column with fill level}
+\item{copy}{If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional.}
 }
 \description{
 Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.

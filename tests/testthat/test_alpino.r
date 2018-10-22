@@ -70,6 +70,12 @@ test_that("extracting sources works", {
 
 test_that("extracting clauses works", {
   tokens = as_tokenindex(tokens_dutchclauses)
+
+  tq = tquery(save='target', 
+              children(relation = 'cnj', save='conj'))
+  .tokens = tokens %>%
+    flatten_conjunctions(tq=tq, target_is_cc = T) %>%
+    plot_tree(token)
   
   find_nodes(tokens[tokens$sentence == 1,], 
              tquery(POS='verb', save='pred',

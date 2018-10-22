@@ -1,28 +1,34 @@
 #' Prepare a tokenIndex
 #' 
+#' @description
 #' Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
-#' Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent) are present.
-#' Alternative column names can be given.
+#' Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent, relation) are present.
+#' The names of these columns must be one of the values specified in the respective arguments.
 #' 
 #' The data will be sorted by the doc_id, sentence and token_id columns.
 #' Accordingly, it is recommended to use numeric token_id's. 
 #' Some parsers return token_id's as numbers with a prefix (t_1, w_1), in which case sorting is inconvenient (t_15 > t_100).
 #'
-#' The data in the data.frame will not be changed, with two exceptions. First, the columnnames will be changed if the default values are not used.
+#' The data in the data.frame will not be changed, with three exceptions. First, the columnnames will be changed if the default values are not used.
 #' Second, if a token has itself as its parent (which in some parsers is used to indicate the root), the parent is set to NA (as used in other parsers) to prevent infinite cycles.
+#' Third, the data will be sorted by doc_id, sentence, token_id.
 #'
 #' @param tokens     A data.frame, data.table, or tokenindex. 
-#' @param doc_id     The name of the document id columns
-#' @param sentence   The name of the sentence (id/index) column
-#' @param token_id   The name of the token id column
-#' @param parent     The name of the parent id column
+#' @param doc_id     candidate names for the document id columns
+#' @param sentence   candidate names for sentence (id/index) column
+#' @param token_id   candidate names for the  token id column
+#' @param parent     candidate names for the parent id column
+#' @param relation   candidate names for the relation column
 #'
-#' @export
-as_tokenindex <- function(tokens, doc_id='doc_id', sentence='sentence', token_id='token_id', parent='parent', relation='relation') {
+as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel')) {
   new_index = !is(tokens, 'tokenIndex')
-  
-  for (col in c(doc_id,sentence,token_id,parent,relation)) {
-    if (!col %in% colnames(tokens)) stop(sprintf('%s is not a valid column in tokens', col))
+
+  for (cols_obj in c('doc_id','sentence','token_id','parent','relation')) {
+    cols = get(cols_obj)
+    in_tokens = cols %in% colnames(tokens)
+    if (!any(in_tokens)) stop(sprintf('None of the default values in c(%s) is a valid column in tokens', paste(cols,collapse=', ')))
+    col = cols[which(in_tokens)[1]]
+    assign(cols_obj, value = col)
   }
   
   if (!is(tokens, 'data.table')) {

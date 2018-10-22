@@ -4,7 +4,7 @@
 \alias{plot_tree}
 \title{Create an igraph tree from a sentence}
 \usage{
-plot_tree(tokens, ..., id = T, treshape = NULL, tqueries = NULL,
+plot_tree(tokens, ..., treshape = NULL, tqueries = NULL,
   sentence_i = 1, doc_id = NULL, sentence = NULL,
   annotations = NULL, allign_text = T, ignore_rel = NULL,
   all_lower = F, all_abbrev = NULL, textsize = 1, spacing = 1,
@@ -14,8 +14,6 @@ plot_tree(tokens, ..., id = T, treshape = NULL, tqueries = NULL,
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
 \item{...}{Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)}
-
-\item{id}{By default (true) the token_id is printed, but maybe you don't like ids.}
 
 \item{treshape}{A \link{treshape} or list of treshapes, to reshape the dependency tree}
 
@@ -44,6 +42,8 @@ plot_tree(tokens, ..., id = T, treshape = NULL, tqueries = NULL,
 \item{max_curve}{A number for controlling the allowed amount of curve in the edges.}
 
 \item{palette}{A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation}
+
+\item{id}{By default (true) the token_id is printed, but maybe you don't like ids.}
 }
 \value{
 an igraph graph

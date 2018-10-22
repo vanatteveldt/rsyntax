@@ -1,4 +1,4 @@
-melt_nodes_list <- function(nodes, only_first_fill=T) {
+melt_nodes_list <- function(nodes, fill_only_first=T) {
   ## the nodes created in find_nodes have a weird structure, which is only usefull for efficiently merging data.tables
   ## here we melt the nodes to a more convenient format
   
@@ -32,10 +32,11 @@ melt_nodes_list <- function(nodes, only_first_fill=T) {
   nodes[is.na(nodes$.FILL_LEVEL), .FILL_LEVEL := 0]
   data.table::setattr(nodes$.ROLE, 'levels', gsub('\\_FILL', '', levels(nodes$.ROLE)))
 
-
-  if (only_first_fill) {
+  if (fill_only_first) {
     data.table::setorder(nodes, '.FILL_LEVEL')
-    nodes = unique(nodes, by=c('doc_id','sentence','token_id','.ID'))
+    nodes = unique(nodes, by=c('doc_id','sentence','token_id'))
+  } else {
+    nodes = unique(nodes, by=c('doc_id','sentence','token_id','.ROLE','.ID'))
   }
   nodes
 }

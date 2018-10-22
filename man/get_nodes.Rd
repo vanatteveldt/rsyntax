@@ -4,8 +4,7 @@
 \alias{get_nodes}
 \title{Transform the nodes to long format and match with token data}
 \usage{
-get_nodes(tokens, nodes, use = NULL, token_cols = c("token"),
-  concat_dup = T)
+get_nodes(tokens, nodes, use = NULL, token_cols = c("token"))
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}

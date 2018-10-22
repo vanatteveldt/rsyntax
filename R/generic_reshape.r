@@ -1,260 +1,354 @@
-treshape <- function(tokens, tq, fill=T, only_first_fill=T){
-  nodes = find_nodes(tokens, tq, fill = F, melt = F)
-  if (fill) ids = add_fill(tokens, nodes, tq, block=nodes)
-  ids = melt_nodes_list(ids, only_first_fill=only_first_fill)
+select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T){
+  ## fill mode: all, only_first, 
+  tokens = as_tokenindex(tokens)
+  nodes = find_nodes(tokens, tquery, fill = F, melt = F)
   
-  is_fill = ids$.FILL_LEVEL > 0
-  #fill_table = subset(ids, is_fill, select=c('doc_id','sentence','.ID','.ROLE','token_id'))
-  fill_table = subset(ids, is_fill)
-  data.table::setindexv(fill_table, '.ROLE')
-  
-  #rtokens = tokens[unique(ids[,c('doc_id','sentence','token_id')]), on=c('doc_id','sentence','token_id')]
-  #rtokens = as_tokenindex(rtokens)
-
-  rnodes = list(tokens=tokens,        ## The tokenindex 
-                #rm_tokens=list(),     ## a list with global token ids (data.tables with doc_id, sentence and token_id) that are to be removed
-                nodes=nodes,          ## the nodes found with the tquery
-                fill = fill_table)    ## a table with all fill values is first created 
-  
-  rnodes
+  if (!is.null(nodes)) {
+    if (fill) {
+      if (fill_only_first) {
+        ids = unique(add_fill(tokens, nodes, tquery, block=nodes))
+      } else {
+        ids = unique(add_fill(tokens, nodes, tquery, block=NULL))
+      }
+    } else ids = NULL
+    if (!is.null(ids)) {
+      ids = melt_nodes_list(ids, fill_only_first=fill_only_first)
+    
+      is_fill = ids$.FILL_LEVEL > 0
+      fill_table = subset(ids, is_fill)
+      data.table::setindexv(fill_table, '.ROLE')
+    }
+    l = list(nodes=nodes, fill=fill_table, prov = list(tquery=tquery, fill=fill, fill_only_first=fill_only_first))
+  } else {
+    l = list(nodes =data.table::data.table(), fill=data.table::data.table(), prov = list(tquery=tquery, fill=fill, fill_only_first=fill_only_first))
+  }
+  data.table::setattr(tokens, '.nodes', value = l)  ## .nodes is assigned to attribute. This way it will automatically be deleted
+                                                    ## if tokens is changes (which in this case is convenient)
+  tokens[]
 }
 
-mutate_nodes <- function(.treshape, node, ..., subset=NULL, copy=T) {
-  if (is(substitute(node), 'name')) node = as.character(substitute(node))
-  
+reselect_nodes <- function(.tokens) {
+  .nodes = .nodes_from_attr(.tokens)
+  select_nodes(.tokens, tquery = .nodes$prov$tquery, fill = .nodes$prov$fill, fill_only_first = .nodes$prov$fill_only_first)
+}
+
+unselect_nodes <- function(.tokens) {
+  data.table::setattr(.tokens, '.nodes', NULL)
+  .tokens
+}
+
+.nodes_from_attr <- function(.tokens) {
+  if (is.null(attr(.tokens, '.nodes'))) stop('.tokens data.table does not have selected nodes. Please use select_nodes(tokens, tquery, ...) before using this function. See ?select_nodes documentation for details')
+  attr(.tokens, '.nodes')
+}
+
+mutate_nodes <- function(.tokens, node, ..., subset=NULL, copy=T) {
+  .nodes = .nodes_from_attr(.tokens)
+  if (nrow(.nodes$nodes) == 0) return(.tokens)
+  if (!is.character(node)) stop('"node" argument has to be a character value')
+    
   l = tidyselect::quos(...)
-  if (length(l) == 0) return(.treshape) 
+  if (length(l) == 0) return(.tokens) 
+  if (copy) .tokens = data.table::copy(.tokens)
   
-  .treshape = data.table::copy(.treshape)
-  linked_node_vars = get_linked_node_vars(.treshape)
+  .tokens = data.table::copy(.tokens)
+  linked_node_vars = get_linked_node_vars(.tokens, .nodes)
   
-  token_i = get_node_position(.treshape, node)
+  token_i = get_node_position(.tokens, .nodes, node)
   
-  subset = substitute(subset)
-  if (!is.null(subset)) {
-    subset_l = eval(subset, envir = linked_node_vars, parent.frame())
-    token_i[subset_l]
-  }
-  
+  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
+  subset = if (subset == 'NULL') NULL else eval(parse(text=subset), envir=linked_node_vars, parent.frame())
   for (i in seq_along(l)) {
     col = names(l)[i]
     if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
-    val = eval(l[[i]][[2]], linked_node_vars, parent.frame())
-    if (!is.null(subset)) val = val[subset_l]
-    .treshape$tokens[token_i, (col) := val]
+    .VAL = eval(l[[i]][[2]], linked_node_vars, parent.frame())
+    if (!is.null(subset)) {
+      .tokens[token_i[subset], (col) := .VAL[subset]]
+    } else {
+      .tokens[token_i, (col) := .VAL]
+    }
   }
-  
-  if (copy) .treshape else invisible(.treshape)
+
+  data.table::setattr(.tokens, '.nodes', value = .nodes)
+  if (copy) .tokens[] else invisible(.tokens)
 }
 
-remove_nodes <- function(.treshape, node, rm_subset=NULL, with_fill=T) {
-  if (is(substitute(node), 'name')) node = as.character(substitute(node))
+
+remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_fill=NULL, keep_shared=F) {
+  .nodes = .nodes_from_attr(.tokens)
+  if (nrow(.nodes$nodes) == 0) return(.tokens)
   
+  if (!is.character(node)) stop('"node" argument has to be a character value')
+  
+  if (!is_deparsed_call(rm_subset)) rm_subset = deparse(substitute(rm_subset)) 
+  rm_subset = if (rm_subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, rm_subset)
   if (!is.null(rm_subset)) {
-    if (!is.logical(rm_subset)) rm_subset = treshape_eval(.treshape, substitute(rm_subset))
-    if (!any(rm_subset)) return(.treshape) ## if there are no nodes that meet the rm_subset condition, nothing is removed
-  } else rm_subset = rep(T, nrow(.treshape$nodes))
+    if (!any(rm_subset)) return(.tokens) ## if there are no nodes that meet the rm_subset condition, nothing is removed
+  } else rm_subset = rep(T, nrow(.nodes$nodes))
   
-  ## remove fill first, because this uses .treshape$nodes (but after rm_subset, so that it only has to be evaluated once)
-  if (with_fill) remove_fill(.treshape, node, rm_subset, rm_subset_fill)
+  ## remove fill first because nodes are used to find fill nodes
+  if (with_fill) {
+    fill_nodes = get_fill_nodes(.tokens, .nodes, node)
+    if (!is_deparsed_call(rm_subset_fill)) rm_subset_fill = deparse(substitute(rm_subset_fill)) 
+    rm_subset_fill = if (rm_subset_fill == 'NULL') NULL else eval(parse(text=rm_subset_fill), envir = fill_nodes, parent.frame())
+    .tokens = do_remove_fill(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared)
+    .nodes = .nodes_from_attr(.tokens)
+  }
   
-  drop_ids = .treshape$nodes[rm_subset, c('doc_id','sentence',node), with=F]
+  drop_ids = .nodes$nodes[rm_subset, c('doc_id','sentence',node), with=F]
   drop_ids = na.omit(drop_ids)
   if (nrow(drop_ids) > 0) {
     data.table::setnames(drop_ids, old=node, new='token_id')
-    .treshape$tokens = .treshape$tokens[!drop_ids, on=c('doc_id','sentence','token_id')]
-    .treshape$nodes[[node]] = ifelse(rm_subset, NA, .treshape$nodes[[node]])
+    .tokens = .tokens[!drop_ids, on=c('doc_id','sentence','token_id')]
+    .nodes$nodes[[node]] = ifelse(rm_subset, NA, .nodes$nodes[[node]])
   }
-  .treshape$tokens = fix_missing_parents(.treshape$tokens, warn = F)  ## (function in token_index.r)
-  .treshape
+  .tokens = fix_missing_parents(.tokens, warn = F)  ## (function in token_index.r)
+  
+  data.table::setattr(.tokens, '.nodes', value = .nodes)
+  .tokens[]
 }
 
-remove_fill <- function(.treshape, node, rm_subset=NULL, rm_subset_fill=NULL, keep_shared=F) {
-  fill_nodes = get_fill_nodes(.treshape, node)
+remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep_shared=F) {
+  .nodes = .nodes_from_attr(.tokens)
+  if (nrow(.nodes$nodes) == 0) return(.tokens)
   
-  node_ids = .treshape$nodes$.ID
+  if (!is.character(node)) stop('"node" argument has to be a character value')
+  
+  if (!is_deparsed_call(rm_subset)) rm_subset = deparse(substitute(rm_subset)) 
+  rm_subset = if (rm_subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, rm_subset)
+  
+  fill_nodes = get_fill_nodes(.tokens, .nodes, node)
+  if (!is_deparsed_call(rm_subset_fill)) rm_subset_fill = deparse(substitute(rm_subset_fill)) 
+  rm_subset_fill = if (rm_subset_fill == 'NULL') NULL else eval(parse(text=rm_subset_fill), envir = fill_nodes, parent.frame())
+  
+  do_remove_fill(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared)
+}
 
+do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared=F) {
+  ## here node must already be a character, and rm_subset and rm_subset_fill must already be logical vectors (or NULL)
+  node_ids = .nodes$nodes$.ID
+
+  if (!is.null(rm_subset_fill)) {
+    fill_nodes = fill_nodes[rm_subset_fill,] 
+  }
+  if (nrow(fill_nodes) == 0) return(.tokens)
+  
   if (!is.null(rm_subset)) {
-    if (!is.logical(rm_subset)) rm_subset = treshape_eval(.treshape, substitute(rm_subset))
-    if (!any(rm_subset)) return(.treshape) ## if there are no nodes that meet the rm_subset condition, nothing is removed
+    if (!any(rm_subset)) return(.nodes) ## if there are no nodes that meet the rm_subset condition, nothing is removed
     node_ids = na.omit(node_ids[rm_subset])
     fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0]
   }
-  if (nrow(fill_nodes) == 0) return(.treshape)
-  .treshape$fill = .treshape$fill[!fill_nodes, on=c('.ID','.ROLE')]
+  if (nrow(fill_nodes) == 0) return(.tokens)
+  
+  .nodes$fill = .nodes$fill[!fill_nodes, on=c('.ID','.ROLE')]
   
   if (keep_shared) {
-    fill_nodes = fill_nodes[!.treshape$fill, on=c('doc_id','sentence','token_id')]  
-    if (nrow(fill_nodes) == 0) return(.treshape)
+    fill_nodes = fill_nodes[!.nodes$fill, on=c('doc_id','sentence','token_id')]  
+    if (nrow(fill_nodes) == 0) return(.tokens)
   } 
-  .treshape$tokens = .treshape$tokens[!fill_nodes, on=c('doc_id','sentence','token_id')]
-  .treshape$tokens = fix_missing_parents(.treshape$tokens, warn=F)  ## (function in token_index.r)
-  .treshape
+  
+  .tokens = .tokens[!fill_nodes, on=c('doc_id','sentence','token_id')]
+  .tokens = fix_missing_parents(.tokens, warn=F)  ## (function in token_index.r)
+  
+  data.table::setattr(.tokens, '.nodes', value = .nodes)
+  .tokens[]
 }
 
-copy_nodes <- function(.treshape, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
-  if (is(substitute(node), 'name')) node = as.character(substitute(node))
-  if (is(substitute(new), 'name')) new = as.character(substitute(new))
-  if (!node %in% names(.treshape$nodes)) stop(sprintf('node (%s) is not a valid node in the tquery results (use the save= argument)', node))
+copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
+  .nodes = .nodes_from_attr(.tokens)  
+  if (nrow(.nodes$nodes) == 0) return(.tokens)
   
-  if (!is.null(subset)) {
-    if (!is.logical(subset)) subset = treshape_eval(.treshape, substitute(subset))
-  } else subset = rep(T, nrow(.treshape$nodes)) 
-
-  node_ids = .treshape$nodes[,c('doc_id','sentence',node),with=F]
-  node_ids = add_sub_id(.treshape, node_ids[subset]) ## beware of the subset being used here
-  .treshape$nodes[[new]] = double(nrow(.treshape$nodes))
-  .treshape$nodes[subset, (new) := node_ids]
+  if (!is.character(node)) stop('"node" argument has to be a character value')
+  if (!is.character(new)) stop('"new" argument has to be a character value')
+  if (!node %in% colnames(.nodes$nodes)) stop(sprintf('node (%s) is not a valid node in the tquery results (use the save= argument)', node))
   
-  node_vars = get_node_vars(.treshape, node)
+  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
+  subset = if (subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, subset)
+  if (is.null(subset)) subset = rep(T, nrow(.nodes$nodes))
+  
+  node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=F]
+  node_ids = add_sub_id(.tokens, node_ids[subset]) ## beware of the subset being used here
+  .nodes$nodes[[new]] = double(nrow(.nodes$nodes))
+  .nodes$nodes[subset, (new) := node_ids]
+  
+  node_vars = get_node_vars(.tokens, .nodes, node)
   node_vars = node_vars[subset]
   node_vars$token_id = node_ids
   if (!keep_relation) {
     node_vars[, parent := NA]
     node_vars[, relation := 'ROOT']
   }
-  .treshape = add_to_tokens(.treshape, node_vars)
-  if (copy_fill) .treshape = copy_fill(.treshape, node, new, subset_fill=subset_fill, only_new=only_new)
-  .treshape
+  .tokens = add_to_tokens(.tokens, node_vars)
+  
+  data.table::setattr(.tokens, '.nodes', value = .nodes)
+  
+  if (copy_fill) {
+    fill_nodes = get_fill_nodes(.tokens, .nodes, node)
+    if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill)) 
+    subset_fill = if (subset_fill == 'NULL') NULL else eval(parse(text=subset_fill), envir = fill_nodes, parent.frame())
+    .tokens = do_copy_fill(.tokens, .nodes, fill_nodes, node, new, subset, subset_fill, only_new)
+  }
+  .tokens[]
 }
 
-copy_fill <- function(.treshape, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
-  if (is(substitute(from_node), 'name')) from_node = as.character(substitute(from_node))
-  if (is(substitute(to_node), 'name')) to_node = as.character(substitute(to_node))
-  if (!from_node %in% names(.treshape$nodes)) stop(sprintf('from_node (%s) is not a valid node in the tquery results (use the save= argument)', node))
-  if (!to_node %in% names(.treshape$nodes)) stop(sprintf('to_node (%s) is not a valid node in the tquery results (use the save= argument)', node))
-  #.treshape = create_fill_table(.treshape, only_first_fill)  ## creates .treshape$fill, if it does not already exist
-
+copy_fill <- function(.tokens, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
+  .nodes = .nodes_from_attr(.tokens)
+  if (nrow(.nodes$nodes) == 0) return(.tokens)
   
-  fill_nodes = get_fill_nodes(.treshape, from_node)
+  if (!is.character(from_node)) stop('"from_node" argument has to be a character value')
+  if (!is.character(to_node)) stop('"to_node" argument has to be a character value')
+  if (!from_node %in% colnames(.nodes$nodes)) stop(sprintf('from_node (%s) is not a valid node in the tquery results (use the save= argument)', from_node))
+  if (!to_node %in% colnames(.nodes$nodes)) stop(sprintf('to_node (%s) is not a valid node in the tquery results (use the save= argument)', to_node))
+  
+  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
+  subset = if (subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, subset)
+  
+  fill_nodes = get_fill_nodes(.tokens, .nodes, from_node)
+  
+  if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill)) 
+  subset_fill = if (subset_fill == 'NULL') NULL else eval(parse(text=subset_fill), envir = fill_nodes, parent.frame())
+  
+  do_copy_fill(.tokens, .nodes, fill_nodes, from_node, to_node, subset, subset_fill, only_new)
+}
+
+do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
+  ## here from_node and to_node must already be characters, and subset and subset_fill must already be logical vectors (or NULL)
+  
+  if (nrow(fill_nodes) == 0) return(.tokens)
   
   if (!is.null(subset_fill)) {
-    subset_fill = eval(substitute(subset_fill), envir = fill_nodes, parent.frame())
     fill_nodes = fill_nodes[subset_fill]
   }
+  if (nrow(fill_nodes) == 0) return(.tokens)
   
   if (!is.null(only_new)) {
-    current_fill = get_fill_nodes(.treshape, to_node)
-    if (any(!only_new %in% colnames(current_fill))) stop('some values in only_new are not valid token columns')
-    remove_fill = current_fill[,c('.ID',only_new),with=F]
-    fill_nodes = fill_nodes[!remove_fill, on=c('.ID',only_new)]
+    first_children_parents = .nodes$nodes[,c('doc_id','sentence',to_node,'.ID'), with=F]
+    first_children = rbind(
+      merge(.tokens, first_children_parents, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence',to_node)),
+      merge(.tokens, first_children_parents, by.x=c('doc_id','sentence','parent'), by.y=c('doc_id','sentence',to_node))
+    )
+    first_children$.FILL_LEVEL = 1
+    if (any(!only_new %in% colnames(first_children))) stop('some values in only_new are not valid token columns')
+    remove_fill = first_children[,c('.FILL_LEVEL','.ID',only_new),with=F]
+    fill_nodes = fill_nodes[!remove_fill, on=c('.FILL_LEVEL','.ID',only_new)]
   }
-  
+  if (nrow(fill_nodes) == 0) return(.tokens)
   if (!is.null(subset)) {
-    if (!is.logical(subset)) subset = treshape_eval(.treshape, substitute(subset))
-    node_ids = .treshape$nodes$.ID[subset]
+    node_ids = .nodes$nodes$.ID[subset]
     fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0]
   }
+  if (nrow(fill_nodes) == 0) return(.tokens)
   
-  id_index = match(fill_nodes$.ID, .treshape$nodes$.ID)
-  from_node_ids = .treshape$nodes[[from_node]][id_index]
-  to_node_ids = .treshape$nodes[[to_node]][id_index]
+  id_index = match(fill_nodes$.ID, .nodes$nodes$.ID)
+  from_node_ids = .nodes$nodes[[from_node]][id_index]
+  to_node_ids = .nodes$nodes[[to_node]][id_index]
   
-  .NEW_ID = add_sub_id(.treshape, fill_nodes[,c('doc_id','sentence','token_id')])
-  parent_index = fill_nodes[,c('doc_id','sentence','token_id','parent')]
+  fill_nodes[,.NEW_ID := add_sub_id(.tokens, fill_nodes[,c('doc_id','sentence','token_id')])]
+  parent_index = fill_nodes[,c('doc_id','sentence','token_id','parent','.ID','token')]
   parent_index[, .I := 1:nrow(parent_index)]
-  parent_index = parent_index[list(parent_index$doc_id, parent_index$sentence, parent_index$parent),
-                            on = c('doc_id','sentence','token_id')]
-  .NEW_PARENT = .NEW_ID[parent_index$parent]
-
+  
+  match_id = fill_nodes[,c('doc_id','sentence','token_id','.ID','.NEW_ID')]
+  parent_index = merge(parent_index, match_id, by.x=c('doc_id','sentence','parent','.ID'), by.y=c('doc_id','sentence','token_id','.ID'))
+  .NEW_PARENT = rep(NA, nrow(fill_nodes))
+  parent_index = na.omit(parent_index)
+  .NEW_PARENT[parent_index$.I] = parent_index$.NEW_ID
+  
   fill_nodes[, token_id := .NEW_ID]
   ## if parent is the from_node id (i.e. fill is a direct child that connects the fill tree to the node), replace parent with node id, otherwise create the sub id
   is_direct_child = fill_nodes$parent == from_node_ids
-  if (any(is_direct_child)) fill_nodes[is_direct_child, parent := to_node_ids[is_direct_child]]
-  if (any(!is_direct_child)) fill_nodes[!is_direct_child, parent := .NEW_PARENT[!is_direct_child]]
-  
+  if (any(is_direct_child)) {
+    fill_nodes[is_direct_child, parent := to_node_ids[is_direct_child]]
+  }
+  if (any(!is_direct_child)) {
+    fill_nodes[!is_direct_child, parent := as.double(.NEW_PARENT[!is_direct_child])]
+    fill_nodes = remove_isolate_fill(fill_nodes)
+  }
   fill_nodes[, .ROLE := to_node]  
-  .treshape = add_to_tokens(.treshape, fill_nodes)  
-  .treshape = add_to_fill(.treshape, fill_nodes)  
-  .treshape
+  .tokens = add_to_tokens(.tokens, fill_nodes)  
+  .nodes = add_to_fill(.nodes, fill_nodes)  
+  
+  data.table::setattr(.tokens, '.nodes', value = .nodes)
+  .tokens[]
 }
 
-add_to_tokens <- function(.treshape, new_tokens) {
-  if (!identical(colnames(.treshape$tokens), colnames(new_tokens))) new_tokens = subset(new_tokens, select = colnames(.treshape$tokens))
-  .treshape$tokens = unique(rbind(.treshape$tokens, new_tokens))
-  .treshape$tokens = as_tokenindex(.treshape$tokens)
-  .treshape
+remove_isolate_fill <- function(fill_nodes) {
+  iso = fill_nodes[is.na(parent),] ## removes isolates, which can result from subsetting or using only_new
+  fill_nodes = fill_nodes[!is.na(parent),]
+  while (nrow(iso) > 0) {
+    iso_i = fill_nodes[list(iso$doc_id, iso$sentence, iso$token_id), on=c('doc_id','sentence','parent'), nomatch=0, which=T]
+    if (length(iso_i) > 0) {
+      iso = fill_nodes[iso_i,]
+      fill_nodes = fill_nodes[!iso_i,]
+    } else break
+  }
+  fill_nodes
 }
 
-add_to_fill <- function(.treshape, new_fill) {
-  if (!identical(colnames(.treshape$fill), colnames(new_fill))) new_fill = subset(new_fill, select = colnames(.treshape$fill))
-  .treshape$fill = unique(rbind(.treshape$fill, new_fill))
-  data.table::setindexv(.treshape$fill, '.ROLE')
-  .treshape
+is_deparsed_call <- function(x) {
+  ## for use in functions to pass on deparsed calls, in particular for subset arguments
+  ## determine whether x is a deparsed call (call as a string)
+  tryCatch(is.character(eval(x)), error = function(e) F, finally = T)
 }
 
-treshape_eval <- function(.treshape, x) {
+
+
+add_to_tokens <- function(.tokens, new_tokens) {
+  if (!identical(colnames(.tokens), colnames(new_tokens))) new_tokens = subset(new_tokens, select = colnames(.tokens))
+  .tokens = unique(rbind(.tokens, new_tokens))
+  .tokens = as_tokenindex(.tokens)
+  .tokens
+}
+
+add_to_fill <- function(.nodes, new_fill) {
+  if (!identical(colnames(.nodes$fill), colnames(new_fill))) new_fill = subset(new_fill, select = colnames(.nodes$fill))
+  .nodes$fill = unique(rbind(.nodes$fill, new_fill))
+  data.table::setindexv(.nodes$fill, '.ROLE')
+  .nodes
+}
+
+.nodes_eval <- function(.tokens, .nodes, x) {
+  ## x has to be an expressions given as a character value (deparse(substitute(x)))
   if (is.null(x)) return(NULL)
-  linked_node_vars = get_linked_node_vars(.treshape)
-  eval(x, envir = linked_node_vars, parent.frame())
+  linked_node_vars = get_linked_node_vars(.tokens, .nodes)
+  eval(parse(text=x), envir = linked_node_vars, parent.frame())
 }
 
-
-apply_treshape <- function(.treshape, tokens) {
-  exists = tokens[.treshape$tokens[,c('doc_id','sentence','token_id')], on=c('doc_id','sentence','token_id'), which=T]
-}
-
-
-get_node_vars <- function(.treshape, node) {
-  node_ids = .treshape$nodes[,c('doc_id','sentence',node),with=F]
+get_node_vars <- function(.tokens, .nodes, node) {
+  node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=F]
   data.table::setnames(node_ids, old=node, new='token_id')
-  .treshape$tokens[node_ids, on=c('doc_id','sentence','token_id')]
+  .tokens[node_ids, on=c('doc_id','sentence','token_id')]
 }
   
-get_linked_node_vars <- function(.treshape) {
-  node_names = setdiff(colnames(.treshape$nodes), c('.ID','doc_id','sentence'))
-  node_vars = lapply(node_names, function(node) get_node_vars(.treshape, node))
+get_linked_node_vars <- function(.tokens, .nodes) {
+  node_names = setdiff(colnames(.nodes$nodes), c('.ID','doc_id','sentence'))
+  node_vars = lapply(node_names, function(node) get_node_vars(.tokens, .nodes, node))
   names(node_vars) = node_names
   node_vars
 }
 
-get_node_position <- function(.treshape, node) {
-  node_ids = .treshape$nodes[,c('doc_id','sentence',node), with=F]
+get_node_position <- function(.tokens, .nodes, node) {
+  node_ids = .nodes$nodes[,c('doc_id','sentence',node), with=F]
   data.table::setnames(node_ids, old=node, new='token_id')
-  .treshape$tokens[node_ids,on=c('doc_id','sentence','token_id'),which=T]
+  .tokens[node_ids,on=c('doc_id','sentence','token_id'),which=T]
 }
 
-get_fill_nodes <- function(.treshape, node) {
-  #.treshape = create_fill_table(.treshape, only_first_fill)  ## creates .treshape$fill, if it does not already exist (should be done before calling get_fill_nodes for efficiency)
-  fill_table = .treshape$fill[list(node), on='.ROLE', nomatch=0]
+get_fill_nodes <- function(.tokens, .nodes, node) {
+  fill_table = .nodes$fill[list(node), on='.ROLE', nomatch=0]
   data.table::setkeyv(fill_table, c('doc_id','sentence','token_id'))
-  merge(fill_table, .treshape$tokens, by=c('doc_id','sentence','token_id'))
+  merge(fill_table, .tokens, by=c('doc_id','sentence','token_id'))
 }
-
-#new_sub_id <- function(.treshape) {
-#  max_sub = max(.treshape$tokens$token_id - floor(.treshape$tokens$token_id))
-#  max_sub = round(max_sub, 6) ## necessary due to weird accuracy errors in adding the sub int, that create huge strings
-#  max_sub_int = as.numeric(gsub('0\\.', '', max_sub))
-#  n = nchar(max_sub_int)
-#  (max_sub_int + 1) / 10^n
-#}
-
-## much more efficient, but less intuitive ids (increment counts from the highest sub_id)
-#add_sub_id <- function(.treshape, x, sub_id=NULL) {   ## find more elegant solution
-#  if (is.null(sub_id)) sub_id = new_sub_id(.treshape)
-#  floor(x) + sub_id
-#}
-
-#add_sub_id2 <- function(x, sub_id) {
-#  n = nchar(gsub('\\.', '', sub_id))
-##  x[x == 0] = 0.01 ## in case the token is zero, since 0.0 would mess things up
-#  ##x / 10^(ceiling(log10(highest)))
-#  x / 10^(nchar(highest) + 1)
-#}
 
 increment_sub_id <- function(x) {
   ## use decimals as sub_id by mirroring increment. so increments 3.99 to 3.001 (mirroring 99 to 100), 3.001 to 3.101, etc. 
   int_x = floor(x) 
-  dec = x - int_x
-  n = stringi::stri_count_regex(dec, pattern = '[0-9]')
-  new_dec = (dec * 10^(n-1)) + 1
-  n = stringi::stri_length(new_dec)
-  sub_id = new_dec / 10^(n*2-1)
-  int_x + sub_id
+  dec = round(x - int_x, 6) ## see round at end, for some reason it has to go here as well
+  dec = ifelse(dec > 0, stringi::stri_extract_first_regex(x, '[0-9]+$'), '0')
+  dec = as.numeric(stringi::stri_reverse(dec)) + 1
+  sub_id = as.numeric(stringi::stri_reverse(sprintf('%.1f', dec)))
+  round(int_x + sub_id, 6) ## round is necessary, because sub_id is sliiiiiigly more than what you see, which messes up the stri_count_regex for number of digits 
 }
 
-
-add_sub_id <- function(.treshape, ids) {
+add_sub_id <- function(.tokens, ids) {
   ## ids should be a data.table with the first three columns being: doc_id, sentence, token_id
   ids = data.table::copy(ids)
   data.table::setnames(ids, c('doc_id','sentence','token_id'))
@@ -264,7 +358,7 @@ add_sub_id <- function(.treshape, ids) {
   exists = rep(T, nrow(ids))
   while (any(exists)) {
     ids[exists, token_id := increment_sub_id(ids$token_id[exists])]
-    matched[exists] = .treshape$token[ids[exists], on=c('doc_id','sentence','token_id'), which=T]
+    matched[exists] = .tokens[ids[exists], on=c('doc_id','sentence','token_id'), which=T]
     exists = !is.na(matched)
   }
   
@@ -275,83 +369,6 @@ add_sub_id <- function(.treshape, ids) {
   }
   ids$token_id
 }
-
-
-#add_sub_id <- function(.treshape, ids, id_col='token_id') {
-#  colnames(ids) = c('doc_id','sentence',id_col)
-#  data.table::setkeyv(ids, c('doc_id','sentence',id_col))
-#  i = 0L
-#  ex = 1:nrow(ids)
-#  while (length(ex) > 0) {
-#    i = i + 1
-#    n = ceiling(log10(i+1))
-#    sub_id = i / 10^n
-#    ids[ex, (id_col) := floor(ids[[id_col]]) + sub_id]
-#    sub_ex = ids[ex,][.treshape$tokens, on=c('doc_id','sentence',id_col), which=T, nomatch=0]
-#    ex = ex[sub_ex]
-#  }
-#  
-#  add_i = ave(ids[[id_col]]==ids[[id_col]], ids[[id_col]], FUN=cumsum) 
-#  is_dup = add_i > 1
-#  if (any(is_dup)) {
-#    add_i = add_i[is_dup] - 1
-#    n = ceiling(log10(add_i+1))
-#    sub_id = add_i / 10^n
-#    ids[is_dup, (id_col) := ids[[id_col]] + sub_id] 
-#  }
-#  ids[[id_col]]
-#}
-
-
-
-
-function(){
-library(spacyr)
-tokens = spacy_parse('Steve ate a pie, banana and cake', dependency=T)
-tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-plot_tree(tokens, token, use_color = T)
-  
-tokens = spacy_parse('Steve ate a pie and banana and bought a cake', dependency=T)
-tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-plot_tree(tokens, token)
-  
-tq = tquery(save='parent', 
-            children(relation = 'conj', save='child'))
-
-tq = tquery(save='parent',  
-            children(relation = 'nsubj', save='child'))
-
-
-treshape(tokens, tq) %>%
-  mutate_nodes(child, token = parent$relation)  
-
-treshape(tokens, tq) %>%
-  copy_nodes(parent, parent_copy) %>%
-  copy_fill(parent, parent_copy)
-
-treshape(tokens, tq) %>%
-  copy_nodes(parent, parent_copy) %>%
-  copy_fill(parent, parent_copy) %>%
-  copy_fill(parent, parent_copy)
-
-
-treshape(tokens, tq) %>%
-  copy_fill(parent, child)
-  
-treshape(tokens, tq) %>%
-  copy_fill(parent, child) %>%
-  copy_fill(parent, child)
-
-.treshape = copy_nodes(.treshape, 'parent', 'parent_copy', keep_parent=T, with_fill = T)
-.treshape = set_relation(.treshape, 'child', parent_copy$parent, parent_copy$relation)
-.treshape
-}
-
-
-
-
-
-
 
 
 

@@ -4,7 +4,7 @@
 \alias{rec_find}
 \title{Recursive search tokens}
 \usage{
-rec_find(tokens, ids, ql, block = NULL, only_req = F)
+rec_find(tokens, ids, ql, block = NULL, fill = T)
 }
 \arguments{
 \item{tokens}{The tokenIndex}

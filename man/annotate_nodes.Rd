@@ -4,8 +4,7 @@
 \alias{annotate_nodes}
 \title{Annotate a tokenlist based on rsyntaxNodes}
 \usage{
-annotate_nodes(tokens, nodes, column, unique_fill = F, concat_dup = T,
-  show_fill = F)
+annotate_nodes(tokens, nodes, column)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -13,12 +12,6 @@ annotate_nodes(tokens, nodes, column, unique_fill = F, concat_dup = T,
 \item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
 
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id}
-
-\item{unique_fill}{If TRUE, only the fill value of the closest parent will be used, and nodes that are already directly matched will not be filled.}
-
-\item{concat_dup}{If TRUE (default), duplicate values will be concatenated. Otherwise, rows will be duplicated.}
-
-\item{show_fill}{if TRUE, return column with fill level}
 }
 \description{
 Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
