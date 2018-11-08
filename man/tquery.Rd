@@ -4,7 +4,7 @@
 \alias{tquery}
 \title{Create a query for dependency based parse trees in a data.table (CoNLL-U or similar format).}
 \usage{
-tquery(..., g_id = NULL, save = NA, fill = T, block = F)
+tquery(..., g_id = NULL, label = NA, fill = T, block = F)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -20,14 +20,14 @@ These functions have the same query arguments as tquery, but with some additiona
 
 \item{g_id}{Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id.}
 
-\item{save}{A character vector, specifying the column name under which the selected tokens are returned. 
+\item{label}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
 \item{fill}{Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
 function (a special version of the children function).}
 
-\item{block}{Logical. If TRUE, the node will be blocked from being assigned (saved). This is mainly usefull if you have a node that you do not want to be assigned by fill,
-but also don't want to 'save' it. Essentially, block is shorthand for using save and then removing the node afterwards. If block is TRUE, save has to be NA.}
+\item{block}{Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+but also don't want to 'label' it. Essentially, block is shorthand for using label and then removing the node afterwards. If block is TRUE, label has to be NA.}
 }
 \value{
 A tQuery object, that can be used with the \link{apply_queries} function.
@@ -39,7 +39,7 @@ queries will be used) and the values are vectors with lookup values.
 Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
 These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
 
-The fill() function (also see fill argument) can be nested to include the children of a 'saved' node. It can only be nested in a query if the save argument is not NULL,
+The fill() function (also see fill argument) can be nested to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
 and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
 assigned to the closest node. 
   
@@ -47,10 +47,9 @@ Please look at the examples below for a recommended syntactic style for using th
 }
 \details{
 There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
-If the name is given the suffix __N, only rows without an exact match are found. (so, lemma__N = "fish" look for all rows in which the lemma is not "fish").
 By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
 If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
-Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flags is irrelevant)
+Multiple flags can be combined, such as lemma__RI, or lemma_IR  (order of flags is irrelevant)
 }
 \examples{
 ## it is convenient to first prepare vectors with relevant words/pos-tags/relations
@@ -59,7 +58,7 @@ Multiple flags can be combined, such as lemma__NRI, or lemma_IRN  (order of flag
 .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 
 quotes_direct = tquery(lemma = .SAY_VERBS,
-                         children(save = 'source', p_rel = .SUBJECT_RELS),
-                         children(save = 'quote', p_rel = .QUOTE_RELS))
+                         children(label = 'source', p_rel = .SUBJECT_RELS),
+                         children(label = 'quote', p_rel = .QUOTE_RELS))
 quotes_direct ## print shows tquery
 }

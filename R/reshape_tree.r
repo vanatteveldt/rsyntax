@@ -23,16 +23,16 @@ treshape_remove <- function(...) {
 
 treshape_query <- function(...){
   l = list(...)
-  save = '.RESHAPE_KEY'
+  label = '.RESHAPE_KEY'
   
   if (length(l) > 0) {
     l = l[!sapply(l, is, 'tQueryFill')]
   }
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') 
-    q = list(g_id=NULL, save=save, lookup = l[!is_nested], nested=l[is_nested])
+    q = list(g_id=NULL, label=label, lookup = l[!is_nested], nested=l[is_nested])
   } else {
-    q = list(g_id=NULL, save=save, lookup =NULL, nested=NULL)
+    q = list(g_id=NULL, label=label, lookup =NULL, nested=NULL)
   }
   q = safe_names(q)
   class(q) = c('tQuery', class(q))
@@ -189,7 +189,7 @@ add_link_children <- function(tokens, path, link_children, link_fill, only_lowes
   
   ids = unique(rbind(data.table::data.table(doc_id=path$doc_id, sentence=path$sentence, token_id=path$token_id),
                      data.table::data.table(doc_id=path$doc_id, sentence=path$sentence, token_id=path$token_id_head)))
-  link_children$save = '.LINK_KEY'
+  link_children$label = '.LINK_KEY'
   link_ids = rec_find(tokens, ids=ids, ql = list(link_children))
   add = tokens[list(link_ids$doc_id, link_ids$sentence, link_ids$.LINK_KEY), on=c('doc_id','sentence', 'token_id')]
   

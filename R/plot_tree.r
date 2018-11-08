@@ -1,3 +1,238 @@
+#' Create an igraph tree from a sentence
+#' 
+#' @description
+#' Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
+#' 
+#' By default, all columns in the data are included as labels. This can be changes by using the ... argument.
+#' 
+#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param ...         Optionally, select which columns to include as labels and how to present them. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)  
+#' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
+#' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
+#' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
+#' @param allign_text If TRUE (default) allign text (the columns specified in ...) in a single horizontal line at the bottom, instead of following the different levels in the tree
+#' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
+#' @param all_lower   If TRUE, make all text lowercase
+#' @param all_abbrev  If an integer, abbreviate all text, with the number being the target number of characters. 
+#' @param textsize    A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number. 
+#' @param spacing     A number for scaling the distance between words (between 0 and infinity) 
+#' @param use_color   If true, use colors
+#' @param max_curve   A number for controlling the allowed amount of curve in the edges. 
+#' @param palette     A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation
+#'   
+#' @return an igraph graph
+#' @export
+plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
+  if (is.null(pdf_file)) plot.new()
+  
+  tokens = as_tokenindex(tokens) 
+  nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
+  nodes$rel_label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
+  nodes$label = nodes$token_id
+  
+  sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
+  annotations = gsub('\\_.*', '', grep('\\_fill', colnames(nodes), value=T))
+  text_cols = get_text_cols(nodes, tidyselect::quos(...), annotations)
+  edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
+  
+  text = NULL
+  for (tc in text_cols) {
+    textval = if (!is.null(all_abbrev)) abbreviate(tc, minlength = all_abbrev) else tc
+    textval = ifelse(is.na(textval), '', as.character(textval))
+    text = if (is.null(text)) textval else paste(text, textval, sep='\n')
+  }
+  if (!is.null(ignore_rel)) nodes$label[nodes$label %in% ignore_rel] = ''
+  if (all_lower) {
+    text = tolower(text)
+    nodes$label = tolower(nodes$label)
+  }
+  
+  g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
+  V(g)$id = as.numeric(V(g)$name)
+  
+  ## order nodes, split by roots
+  comps = igraph::decompose(g)
+  if (length(comps) > 1) {
+    reorder_list = sapply(comps, function(x) sort(V(x)$id), simplify = F)
+    reorder = unlist(reorder_list)
+    g = permute(g, match(as.numeric(V(g)$id), as.numeric(reorder)))
+    
+    reorder_i = match(as.numeric(reorder), as.numeric(nodes$token_id))
+    text = text[reorder_i]
+    nodes = nodes[reorder_i,]
+    tree_boundaries = sapply(reorder_list, length)
+  } else tree_boundaries = NULL
+  
+  root = find_roots(g)
+  g$layout = igraph::layout_as_tree(g, root = root)
+  
+  if (!is.null(ignore_rel)) g = delete.edges(g, which(get.edge.attribute(g, 'relation') %in% ignore_rel))
+  
+  
+  co = g$layout
+  e = get.edges(g, E(g))
+  co[,1] = arrange_horizontal(g, text, tree_boundaries)
+  g = format_edges(g, max_curve, e)
+  co[,2] = arrange_vertical(co, text_cols)
+
+  #E(g)$arrow.size=0.5
+  E(g)$arrow.mode=2
+  E(g)$arrow.size=0.4
+  
+  
+  ## make empty plot to get positions in current plot device
+  if (!is.null(pdf_file)) {
+    height = 7
+    width = height * (dev.size()[1] / dev.size()[2])
+    pdf(pdf_file, height = height, width=width)
+  }
+  
+  par(mar=c(0,0,0,0))
+  plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(co[,1]),ylim=extendrange(c(-1,1)))
+  
+  cex = calc_cex(g, co, text, tree_boundaries, spacing, textsize)
+  g = set_vertex_attr(g, cex, ignore_rel) 
+ 
+  
+  if ('.REL_LEVEL' %in% igraph::vertex_attr_names(g)) {
+    hl = !is.na(V(g)$.REL_LEVEL)
+  } else hl = rep(F, vcount(g))
+  
+  if (use_color) {
+    V(g)$color = festival(V(g)$label, palette)
+    E(g)$color = V(g)$color[e[,2]]
+    V(g)$frame.color[hl] = 'red'
+    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
+  } else {
+    V(g)$color =  'lightgrey'
+    V(g)$frame.color =  'darkgrey'
+    V(g)$frame.color[hl] =  'black'
+    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
+  }
+  
+  #label = V(g)$label
+  #V(g)$label = V(g)$name    ## use id instead of label, and print label above id
+  #V(g)$label = ''
+ 
+  
+  plot(g, layout=co, rescale=FALSE, add=TRUE)
+  
+  text(co[,1], co[,2]+(0.02*cex), labels=V(g)$rel_label, 
+       col = 'black', cex=cex*0.9, pos=3, font = 3)
+
+  ## add text and lines
+  
+  ## non-integers are added. highlight these in red for clarity
+  added = as.numeric(V(g)$name)
+  added = (round(added) - added) != 0
+  if (any(added)) {
+    
+    col = ifelse(added, ifelse(use_color, 'red', 'darkgrey'),'black')
+  } else col = 'black'
+  
+  if (allign_text) {
+    texty = min(co[,2])
+  } else {
+    texty = co[,2]
+  }
+  
+  text(co[,1], texty-(0.1*cex), labels=text, 
+         col = col, 
+         cex=cex, adj=c(0.5,1))
+  
+  #if (!is.null(tree_boundaries)) {
+  #  print(tree_boundaries)
+  #}
+  
+  if (!is.null(annotation)) {
+    vdist = co[,2]
+    vdist = max(vdist) - max(vdist[vdist < max(vdist)])
+    id_start = 1
+    role_start = 1
+    ann_id = paste0(annotation, '_id')
+    for (i in 1:nrow(nodes)) {
+      role_done = !nodes[[annotation]][role_start] == nodes[[annotation]][i]
+      id_done = !nodes[[ann_id]][id_start] == nodes[[ann_id]][i]
+      if (is.na(role_done)) {
+        if (role_start == i) {
+          role_done = F
+          role_start = i
+        } else role_done = T
+      }
+      if (is.na(id_done)) {
+        if (id_start == i) {
+          id_done = F
+          id_start = i
+        } else id_done = T
+      }
+      if (role_done || id_done) {
+        value = nodes[[annotation]][role_start]
+        if (!is.na(value)) draw_box(co, role_start, i-1, label=value, is_outer = F, vdist, cex=cex)
+        role_start = i
+      }
+      if (id_done) {      
+        value = nodes[[ann_id]][id_start]
+        if (!is.na(value)) draw_box(co, id_start, i-1, label=value, is_outer=T, vdist, cex=cex)
+        id_start = i
+      }
+    }
+    if (role_start <= i) {
+      value = nodes[[annotation]][role_start]
+      if (!is.na(value)) draw_box(co, role_start, nrow(nodes), label=value, is_outer=F, vdist, cex=cex)
+    }
+    if (id_start <= i) {
+      value = nodes[[ann_id]][id_start]
+      if (!is.na(value)) draw_box(co, id_start, nrow(nodes), label=value, is_outer=T, vdist, cex=cex)
+    }
+    #rect()
+  }
+  message(sentmes)
+  #if (allign_text) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
+  drop = if (is.null(ignore_rel)) rep(F, vcount(g)) else V(g)$relation %in% ignore_rel
+  if (allign_text && length(text_cols) > 0) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
+  if (!is.null(pdf_file)) dev.off()
+  invisible(tokens)
+}
+
+draw_box <- function(co, start, end, vdist, label, is_outer=F, hexp=1, vexp=1, cex=1,  ...) {
+  vexp = if (is_outer) 1.2 else 1
+  hexp = if (is_outer) 1 else 0.95
+  ldist = if (start == 1) abs(co[2,1] - co[1,1]) else co[start,1] - co[start-1,1] 
+  rdist = if (end == nrow(co)) co[nrow(co),1] - co[nrow(co)-1,1] else abs(co[end,1] - co[end+1,1]) 
+  xl = co[start,1] - ((ldist/2.1)*hexp)
+  xr = co[end,1] + ((rdist/2.1)*hexp)
+  yt = max(co[start:end,2]) + (vdist*vexp)
+  if (is_outer) yt = yt + vdist
+  yb = min(co[start:end,2]) - (vdist/2)*vexp
+  if (yb < -0.5) yb = -0.5 - (0.05*cex)
+  rect(xl,yb,xr,yt, lty=if(is_outer) 1 else 2, ...)
+  labelx = mean(c(xl,xr))
+  labely = yt + (vdist/2)
+  if (is_outer) {
+    text(labelx, labely, label, cex=cex*0.8, font= 2)
+  } else {
+    text(labelx, labely, label, cex=cex*0.8, font= 3)
+  }
+}
+
+get_text_cols <- function(nodes, l, annotations) {
+  text_cols = list()
+  if (length(l) > 0) {
+    for (i in seq_along(l)) {
+      if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
+      text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
+    }
+  } else {
+    cols = setdiff(colnames(tokens), c('doc_id','sentence','token_id','parent','relation'))
+    ann_cols = unlist(sapply(annotations, paste0, c('','_id','_fill'), simplify=F))
+    cols = setdiff(cols, ann_cols)
+    for (col in cols) {
+      text_cols[[col]] = nodes[[col]]   
+    }
+  }
+  text_cols
+}
+
 get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
   if (!length(sentence_i) == 1) stop('Can only select one sentence_i') 
   if (!is.null(.DOC_ID)) {
@@ -18,235 +253,11 @@ get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
     .DOC_SENT = .DOC_SENT[sentence_i,]
     sent = tokens[.DOC_SENT, on=c('doc_id','sentence'), nomatch=0]
   }
+  data.table::setcolorder(sent, union('token_id', colnames(sent))) ## set token_id first for matching with edges
+  
   sent
 }
 
-
-#' Create an igraph tree from a sentence
-#' 
-#' Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
-#' 
-#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param ...         Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)  
-#' @param id          By default (true) the token_id is printed, but maybe you don't like ids.
-#' @param treshape    A \link{treshape} or list of treshapes, to reshape the dependency tree
-#' @param tqueries    A \link{tquery} or list of tqueries, to annotate nodes. Queries will be applied after the treshape transformations. Can also be a named list of lists, where each entry is a seperately annotated list of tqueries. 
-#' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
-#' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
-#' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
-#' @param allign_text If TRUE (default) allign text (the columns specified in ...) in a single horizontal line at the bottom, instead of following the different levels in the tree
-#' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
-#' @param all_lower   If TRUE, make all text lowercase
-#' @param all_abbrev  If an integer, abbreviate all text, with the number being the target number of characters. 
-#' @param textsize    A number to manually change the textsize. The function tries to set a suitable textsize for the plotting device, but if this goes wrong and now everything is broken and sad, you can multiply the textsize with the given number. 
-#' @param spacing     A number for scaling the distance between words (between 0 and infinity) 
-#' @param use_color   If true, use colors
-#' @param max_curve   A number for controlling the allowed amount of curve in the edges. 
-#' @param palette     A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation
-#'   
-#' @return an igraph graph
-#' @export
-plot_tree <-function(tokens, ..., treshape=NULL, tqueries=NULL, sentence_i=1, doc_id=NULL, sentence=NULL, annotations=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
-  plot.new()
-  
-  tokens = as_tokenindex(tokens) 
-  nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
-  sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
-  
-  if (!is.null(treshape)) nodes = apply_reshapes(nodes, treshape)
-  
-  l = tidyselect::quos(...)
-  text_cols = list()
-  for (i in seq_along(l)) {
-    if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
-    text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
-  }
-  
-  if (!is.null(tqueries)) {    
-    nodes = annotate(nodes, tqueries, 'annotate')
-    text_cols[['annotate']] = nodes$annotate
-  }
-  
-  #nodes = apply_reshapes(nodes, treshape(bypass=bypass, isolate=isolate, link_children = link_children))
-  
-
-
-  data.table::setcolorder(nodes, union('token_id', colnames(nodes))) ## set token_id first for matching with edges
-  
-  # reorder columns and split to edges and nodes, keep only nodes that appear in an edge:
-  edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
-  #edges = edges[!edges$relation %in% bypass,]
-  
-  text = NULL
-  for (tc in text_cols) {
-    textval = if (!is.null(all_abbrev)) abbreviate(tc, minlength = all_abbrev) else tc
-    textval = ifelse(is.na(textval), '', as.character(textval))
-    text = if (is.null(text)) textval else paste(text, textval, sep='\n')
-  }
-  nodes$label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
-  #nodes$label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
-  
-  if (!is.null(ignore_rel)) nodes$label[nodes$label %in% ignore_rel] = ''
-  
-  if (all_lower) {
-    text = tolower(text)
-    nodes$label = tolower(nodes$label)
-  }
-  
-  g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
-  V(g)$id = as.numeric(V(g)$name)
-  
-  ## order nodes, split by roots
-  comps = igraph::decompose(g)
-  if (length(comps) > 1) {
-    reorder_list = sapply(comps, function(x) sort(V(x)$id), simplify = F)
-    reorder = unlist(reorder_list)
-    g = permute(g, match(as.numeric(V(g)$id), as.numeric(reorder)))
-    text = text[match(as.numeric(reorder), as.numeric(nodes$token_id))]
-    tree_boundaries = sapply(reorder_list, length)
-  } else tree_boundaries = NULL
-  
-  root = find_roots(g)
-  g$layout = igraph::layout_as_tree(g, root = root)
-  
-  #plot(g)
-  #return(NULL)
-  
-  if (!is.null(ignore_rel)) g = delete.edges(g, which(get.edge.attribute(g, 'relation') %in% ignore_rel))
-  co = g$layout ## vertex coordinates
-  
-  
-  ## arrange horizontal positions
-  textwidth = strwidth(text)
-  textwidth = centered_width(textwidth)
-  relwidth = strwidth(V(g)$label)
-  relwidth2 = strwidth(V(g)$name)
-  relwidth = ifelse(relwidth > relwidth2, relwidth, relwidth2)
-  relwidth = centered_width(relwidth) ## relwidth is annoying, because nodes are centered. Therefore, use halved length of current node and next
-  
-  width = ifelse(textwidth > relwidth, textwidth, relwidth)
-  width = width_boundaries(width, tree_boundaries)
-  
-  
-  right_allign = cumsum(width)
-  left_allign = c(0,right_allign[-length(right_allign)])
-  co[,1] = rescale_var(left_allign, new_min = -1, new_max = 1, x_min = 0, x_max=max(right_allign))
-  
-  ## format edges
-  e = get.edges(g, E(g))
-  vdist = (e[,2] - e[,1])
-  maxcurve = 1 / (1 + exp(-max(abs(vdist))*0.05))
-  maxcurve = min(maxcurve, max_curve) # max_curve, with underscore, is a parameter
-  curve = rescale_var(abs(vdist)^2, 0, maxcurve) * sign(vdist)
-  #curve = maxcurve * sign(vdist)
-  E(g)$curved = curve
-  E(g)$width = 2
-  E(g)$color = 'darkgrey'
-  
-  ## arrange vertical positions
-  levels = max(co[,2]) - min(co[,2])
-  maxheight = if (levels > 10) 1 else -0.5 + levels*0.15
-  co[,2] = rescale_var(co[,2], new_min = -0.5, new_max = maxheight)
-  #E(g)$arrow.size=0.5
-  E(g)$arrow.mode=1
-  E(g)$arrow.size=0.5
-  
-  ## make empty plot to get positions in current plot device
-  par(mar=c(0,0,0,0))
-  plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(co[,1]),ylim=extendrange(c(-1,1)))
-  
-  width_label = strwidth(V(g)$label, units='inches')
-  width_label = centered_width(width_label)
-  width_label2 = strwidth(V(g)$name, units='inches')
-  width_label2 = centered_width(width_label2)
-  width_label = ifelse(width_label > width_label2, width_label, width_label2)
-  
-  width_text = strwidth(text, units='inches')
-  need_width = ifelse(width_label > width_text, width_label, width_text)
-  need_width = width_boundaries(need_width, tree_boundaries)
-  need_width = sum(need_width)
-  need_width = need_width + (strwidth('  ', units='inches') * (spacing+0.1) * vcount(g))
-  
-  max_width = dev.size(units = 'in')[1]
-  max_width = max_width * (1 - min(co[,1])) / 2
-  cex = if (max_width < need_width) max_width / need_width else 1
-  cex = textsize * cex
-  
-  
-  width = (strwidth(V(g)$label, cex=cex) + strwidth('', cex=cex)) * 100
-  height = (max(strheight(V(g)$label), strheight('I')) + strheight('I')*0.1) * 100
-  V(g)$label.cex = cex
-  V(g)$label.color = 'black'
-  V(g)$shape = 'rectangle'
-  V(g)$size = width
-  V(g)$size2 = height
-  V(g)$color = 'white'
-  V(g)$border.color = 'white'
-  V(g)$frame.color = 'white'
-  V(g)$label.font=2
-
-  drop = if (is.null(ignore_rel)) rep(F, vcount(g)) else V(g)$relation %in% ignore_rel
-  V(g)$size[drop] = 0
-  V(g)$size2[drop] = 0
-  V(g)$label[drop] = ''
-
-  if ('.REL_LEVEL' %in% igraph::vertex_attr_names(g)) {
-    hl = !is.na(V(g)$.REL_LEVEL)
-  } else hl = rep(F, vcount(g))
-  
-  if (use_color) {
-    if (is.null(annotations)) {
-      V(g)$color = festival(V(g)$label, palette)
-    } else {
-      V(g)$color = festival(nodes[[annotations]], palette)
-    }
-    E(g)$color = V(g)$color[e[,2]]
-    V(g)$frame.color[hl] = 'red'
-    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
-  } else {
-    V(g)$color =  'lightgrey'
-    V(g)$frame.color =  'darkgrey'
-    V(g)$frame.color[hl] =  'black'
-    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
-  }
-  
-  label = V(g)$label
-  V(g)$label = V(g)$name    ## use id instead of label, and print label above id
-  #V(g)$label = ''
-  plot(g, layout=co, rescale=FALSE, add=TRUE)
-  
-  text(co[,1], co[,2]+(0.02*cex), labels=label, 
-       col = 'black', cex=cex*0.9, pos=3, font = 3)
-
-  ## add text and lines
-  
-  ## non-integers are added. highlight these in red for clarity
-  added = as.numeric(V(g)$name)
-  added = (round(added) - added) != 0
-  if (any(added)) {
-    
-    col = ifelse(added, ifelse(use_color, 'red', 'darkgrey'),'black')
-  } else col = 'black'
-  
-  if (allign_text) {
-    texty = min(co[,2])
-  } else {
-    texty = co[,2]
-  }
-    
-  text(co[,1], texty-(0.05*cex), labels=text, 
-       col = col, 
-       cex=cex, pos=1)
-  
-  #if (!is.null(tree_boundaries)) {
-  #  print(tree_boundaries)
-  #}
-  
-  message(sentmes)
-  #if (allign_text) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
-  if (allign_text && length(text_cols) > 0) segments(co[,1], min(co[,2]), co[,1], co[,2], lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
-  invisible(tokens)
-}
 
 width_boundaries <- function(width, tree_boundaries) {
    if (!is.null(tree_boundaries)) {
@@ -260,15 +271,74 @@ width_boundaries <- function(width, tree_boundaries) {
 
 centered_width <- function(width) (width / 2) + data.table::shift(width / 2, type = 'lead', fill=0)
 
+format_edges <- function(g, max_curve, e) {
+  ## format edges
+  vdist = (e[,2] - e[,1])
+  maxcurve = 1 / (1 + exp(-max(abs(vdist))*0.05))
+  maxcurve = min(maxcurve, max_curve) # max_curve, with underscore, is a parameter
+  curve = rescale_var(abs(vdist)^2, 0, maxcurve) * sign(vdist)
+  #curve = maxcurve * sign(vdist)
+  E(g)$curved = curve
+  E(g)$width = 2
+  E(g)$color = 'darkgrey'
+  g  
+}
+
+calc_cex <- function(g, co, text, tree_boundaries, spacing, textsize) {
+  width_label = strwidth(V(g)$label, units='inches')
+  width_label = centered_width(width_label)
+  width_label2 = strwidth(V(g)$rel_label, units='inches')
+  width_label2 = centered_width(width_label2)
+  width_label = ifelse(width_label > width_label2, width_label, width_label2)
+  
+  width_text = strwidth(text, units='inches')
+  need_width = ifelse(width_label > width_text, width_label, width_text)
+  need_width = width_boundaries(need_width, tree_boundaries)
+  need_width = sum(need_width)
+  need_width = need_width + (strwidth('  ', units='inches') * (spacing+0.1) * vcount(g))
+  
+  max_width = dev.size(units = 'in')[1]
+  max_width = max_width * (1 - min(co[,1])) / 2
+  cex = if (max_width < need_width) max_width / need_width else 1
+  textsize * cex
+}
+
+
+set_vertex_attr <- function(g, cex, ignore_rel) {
+  width = (strwidth(V(g)$label, cex=cex) + strwidth(' ', cex=cex*0.5)) * 100
+  width2 = (strwidth(V(g)$rel_label, cex=cex) + strwidth(' ', cex=cex*0.5)) * 100
+  width = ifelse(width > width2, width, width2)
+  
+  height = (max(strheight(V(g)$label, cex=cex), strheight('I', cex=cex)) + strheight('I',cex=cex)*0.25) * 100
+  V(g)$label.cex = cex
+  V(g)$label.color = 'black'
+  V(g)$shape = 'rectangle'
+  V(g)$size = width
+  V(g)$size2 = height
+  V(g)$color = 'white'
+  V(g)$border.color = 'white'
+  V(g)$frame.color = 'white'
+  V(g)$label.font=2
+  
+  drop = if (is.null(ignore_rel)) rep(F, vcount(g)) else V(g)$relation %in% ignore_rel
+  V(g)$size[drop] = 0
+  V(g)$size2[drop] = 0
+  V(g)$label[drop] = ''
+  
+  g
+}
+
+
   
 festival <- function(labels, palette=palette){
-  pal = palette(256)
+  pal = palette(4097) #(16^3 + 1 for indexing)
   color = NA
   for (label in labels) {
     if (is.na(label)) next
     if (label == '') next
     hash = digest::digest(label, 'xxhash32')
-    labelint = strtoi(substr(hash, 2,3), 16)
+    hash = digest::digest(hash, 'xxhash32')  ## somehow first hash doesn't seem random enough
+    labelint = strtoi(substr(hash, 2,4), 16) + 1
     color[labels == label] = pal[labelint]
   }
   color
@@ -293,6 +363,36 @@ find_roots <- function(g) {
   }
   roots
 }
+
+arrange_horizontal <- function(g, text, tree_boundaries) {
+  width = get_width(g, text, tree_boundaries)
+  right_allign = cumsum(width)
+  left_allign = c(0,right_allign[-length(right_allign)])
+  rescale_var(left_allign, new_min = -1, new_max = 1, x_min = 0, x_max=max(right_allign))
+}
+
+arrange_vertical <- function(co, text_cols) {
+  levels = max(co[,2]) - min(co[,2])
+  bottom_offset = length(text_cols)
+  if (bottom_offset < 5) bottom_offset = 5  
+  if (bottom_offset > 10) bottom_offset = 10
+  bottom_offset = -(1 - bottom_offset / 10)
+  maxheight = if (levels > 10) 1 else bottom_offset + levels*0.15
+  rescale_var(co[,2], new_min = bottom_offset, new_max = maxheight)
+}
+
+get_width <- function(g, text, tree_boundaries){
+  textwidth = strwidth(text)
+  textwidth = centered_width(textwidth)
+  relwidth = strwidth(V(g)$label)
+  relwidth2 = strwidth(V(g)$rel_label)
+  relwidth = ifelse(relwidth > relwidth2, relwidth, relwidth2)
+  relwidth = centered_width(relwidth) ## relwidth is annoying, because nodes are centered. Therefore, use halved length of current node and next
+  
+  width = ifelse(textwidth > relwidth, textwidth, relwidth)
+  width_boundaries(width, tree_boundaries)
+}
+
 
 
 
@@ -337,7 +437,15 @@ function() {
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, token, lemma, tolower(pos))
   
+  tokens = spacy_parse('Bobby, who is a dog, went home.', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos))
   
+  tq = tquery(relation = "nsubj", label = "subject",
+              fill(NOT(relation = "relcl"), connected = TRUE))
+  tokens = annotate(tokens, tq, 'test')
+  tokens            
+              
   tokens = spacy_parse('According to Trump, bees will die if Democrats win control of Congress this year.', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, token, lemma, tolower(pos))
@@ -353,8 +461,8 @@ function() {
   plot_tree(tokens, token, lemma, tolower(pos))
   
   ifthen = tquery(lemma = c("if","when","because"),
-                  parents(pos = 'VERB*', save='reason',
-                          parents(save='consequence')))
+                  parents(pos = 'VERB*', label='reason',
+                          parents(label='consequence')))
   
   tokens = annotate(tokens, spacy_english_quote_queries(), column = 'quotes')
   tokens = annotate(tokens, spacy_english_clause_queries(), column = 'clauses')
@@ -385,18 +493,20 @@ function() {
   viewer <- getOption("viewer")
   viewer('Rplot.pdf')
   
-  tokens = spacy_parse('"Kenny said: "Steve and Patrick hit John, punched Ken, kissed Mary and punched Ben."', dependency=T)
-  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-  plot_tree(tokens, token, tolower(pos),allign_text = T)
   
-  inspect_family(tokens, query = tquery(relation='conj', save='conj'), node='conj')
+  
+  tokens = spacy_parse('"Kenny stated: "Steve and Patrick hit John, punched Ken, kissed Mary and punched Ben."', dependency=T)
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  plot_tree(tokens, token, lemma, tolower(pos),allign_text = T)
+  
+  inspect_family(tokens, query = tquery(relation='conj', label='conj'), node='conj')
   
   find_nodes(tokens, check=F, 
-             parents(relation=c('dep','conj'), depth=Inf, connected=T, save='test'))
+             parents(relation=c('dep','conj'), depth=Inf, connected=T, label='test'))
 
-  find_nodes(tokens, check=F, save='key',  
-             children(relation=c('nsubj'), save='link', req=F),
-             children(relation=c('dep','conj'), depth=Inf, save='bypass', connected=T))
+  find_nodes(tokens, check=F, label='key',  
+             children(relation=c('nsubj'), label='link', req=F),
+             children(relation=c('dep','conj'), depth=Inf, label='bypass', connected=T))
   
   plot_tree(tokens, token, tolower(pos), bypass='conj', link_children='nsubj')
   plot_tree(tokens, token, tolower(pos), bypass='conj', link_children='nsubj')
@@ -531,7 +641,7 @@ function() {
   text = paste(paste0(en$headline,'.'), en$text, sep='\n\n')[1:5]
   ##tokens = spacy_parse(text, dependency = T)
   #tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-  #saveRDS(tokens, file='example_backup.rds')
+  #labelRDS(tokens, file='example_backup.rds')
   
   tokens = readRDS('example_backup.rds')
   tokens1 = tokens[list('text5', c(2349,2354)), on=c('doc_id','sentence')]

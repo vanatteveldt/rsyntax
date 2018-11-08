@@ -16,8 +16,8 @@ S3 print for tQuery class
 }
 \examples{
 q = tquery(lemma = .VIND_VERBS, 
-                   children(save = 'source', p_rel=.SUBJECT_REL),
+                   children(label = 'source', p_rel=.SUBJECT_REL),
                    children(p_rel='vc', POS = c('C', 'comp'),
-                            children(save='quote', p_rel=.SUBJECT_BODY)))
+                            children(label='quote', p_rel=.SUBJECT_BODY)))
 q 
 }

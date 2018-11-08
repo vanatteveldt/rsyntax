@@ -1,8 +1,7 @@
-find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, fill=T, melt=T) {
+find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T, melt=T) {
   .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
-  
   nodes = filter_tokens(tokens, lookup=tquery$lookup, .G_ID=tquery$g_id, .BLOCK=block, use_index=use_index)
   if (nrow(nodes) == 0) return(NULL)
   nodes = subset(nodes, select = c('doc_id','sentence','token_id'))
@@ -12,12 +11,11 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NULL, fill=
     nodes = find_nested(tokens, nodes, tquery, block, fill=F)
   } else {
     data.table::setnames(nodes, old = 'token_id', new='.ID')
-    if (!is.na(tquery$save)) nodes[,(tquery$save) := .ID]
+    if (!is.na(tquery$label)) nodes[,(tquery$label) := .ID]
   } 
   if (is.null(nodes)) return(NULL)
   if (nrow(nodes) == 0) return(NULL)
 
-  
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
   nodes = create_unique_key(nodes, name)
   if (melt) {
@@ -32,10 +30,10 @@ find_nested <- function(tokens, nodes, tquery, block, fill) {
   nodes[, .ID := .MATCH_ID]
   data.table::setcolorder(nodes, c('.ID', setdiff(colnames(nodes), '.ID')))
   
-  if (is.na(tquery$save)) {
+  if (is.na(tquery$label)) {
     nodes[,.MATCH_ID := NULL]
   } else {
-    data.table::setnames(nodes, '.MATCH_ID', tquery$save)
+    data.table::setnames(nodes, '.MATCH_ID', tquery$label)
   }
   
   dropcols = grep('.DROP.*', colnames(nodes), value=T)
@@ -54,11 +52,12 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     }
   } 
   if (any(is_fill)) {
-    if (is.na(tquery$save)) {
+    if (is.na(tquery$label)) {
       if (level == 1) match_id = '.ID' else return(nodes)
-    } else match_id = tquery$save
+    } else match_id = tquery$label
     if (!match_id %in% colnames(nodes)) return(nodes)
     ids = subset(nodes, select = c('doc_id','sentence',match_id))
+    ids = unique(na.omit(ids))
     add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))
@@ -70,24 +69,20 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
   unique(nodes)
 }
 
-function(){
-  tokens = tokens_dutchquotes
-  tokens = as_tokenindex(tokens)
-  tquery = alpino_quote_queries()[[1]]
-  #tquery = tquery(POS='VB*', save='test', children(save='testing'))
-  nodes = find_nodes(tokens, tquery)
-  
-  add_fill(tokens, nodes, tquery, block)
-  
-}
-
 create_unique_key <- function(nodes, name){
   #if (ncol(nodes) > 3) {
   #  key = paste0(name, '(', nodes$.ID, ':', do.call(paste, args = c(nodes[,-(1:3)], sep='.')), ')')
   #} else {
   #  key = paste0(name, '(', nodes$.ID, ')')
-  #}        
-  key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', match(nodes$.ID, unique(nodes$.ID)))
+  #}      
+  id_col = setdiff(colnames(nodes), c('doc_id','sentence','.ID'))[1]
+  #key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', match(nodes$.ID, unique(nodes$.ID)))
+  if (!is.na(name)) {
+    key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', nodes[[id_col]])
+  } else {
+    key = paste0(nodes$doc_id, '.', nodes$sentence, '.', nodes[[id_col]])
+  }
+  key = key[match(nodes$.ID, nodes$.ID)] ## give same id to nodes with same .ID
   #key = paste0(name, '#', 1:nrow(nodes))
   nodes$.ID = key
   return(nodes)

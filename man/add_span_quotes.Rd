@@ -19,7 +19,7 @@ add_span_quotes(tokens, text_col, quote_col = "quotes",
 
 \item{quote_val}{The value in quote_col that indicates the quote}
 
-\item{tqueries}{A list of tqueries, that will be performed to find source candidates. The order of the queries determines which source candidates are preferred. It would make sense to use the same value as in source_val in the 'save' argument for the tquery.}
+\item{tqueries}{A list of tqueries, that will be performed to find source candidates. The order of the queries determines which source candidates are preferred. It would make sense to use the same value as in source_val in the 'label' argument for the tquery.}
 
 \item{par_col}{If available in the parser output, the column with the paragraph id. We can assume that quotes do not span across paragraphs. By using this argument, quotes that are not properly closed (uneven number of quotes) will stop at the end of the paragraph}
 

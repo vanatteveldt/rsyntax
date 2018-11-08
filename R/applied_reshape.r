@@ -1,25 +1,65 @@
 ## generic_reshape.r contains generic functions for mangling the parse tree
 ## applied_reshape.r uses these functions to do usefull stuff.
 
-flatten_conjunctions <- function(.tokens, conj=NULL, cc=NULL, tq=NULL, target_is_cc=F, rm_cc=T, adopt_fill=T, subset=NULL, subset_fill=NULL, only_new='relation', depth=Inf) {
+inherit <- function(.tokens, relation, take_fill=T, give_fill=F, unpack=T, subset=NULL, subset_fill=NULL, only_new='relation', depth=Inf) {
+  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset))
+  if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
+  
+  tq = tquery(label='target', 
+              children(relation = relation, label='origin'))
+  
+  .tokens = select_nodes(.tokens, tq, fill_only_first = F) 
+  .nodes = .nodes_from_attr(.tokens)
+  if (nrow(.nodes$nodes) > 0) {
+    if (unpack) target_vars = get_node_vars(.tokens, .nodes, 'target')
+    .tokens = climb_tree(.tokens, node='origin', take_fill=take_fill, give_fill=give_fill, subset_fill=subset_fill, only_new=only_new, subset=subset, depth=depth)
+    if (unpack) .tokens = unpack_tree(.tokens, relations = na.omit(unique(target_vars$relation)))
+  }
+  unselect_nodes(.tokens)
+  .tokens
+}
+
+chop <- function(.tokens, ...) {
+  tq = tquery(..., label = 'chop')
+  .tokens = .tokens %>%
+    select_nodes(tq) %>%
+    remove_nodes('chop')
+  unselect_nodes(.tokens)
+}
+
+isolate_relcl <- function(.tokens, relation='relcl', who_lemma=c('who','that')) { 
+  tq = tquery(relation = relation, label='relcl',
+              children(lemma = who_lemma, label='who'),
+              parents(relation = 'dobj', label='obj'))
+
+  .tokens = select_nodes(.tokens, tq)
+  .tokens = copy_nodes(.tokens, 'obj', new = 'who_obj', copy_fill = T)
+  .tokens = mutate_nodes(.tokens, 'who_obj', parent = who$parent, relation = who$relation) 
+  .tokens = remove_nodes(.tokens, 'who', with_fill = T) 
+  .tokens = mutate_nodes(.tokens, 'relcl', parent = NA, relation = 'ROOT')
+  .tokens = unselect_nodes(.tokens)
+  .tokens[]
+}
+
+flatten_conjunctions <- function(.tokens, conj=NULL, cc=NULL, tq=NULL, target_is_cc=F, rm_cc=T, take_fill=T, give_fill=T, subset=NULL, subset_fill=NULL, only_new='relation', depth=Inf) {
   if (!is_deparsed_call(subset)) subset = deparse(substitute(subset))
   if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
   
   if (is.null(tq)) {
     if (is.null(conj)) stop('either conj or tq has to be given (currently both are NULL)')
-    tq = tquery(save='target', 
-              children(relation = conj, save='conj'),
-              if (is.null(cc)) NULL else children(relation = cc, save='cc', req = F))
+    tq = tquery(label='target', 
+              children(relation = conj, label='conj'),
+              if (is.null(cc)) NULL else children(relation = cc, label='cc', req = F))
   }
   
   .tokens = select_nodes(.tokens, tq, fill_only_first = F) 
   .nodes = .nodes_from_attr(.tokens)
   has_cc = 'cc' %in% colnames(.nodes$nodes)
   if (has_cc && rm_cc) .tokens = remove_nodes(.tokens, 'cc', with_fill = T)
-  .tokens = climb_tree(.tokens, node='conj', adopt_fill=adopt_fill, subset_fill=subset_fill, only_new=only_new, subset=subset, depth=depth)
+  .tokens = climb_tree(.tokens, node='conj', take_fill=take_fill, give_fill=give_fill, subset_fill=subset_fill, only_new=only_new, subset=subset, depth=depth)
 
   if (target_is_cc) {
-    tq = tquery(save='cc', g_id = .nodes$nodes[,c('doc_id','sentence','target')])
+    tq = tquery(label='cc', g_id = .nodes$nodes[,c('doc_id','sentence','target')])
     .tokens = select_nodes(.tokens, tq) 
     .tokens = remove_nodes(.tokens, 'cc', with_fill = T)
   }
@@ -29,7 +69,7 @@ flatten_conjunctions <- function(.tokens, conj=NULL, cc=NULL, tq=NULL, target_is
 
 
 
-climb_tree <- function(.tokens, node='conj', adopt_fill=T, subset_fill=NULL, only_new='relation', subset=NULL, depth=Inf) {
+climb_tree <- function(.tokens, node='conj', take_fill=T, give_fill=T, subset_fill=NULL, only_new='relation', subset=NULL, depth=Inf) {
   ## given a node selection that identifies pairs of 'child' and 'parent', 
   ## recursively have child adopt parent relation (parent and relation column)
   ## and adopt parents fill nodes. only_new restricts adding fill nodes to relations that child
@@ -40,8 +80,11 @@ climb_tree <- function(.tokens, node='conj', adopt_fill=T, subset_fill=NULL, onl
   while (i < depth) {
     if (nrow(last_nodes$nodes) == 0) return(.tokens)
     
-    if (adopt_fill) {
+    if (take_fill) {
       .tokens = copy_fill(.tokens, 'target', node, subset_fill = subset_fill, subset = subset, only_new=only_new)
+    }
+    if (give_fill) {
+      .tokens = copy_fill(.tokens, node, 'target', subset_fill = subset_fill, subset = subset, only_new=only_new)
     }
     
     .tokens = mutate_nodes(.tokens, node, subset=subset, parent=target$parent, relation=target$relation)
@@ -60,14 +103,17 @@ climb_tree <- function(.tokens, node='conj', adopt_fill=T, subset_fill=NULL, onl
 
 unpack_tree <- function(.tokens, relations, subset_fill=NULL) {
   if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
-  
   #dup = duplicated(.tokens, by = c('doc_id','sentence','parent','relation'))
   #dup_rel = unique(.tokens$relation[dup])
   #dup_rel = setdiff(dup_rel, 'ROOT')
   #for (rel in dup_rel) {
+  n = nrow(.tokens)
   for (rel in relations) {
     .tokens = do_unpack_tree(.tokens, rel, subset_fill)
   }
+  
+  ## it can be that unpacking some relations duplicates others, so repeat until no changes occr
+  if (n < nrow(.tokens)) .tokens = unpack_tree(.tokens, relations, subset_fill)
   unselect_nodes(.tokens)
 }
 
@@ -80,8 +126,8 @@ do_unpack_tree <- function(.tokens, relation, subset_fill) {
     if (!any(dup)) break
     
     ## select duplicate nodes and their parents
-    tq = tquery(save = 'child', g_id = .tokens[dup,c('doc_id','sentence','token_id')],
-                parents(save = 'parent'))
+    tq = tquery(label = 'child', g_id = .tokens[dup,c('doc_id','sentence','token_id')],
+                parents(label = 'parent'))
     
     .tokens = select_nodes(.tokens, tq)
     ## copy the parent 
@@ -101,16 +147,37 @@ do_unpack_tree <- function(.tokens, relation, subset_fill) {
 
 function(){
   library(spacyr)
-  tokens = spacy_parse('Steve and Bob love pizza but hate cheese.', dependency=T)
+  tokens = spacy_parse("Bob likes dogs but hates tiny cats", dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
-  plot_tree(tokens, token, lemma)
+  plot_tree(tokens, token, lemma, use_color = T)
+  
+  
+  library(spacyr)
+  spacy_initialize()
+  tokens = spacy_parse('China may meet Russia for war games, and that doesn’t make them allies.', dependency=T)
+  plot_tree(tokens, token, lemma, pos, use_color = T)
+  
+  
+  tokens = spacy_parse('China may meet Russia for war games, and that doesn’t make them allies.', dependency=T)
+  plot_tree(tokens, token, lemma, pos, use_color = F)
+  
+  tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
+  
+  tokens = spacy_parse('Conjunctions are usefull but annoying', dependency=T)
+  plot_tree(tokens, token, lemma, pos, use_color = F)
+  
+  
+  tq = tquery(label='target', 
+              children(relation = 'conj', label='conj',
+                       not_children(lemma = c('that','this','which'), pos='nsubj')),
+              children(lemma = c('and'), relation = 'cc', label='cc', req = F))
   
   tokens %>%
-    flatten_conjunctions('conj', cc='cc') %>%
-    unpack_tree(relations=c('nsubj','nobj','nmod')) %>%
-    plot_tree(token, lemma)
+    flatten_conjunctions(tq=tq) %>%
+    unpack_tree(relations=c('nsubj','nobj','nmod','pobj','prep')) %>%
+    plot_tree(token, lemma, use_color = F)
   
-  tokens = spacy_parse('In this campaign season, establishment GOP candidates have accepted his help and endorsement and, in many cases, mimicked his style and themes.', dependency=T)
+  tokens = spacy_parse('Bob, who shot John, went home.', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, token, lemma)
   
@@ -121,9 +188,9 @@ function(){
   
   
   
-  tq = tquery(save='parent', 
-              children(relation = 'conj', save='child'),
-              chlldren(relation = 'cc', save='cc'))
+  tq = tquery(label='parent', 
+              children(relation = 'conj', label='child'),
+              chlldren(relation = 'cc', label='cc'))
   tokens = select_nodes(tokens, tq)
   
   find_nodes(tokens, tq)
@@ -148,14 +215,14 @@ function(){
     plot_tree(token)
   
   
-  tokens = spacy_parse('Steve and Bob ate a pie, banana and cake', dependency=T)
+  tokens = spacy_parse('Those who would give up essential Liberty, to purchase a little temporary Safety, deserve neither Liberty nor Safety', dependency=T)
   tokens = as_tokenindex(tokens, sentence='sentence_id', parent='head_token_id', relation='dep_rel')
   plot_tree(tokens, token, use_color = T)
   
   
   
-  tq = tquery(save='parent', 
-              children(relation = 'conj', save='child'))
+  tq = tquery(label='parent', 
+              children(relation = 'conj', label='child'))
   tokens = select_nodes(tokens, tq)
   
   select_nodes(tokens, tq) %>%

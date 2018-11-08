@@ -21,7 +21,7 @@ Can also be a data.table returned by (a previous) apply_queries, in which case a
 }
 \value{
 A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
-               (parents / children) with names as specified in the save argument.
+               (parents / children) with names as specified in the label argument.
 }
 \description{
 Apply queries created with \link{tquery}
@@ -33,8 +33,8 @@ Apply queries created with \link{tquery}
 .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 
 quotes_direct = tquery(lemma = .SAY_VERBS,
-                         children(save = 'source', p_rel = .SUBJECT_RELS),
-                         children(save = 'quote', p_rel = .QUOTE_RELS))
+                         children(label = 'source', p_rel = .SUBJECT_RELS),
+                         children(label = 'quote', p_rel = .QUOTE_RELS))
 quotes_direct ## print shows tquery
 
 tokens = subset(tokens_corenlp, sentence == 1)

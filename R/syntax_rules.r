@@ -8,7 +8,7 @@
 #' @param check    If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
 #'
 #' @return        A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
-#'                (parents / children) with names as specified in the save argument.
+#'                (parents / children) with names as specified in the label argument.
 #'                
 #' @examples
 #' ## it's convenient to first prepare vectors with relevant words/pos-tags/relations
@@ -17,8 +17,8 @@
 #' .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
 #' 
 #' quotes_direct = tquery(lemma = .SAY_VERBS,
-#'                          children(save = 'source', p_rel = .SUBJECT_RELS),
-#'                          children(save = 'quote', p_rel = .QUOTE_RELS))
+#'                          children(label = 'source', p_rel = .SUBJECT_RELS),
+#'                          children(label = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct ## print shows tquery
 #' 
 #' tokens = subset(tokens_corenlp, sentence == 1)
@@ -41,7 +41,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T) 
     .TQUERY_NAME = names(r)[i]
     if (is.null(.TQUERY_NAME)) .TQUERY_NAME = ''
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
-    .TQUERY_NAME = ifelse(.TQUERY_NAME == '', paste0('tq', i), as.character(.TQUERY_NAME))
+    .TQUERY_NAME = ifelse(.TQUERY_NAME == '', NA, as.character(.TQUERY_NAME))
     
     nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, fill=F, melt = F)
    

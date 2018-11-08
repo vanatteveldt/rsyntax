@@ -4,30 +4,32 @@
 \alias{annotate}
 \title{Annotate a tokenlist based on rsyntax queries}
 \usage{
-annotate(tokens, queries, column, block = NULL, fill = T,
-  overwrite = F, copy = T)
+annotate(tokens, column, ..., block = NULL, fill = T, overwrite = F,
+  block_fill = F, copy = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
-\item{queries}{A tquery or a list of queries, as created with \link{tquery}.}
-
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as column_id}
+
+\item{...}{One or multiple tqueries, or a list of queries, as created with \link{tquery}. Queries can be given a named by using a named argument, which will be used in the annotation_id to keep track of which query was used.}
 
 \item{block}{Optionally, specify ids (doc_id - sentence - token_id triples) that are blocked from querying and filling (ignoring the id and recursive searches through the id).}
 
 \item{fill}{Logical. If TRUE (default) also assign the fill nodes (as specified in the tquery). Otherwise these are ignored}
 
-\item{overwrite}{If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries with chain=T}
+\item{overwrite}{If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.}
+
+\item{block_fill}{If TRUE (and overwrite is FALSE), the existing fill nodes will also be blocked. In other words, the new annotations will only be added if the}
 
 \item{copy}{If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional.}
 }
 \description{
 Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
 One column contains the ids for each hit. The other column contains the annotations.
-Only nodes that are given a name in the tquery (using the 'save' parameter) will be added as annotation.
+Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
 }
 \details{
-Note that while queries only find 1 node for each saved component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
+Note that while queries only find 1 node for each labeld component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
 all children of these nodes can be annotated by settting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 }

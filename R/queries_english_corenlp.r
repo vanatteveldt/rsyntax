@@ -21,19 +21,19 @@ CORENLP_ADVERB_POS = c('RB','RBR','RBS')
 #' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
 corenlp_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
-  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='verb',
-                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'), 
-                  children(save='quote'))
+  direct = tquery(lemma = verbs, NOT(lemma = exclude_verbs), label='verb',
+                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'), 
+                  children(label='quote'))
   
   nosrc = tquery(POS='VB*', 
-                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
-                 children(lemma = verbs, lemma__N = exclude_verbs, relation='xcomp', save='verb',
-                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), save='quote')))
+                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
+                 children(lemma = verbs, NOT(lemma = exclude_verbs), relation='xcomp', label='verb',
+                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), label='quote')))
   
-  according = tquery(save='quote',
-                     children(relation='nmod:according_to', save='source',
-                              children(save='verb')))
-                     
+  according = tquery(label='quote',
+                     children(relation='nmod:according_to', label='source',
+                              children(label='verb')))
+          
   
   list(direct=direct, nosrc=nosrc, according=according)
 }
@@ -55,25 +55,25 @@ corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, 
 
   #tokens = as_tokenindex(tokens_corenlp)
   
-  direct = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
-                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
-                  children(relation = c('dobj'), save=object_name, req=ob_req)) 
+  direct = tquery(POS = 'VB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
+                  children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
+                  children(relation = c('dobj'), label=object_name, req=ob_req)) 
  
   
-  passive = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
+  passive = tquery(POS = 'VB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
                    children(relation = 'auxpass'),
-                   children(relation = 'nmod:agent', save=subject_name, req=F),
-                   children(relation = 'nsubjpass', save=object_name, req=ob_req)) 
+                   children(relation = 'nmod:agent', label=subject_name, req=F),
+                   children(relation = 'nsubjpass', label=object_name, req=ob_req)) 
   
-  copula_direct = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs,
-                         parents(save='predicate',
-                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
-                                 children(relation = c('dobj'), save=object_name, req=ob_req))) 
+  copula_direct = tquery(POS = 'VB*', lemma = verbs, NOT(lemma = exclude_verbs),
+                         parents(label='predicate',
+                                 children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
+                                 children(relation = c('dobj'), label=object_name, req=ob_req))) 
   
-  copula_passive = tquery(POS = 'VB*', lemma = verbs, lemma__N = exclude_verbs,
-                         parents(save='predicate',
-                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
-                                 children(relation = c('dobj'), save=object_name, req=ob_req))) 
+  copula_passive = tquery(POS = 'VB*', lemma = verbs, NOT(lemma = exclude_verbs),
+                         parents(label='predicate',
+                                 children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
+                                 children(relation = c('dobj'), label=object_name, req=ob_req))) 
   
         
   list(direct=direct, passive=passive, copula_direct=copula_direct, copula_passive=copula_passive)

@@ -4,20 +4,16 @@
 \alias{plot_tree}
 \title{Create an igraph tree from a sentence}
 \usage{
-plot_tree(tokens, ..., treshape = NULL, tqueries = NULL,
-  sentence_i = 1, doc_id = NULL, sentence = NULL,
-  annotations = NULL, allign_text = T, ignore_rel = NULL,
-  all_lower = F, all_abbrev = NULL, textsize = 1, spacing = 1,
-  use_color = T, max_curve = 0.3, palette = terrain.colors)
+plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
+  sentence = NULL, annotation = NULL, pdf_file = NULL,
+  allign_text = T, ignore_rel = NULL, all_lower = F,
+  all_abbrev = NULL, textsize = 1, spacing = 1, use_color = T,
+  max_curve = 0.3, palette = terrain.colors)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
-\item{...}{Additional columns to include as labels. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)}
-
-\item{treshape}{A \link{treshape} or list of treshapes, to reshape the dependency tree}
-
-\item{tqueries}{A \link{tquery} or list of tqueries, to annotate nodes. Queries will be applied after the treshape transformations. Can also be a named list of lists, where each entry is a seperately annotated list of tqueries.}
+\item{...}{Optionally, select which columns to include as labels and how to present them. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)}
 
 \item{sentence_i}{By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)}
 
@@ -42,12 +38,12 @@ plot_tree(tokens, ..., treshape = NULL, tqueries = NULL,
 \item{max_curve}{A number for controlling the allowed amount of curve in the edges.}
 
 \item{palette}{A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation}
-
-\item{id}{By default (true) the token_id is printed, but maybe you don't like ids.}
 }
 \value{
 an igraph graph
 }
 \description{
 Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
+
+By default, all columns in the data are included as labels. This can be changes by using the ... argument.
 }

@@ -14,7 +14,7 @@ spacy_english_clause_queries(verbs = NULL,
 \item{exclude_verbs}{A character vector with verbs that are not used in clauses. By default, this is the list of ENGLISH_SAY_VERBS, 
 which are the verbs used in the spacy_english__quote_queries(). If set to NULL, no verbs are excluded.}
 
-\item{with_subject}{If True, subject nodes will be "saved" as "subject"}
+\item{with_subject}{If True, subject nodes will be "labeld" as "subject"}
 
 \item{with_object}{Same for object nodes}
 

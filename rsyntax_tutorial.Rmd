@@ -18,7 +18,7 @@ Many techniques for automatic content analysis rely on a bag-of-words assumption
 
 # Input: dependency parse data
 
-The input data for `rsyntax` is a data.frame with the output of a dependency parser, such as Stanford CoreNLP (English), Alpino (Dutch) or ParZu (German). Short examples are included in `rsyntax`.
+The input data for `rsyntax` is a data.frame with the output of a dependency parser, such as Stanford CoreNLP or Spacy (English), Alpino (Dutch) or ParZu (German). Short examples are included in `rsyntax`.
 
 # rsyntax
 
@@ -52,7 +52,7 @@ tokens
 
 ## Querying the token index
 
-We can now look for nodes in the token index using the `tquery()` and `apply_queries()` functions. The `tquery()` function is used to create token queries, and the `apply_queries()` function is used to apply one or multiple queries on the tokenindex. 
+We can now look for nodes in the token index. The `tquery()` function is used to create token queries, and the `apply_queries()` function is used to apply one or multiple queries on the tokenindex. 
 
 
 ### Using tquery() and apply_queries()

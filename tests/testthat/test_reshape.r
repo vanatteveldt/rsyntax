@@ -6,8 +6,8 @@ test_that("reshape nodes works", {
   tokens = as_tokenindex(tokens_corenlp)
   tokens = tokens[tokens$sentence == 1,]
   
-  tq = tquery(save='parent', POS = 'VB*',
-              children(save='child', relation='nsubj'))
+  tq = tquery(label='parent', POS = 'VB*',
+              children(label='child', relation='nsubj'))
   
   test = select_nodes(tokens, tq) %>%
     mutate_nodes('child', token = parent$relation)

@@ -9,19 +9,19 @@ ENGLISH_SAY_VERBS = c("tell", "show", "acknowledge", "admit", "affirm", "allege"
 #' @return A list with rynstax queries, as created with \link{tquery}
 #' @export
 spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
-  direct = tquery(lemma = verbs, lemma__N = exclude_verbs, save='verb',
-                  children(relation = c('prep','npadvmod'), block=T),
-                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
-                  children(save='quote'))
+  direct = tquery(lemma = verbs, NOT(lemma = exclude_verbs), label='verb',
+                  children(req=F, relation = c('npadvmod'), block=T),
+                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
+                  children(label='quote'))
   
   nosrc = tquery(pos='VERB*', 
-                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), save='source'),
-                 children(lemma = verbs, lemma__N = exclude_verbs, relation='xcomp', save='verb',
-                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), save='quote')))
+                 children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
+                 children(lemma = verbs, NOT(lemma = exclude_verbs), relation='xcomp', label='verb',
+                          children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), label='quote')))
   
-  according = tquery(save='quote',
-                     children(relation='nmod:according_to', save='source',
-                              children(save='verb')))
+  according = tquery(label='quote',
+                     children(relation='nmod:according_to', label='source',
+                              children(label='verb')))
   
   
   list(direct=direct, nosrc=nosrc, according=according)
@@ -34,7 +34,7 @@ spacy_english_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=N
 #' @param verbs         A character vector with verbs used to indicate clauses. If NULL (default), all verbs are used (except those listed in exclude verbs)
 #' @param exclude_verbs A character vector with verbs that are not used in clauses. By default, this is the list of ENGLISH_SAY_VERBS, 
 #'                      which are the verbs used in the spacy_english__quote_queries(). If set to NULL, no verbs are excluded.
-#' @param with_subject  If True, subject nodes will be "saved" as "subject" 
+#' @param with_subject  If True, subject nodes will be "labeld" as "subject" 
 #' @param with_object   Same for object nodes
 #' @param sub_req       If True, subject nodes are required (must be matched). By default this is true.
 #' @param ob_req        Same for object nodes. By default this is false.
@@ -45,25 +45,25 @@ spacy_english_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_V
   subject_name = if (with_subject) 'subject' else NA
   object_name = if (with_object) 'object' else NA
   
-  passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
-                   children(relation = c('agent','nmod:agent'), save=subject_name, req=sub_req),
-                   children(relation = c('nsubjpass','pobj','nsubj'), save=object_name, req=ob_req)) 
+  passive = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
+                   children(relation = c('agent'), label = subject_name, req=sub_req),
+                   children(relation = c('nsubjpass','pobj','nsubj'), label=object_name, req=ob_req)) 
   
-  direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, save='predicate',
+  direct = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
                   not_children(relation = 'auxpass'),
-                  children(relation = c('su', 'nsubj'), save=subject_name, req=sub_req),
-                  children(relation = c('dobj'), save=object_name, req=ob_req)) 
+                  children(relation = c('nsubj', 'nsubjpass'), label=subject_name, req=sub_req),
+                  children(relation = c('dobj'), label=object_name, req=ob_req)) 
   
   
-  copula_direct = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs, 
-                         parents(save='predicate', lemma__N = exclude_verbs,
-                                 children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
-                                 children(relation = c('dobj'), save=object_name, req=ob_req))) 
+  copula_direct = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), 
+                         parents(label='predicate', NOT(lemma = exclude_verbs),
+                                 children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
+                                 children(relation = c('dobj'), label=object_name, req=ob_req))) 
   
-  copula_passive = tquery(pos = 'VERB*', lemma = verbs, lemma__N = exclude_verbs,
-                          parents(save='predicate', lemma__N = exclude_verbs,
-                                  children(relation = c('su', 'nsubj', 'agent'), save=subject_name, req=sub_req),
-                                  children(relation = c('dobj'), save=object_name, req=ob_req))) 
+  copula_passive = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs),
+                          parents(label='predicate', NOT(lemma = exclude_verbs),
+                                  children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
+                                  children(relation = c('dobj'), label=object_name, req=ob_req))) 
   
   
   list(p=passive, d=direct, cd=copula_direct, cp=copula_passive)

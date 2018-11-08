@@ -18,7 +18,7 @@
 #' @param quote_col     The column that contains the quote annotations
 #' @param source_val    The value in quote_col that indicates the source
 #' @param quote_val     The value in quote_col that indicates the quote
-#' @param tqueries      A list of tqueries, that will be performed to find source candidates. The order of the queries determines which source candidates are preferred. It would make sense to use the same value as in source_val in the 'save' argument for the tquery.
+#' @param tqueries      A list of tqueries, that will be performed to find source candidates. The order of the queries determines which source candidates are preferred. It would make sense to use the same value as in source_val in the 'label' argument for the tquery.
 #' @param par_col       If available in the parser output, the column with the paragraph id. We can assume that quotes do not span across paragraphs. By using this argument, quotes that are not properly closed (uneven number of quotes) will stop at the end of the paragraph 
 #' @param space_col     If par_col is not used, paragraphs will be identified based on hard enters in the text_col. In some parsers, there is an additional "space" column that hold the whitespace and linebreaks, which can be included here. 
 #' @param lag_sentences The max number of sentences looked backwards to find source candidates. Default is 1, which means the source candidates have to occur in the sentence where the quote begins (lag = 0) or the sentence before that (lag = 1) 
@@ -127,12 +127,12 @@ select_candidates <- function(tokens, is_quote, quote_col, source_val, tqueries)
 add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_val, quote_val) {
   quote_id_col = paste0(quote_col,'_id')
   
-  sources$save = as.character(sources$.ROLE)
+  sources$label = as.character(sources$.ROLE)
   sources$i = tokens[list(sources$doc_id, sources$sentence, sources$candidate_id), on=c('doc_id','sentence','token_id'),which=T]
   
   ## prepare quotes
   matched_source = sources[match(is_quote, sources$.QUOTE)]
-  matched_source$save = as.character(quote_val)
+  matched_source$label = as.character(quote_val)
   matched_source$i = 1:nrow(matched_source)
   
   ## merge
@@ -145,7 +145,7 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   replace_id_col = as.character(tokens[sources$i,][[quote_id_col]])
   
   already_used = !is.na(replace_id_col) & !(replace_id_col == sources$new_id)
-  replace_col = ifelse(already_used, paste(replace_col, sources$save, sep=','), sources$save)
+  replace_col = ifelse(already_used, paste(replace_col, sources$label, sep=','), sources$label)
   replace_id_col = ifelse(already_used, paste(replace_id_col, sources$new_id, sep=','), sources$new_id)
   
   levels(tokens[[quote_col]]) = union(levels(tokens[[quote_col]]), unique(replace_col))
@@ -198,8 +198,8 @@ function(){
   tokens = read.csv('~/projects/bron_extractie_demo/tokens.csv')
   tokens = annotate(tokens, alpino_quote_queries(), column='quotes')
   
-  tqueries = list(span1 = tquery(POS = 'verb*', lemma = rsyntax:::DUTCH_SAY_VERBS, children(relation='su', save='source')),
-                  span2 = tquery(POS = 'verb*', children(relation='su', save='source')))
+  tqueries = list(span1 = tquery(POS = 'verb*', lemma = rsyntax:::DUTCH_SAY_VERBS, children(relation='su', label='source')),
+                  span2 = tquery(POS = 'verb*', children(relation='su', label='source')))
   tokens = add_span_quotes(tokens, 'token', quote_col = 'quotes', source_val = 'source', quote_val = 'quote', tqueries=tqueries)
   
   url = syntax_reader(tokens, 'quotes', 'source', 'quote')

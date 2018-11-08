@@ -25,7 +25,7 @@ melt_nodes_list <- function(nodes, fill_only_first=T) {
   nodes[, .ROLE := factor(.ROLE, labels=cols)]
   nodes = subset(nodes, !is.na(token_id))
   
-  ## remove duplicate save name tags (#2, etc)
+  ## remove duplicate label name tags (#2, etc)
   data.table::setattr(nodes$.ROLE, 'levels', gsub('#.*', '', levels(nodes$.ROLE)))
   
   ## fill should be 0 if not fill (NA), and _FILL should be removed from .ROLE 

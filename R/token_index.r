@@ -20,6 +20,7 @@
 #' @param parent     candidate names for the parent id column
 #' @param relation   candidate names for the relation column
 #'
+#' @export
 as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel')) {
   new_index = !is(tokens, 'tokenIndex')
 

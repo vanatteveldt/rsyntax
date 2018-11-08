@@ -20,52 +20,53 @@ DUTCH_SAY_VERBS = c("accepteren", "antwoorden", "beamen", "bedenken", "bedoelen"
 #' @export
 alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
   # x zegt dat y
-  zegtdat = tquery(save='verb', lemma = verbs,  
-                   children(save = 'source', relation=c('su')),
+  zegtdat = tquery(label='verb', lemma = verbs,  
+                   children(label = 'source', relation=c('su')),
                    children(relation='vc', POS = c('C', 'comp'),
-                            children(save= 'quote', relation=c('body'))),
+                            children(label= 'quote', relation=c('body'))),
                    not_parents(lemma=c('kun','moet','zal')))   ## exclude "kun/moet/zal je zeggen dat ..."   
 
   # x stelt: y
   ystelt = tquery(lemma = verbs, 
-                       children(save = 'source', relation=c('su')),
-                       children(save = 'quote', relation='nucl'),
+                       children(label = 'source', relation=c('su')),
+                       children(label = 'quote', relation='nucl'),
                        children(lemma =  quote_punctuation))
   
   # y, stelt x
-  xstelt = tquery(save='quote', fill(relation__N='tag'),
-                       children(save='verb', relation='tag', lemma = verbs,
-                                children(save = 'source', relation=c('su'))))
+  xstelt = tquery(label='quote', 
+                  fill(NOT(relation='tag')),
+                  children(label='verb', relation='tag', lemma = verbs,
+                           children(label = 'source', relation=c('su'))))
   
   # y, volgens x
-  volgens = tquery(save='quote',
-                        children(save='verb', relation=c('mod','tag'), lemma = c('volgens','aldus'),
-                                 children(save='source')))
+  volgens = tquery(label='quote',
+                        children(label='verb', relation=c('mod','tag'), lemma = c('volgens','aldus'),
+                                 children(label='source')))
   
   # y, zo noemt x het
-  noemt = tquery(save='verb', relation='tag',
-                      children(save='source', relation=c('su')),
-                      parents(save='quote',
+  noemt = tquery(label='verb', relation='tag',
+                      children(label='source', relation=c('su')),
+                      parents(label='quote',
                               children(relation = ' --', lemma = quote_punctuation)))
   
   # x is het er ook mee eens: y
-  impliciet = tquery(save='verb',
+  impliciet = tquery(label='verb',
     children(lemma = c('"', "'")),
-    children(save='quote', relation=c('tag','nucl','sat')),
-    children(save='source', relation=c('su')))
+    children(label='quote', relation=c('tag','nucl','sat')),
+    children(label='source', relation=c('su')))
   
   # x: y
-  impliciet2 = tquery(save='source',
+  impliciet2 = tquery(label='source',
                       children(lemma = ':'),
-                      children(save='quote', relation=c('tag','nucl','sat')),
+                      children(label='quote', relation=c('tag','nucl','sat')),
                       not_children(relation='su'))
   
   # moet/kan/zal zeggen mag wel als eerste persoon is
-  moetzeggen = tquery(save='verb', lemma=c('kunnen','moeten','zullen'), 
+  moetzeggen = tquery(label='verb', lemma=c('kunnen','moeten','zullen'), 
                       children(lemma=verbs,
-                               children(save = 'source', lemma=c('ik','wij'), relation=c('su')), 
+                               children(label = 'source', lemma=c('ik','wij'), relation=c('su')), 
                                children(relation='vc', POS = c('C', 'comp'),
-                                        children(save= 'quote', relation=c('body')))))
+                                        children(label= 'quote', relation=c('body')))))
 
   
   ## order matters
@@ -83,23 +84,23 @@ alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
 #' @return a data.table with nodes (as .G_ID) for id, subject and predicate
 alpino_clause_queries <- function(verbs=NULL, exclude_verbs=DUTCH_SAY_VERBS, with_subject=T, with_object=F) {
   
-  passive = tquery(POS = 'verb', lemma__N = exclude_verbs, save='predicate',
+  passive = tquery(POS = 'verb', NOT(lemma = exclude_verbs), label='predicate',
                         parents(lemma = c('zijn','worden','hebben')),
                         children(lemma = c('door','vanwege','omwille'), 
-                                 children(save='subject', relation='obj1')))
+                                 children(label='subject', relation='obj1')))
   
   ## [subject] [has/is/etc.] [verb] [object]
-  perfect = tquery(POS = 'verb', lemma__N = exclude_verbs, 
-                   parents(save='predicate', lemma = c('zijn','worden','hebben')),
-                        children(save='subject', relation=c('su')))
+  perfect = tquery(POS = 'verb', NOT(lemma = exclude_verbs), 
+                   parents(label='predicate', lemma = c('zijn','worden','hebben')),
+                        children(label='subject', relation=c('su')))
   
   ## [subject] [verb] [object]
-  active = tquery(save='predicate', POS = 'verb', relation__N = 'vc', lemma__N = exclude_verbs,
-                         children(save='subject', relation=c('su')))
+  active = tquery(label='predicate', POS = 'verb', NOT(relation = 'vc', lemma = exclude_verbs),
+                         children(label='subject', relation=c('su')))
 
   ## [subject] [verb] 
-  catch_rest = tquery(save='predicate', POS = 'verb', lemma__N = exclude_verbs,
-                children(save='subject', relation=c('su')))
+  catch_rest = tquery(label='predicate', POS = 'verb', NOT(lemma = exclude_verbs),
+                children(label='subject', relation=c('su')))
                          
   list(passive=passive, perfect=perfect, active=active, catch_rest=catch_rest)
 }

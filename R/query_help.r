@@ -3,7 +3,7 @@
 #'
 #' @param tokens    A tokenIndex
 #' @param query     An rsyntax tquery
-#' @param node      The name of a node (specified with 'save' in the tquery)
+#' @param node      The name of a node (specified with 'label' in the tquery)
 #' @param family    Either 'children', 'parents',  or 'family' (both children and parents)
 #' @param depth     An integer for how deep to search. 1 is only children, 2 includes grandchilderen, 3 includes grandgrandchildren, etc.
 #' @param group_cols Optionally, names of columns in tokens to group the results by. Groups are aggregated, and the number of times (and percentage) of each group is given. 
@@ -16,7 +16,7 @@ inspect_family <- function(tokens, query, node, family=c('family','children','pa
     message('No nodes found')
     return(NULL)
   }
-  if (!node %in% colnames(ids)) stop('node name does not exist (must be a name used in the save argument in tquery)')
+  if (!node %in% colnames(ids)) stop('node name does not exist (must be a name used in the label argument in tquery)')
   ids = subset(ids, select=c('doc_id','sentence',node))
   if (family == 'family') {
     if (!is.null(group_cols)) group_cols = union('family', group_cols)

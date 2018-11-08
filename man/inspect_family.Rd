@@ -12,7 +12,7 @@ inspect_family(tokens, query, node, family = c("family", "children",
 
 \item{query}{An rsyntax tquery}
 
-\item{node}{The name of a node (specified with 'save' in the tquery)}
+\item{node}{The name of a node (specified with 'label' in the tquery)}
 
 \item{family}{Either 'children', 'parents',  or 'family' (both children and parents)}
 

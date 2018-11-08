@@ -15,8 +15,8 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
     #if (only_req && !q$req) next   ## only look for required nodes. unrequired nodes are added afterwards with add_unrequired()
     if (!fill && is(q, 'tQueryFill')) next   
     
-    if (is.na(q$save)) {
-      q$save = paste('.DROP', i) ## if save is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
+    if (is.na(q$label)) {
+      q$label = paste('.DROP', i) ## if label is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
     } 
     
     selection = rec_selection(tokens, ids, q, block, fill)
@@ -51,8 +51,8 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
   if (!has_req && !has_not_req)
     out = data.table::data.table()
   
-  #if (!q$save == '.DROP' && nrow(out) > 0) {
-  #  parcol = paste0(q$save, '_PARENT') 
+  #if (!q$label == '.DROP' && nrow(out) > 0) {
+  #  parcol = paste0(q$label, '_PARENT') 
   #  out[, (parcol) := .MATCH_ID]
   #}
   out
@@ -61,14 +61,14 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
 rec_selection <- function(tokens, ids, q, block, fill) {
   selection = select_tokens(tokens, ids=ids, q=q, block=block)
   if (length(q$nested) > 0 & length(selection) > 0) {
-    nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$save),with=F], ql=q$nested, block=block, fill=fill) 
-    ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the save column)
+    nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$label),with=F], ql=q$nested, block=block, fill=fill) 
+    ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the label column)
     is_req = any(sapply(q$nested, function(x) x$req))
     if (nrow(nested) > 0) {
       if (is_req) {
-        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$save), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T) 
+        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T) 
       } else {
-        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$save), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all.x=T) 
+        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all.x=T) 
       }
     } else {
       if (is_req) selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), sentence=numeric(), .DROP = numeric())
@@ -122,12 +122,12 @@ select_tokens <- function(tokens, ids, q, block=NULL) {
   
   selection = select_token_family(tokens, ids, q, block)
   
-  if (!grepl('_FILL', q$save, fixed=T)) {
+  if (!grepl('_FILL', q$label, fixed=T)) {
     selection = subset(selection, select=c('.MATCH_ID', 'doc_id','sentence','token_id'))
-    data.table::setnames(selection, 'token_id', q$save)
+    data.table::setnames(selection, 'token_id', q$label)
   } else {
     selection = subset(selection, select=c('.MATCH_ID', 'doc_id','sentence','.FILL_LEVEL','token_id'))
-    data.table::setnames(selection, c('token_id','.FILL_LEVEL'), c(q$save, paste0(q$save, '_LEVEL')))
+    data.table::setnames(selection, c('token_id','.FILL_LEVEL'), c(q$label, paste0(q$label, '_LEVEL')))
   }
   selection
 }

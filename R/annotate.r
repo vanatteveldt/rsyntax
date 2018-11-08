@@ -2,25 +2,31 @@
 #'
 #' Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
 #' One column contains the ids for each hit. The other column contains the annotations.
-#' Only nodes that are given a name in the tquery (using the 'save' parameter) will be added as annotation.
+#' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
 #' 
-#' Note that while queries only find 1 node for each saved component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
+#' Note that while queries only find 1 node for each labeld component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
 #' all children of these nodes can be annotated by settting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 #' 
 #' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param queries     A tquery or a list of queries, as created with \link{tquery}. 
 #' @param column      The name of the column in which the annotations are added. The unique ids are added as column_id
+#' @param ...         One or multiple tqueries, or a list of queries, as created with \link{tquery}. Queries can be given a named by using a named argument, which will be used in the annotation_id to keep track of which query was used. 
 #' @param block       Optionally, specify ids (doc_id - sentence - token_id triples) that are blocked from querying and filling (ignoring the id and recursive searches through the id). 
 #' @param fill        Logical. If TRUE (default) also assign the fill nodes (as specified in the tquery). Otherwise these are ignored 
-#' @param overwrite   If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries with chain=T
+#' @param overwrite   If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.
+#' @param block_fill  If TRUE (and overwrite is FALSE), the existing fill nodes will also be blocked. In other words, the new annotations will only be added if the 
 #' @param copy        If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional. 
 #' 
 #' @export
-annotate <- function(tokens, queries, column, block=NULL, fill=T, overwrite=F, copy=T) {
+annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T) {
+  queries = list(...)
+  is_tquery = sapply(queries, is, 'tQuery')
+  queries = c(queries[is_tquery], unlist(queries[!is_tquery], recursive = F))
+  
+  
   tokens = as_tokenindex(tokens)
   if (copy) tokens = data.table::copy(tokens)
   id_column = paste0(column, '_id')    
-  fill_column = paste0(column, '_FILL')
+  fill_column = paste0(column, '_fill')
   
   
   #if (!is.null(bypass) || !is.null(isolate)) {
@@ -34,20 +40,21 @@ annotate <- function(tokens, queries, column, block=NULL, fill=T, overwrite=F, c
       if (fill_column %in% colnames(tokens)) tokens[, (fill_column) := NULL]
     } else {
       if (!fill_column %in% colnames(tokens)) stop(sprintf('fill column (%s) is not available', fill_column))
-      i = which(tokens[,get(fill_column)] == 0)
+      i = if (block_fill) which(!is.na(tokens[,get(fill_column)])) else which(tokens[,get(fill_column)] == 0)
       block = get_long_ids(block, tokens[i, c('doc_id','sentence','token_id')])
     }
   }
   nodes = apply_queries(tokens, queries, as_chain=T, block=block, fill=fill)
   
   if (nrow(nodes) == 0) {
-    fill_column = paste0(column, '_FILL')
+    fill_column = paste0(column, '_fill')
     if (!column %in% colnames(tokens)) tokens[, (column) := factor()]
     if (!id_column %in% colnames(tokens)) tokens[, (id_column) := factor()]
     if (!fill_column %in% colnames(tokens)) tokens[, (fill_column) := double()]
-    return(tokens)
+    return(tokens[])
   }
   tokens = annotate_nodes(tokens, nodes, column=column)
+  tokens[]
 }
 
 #' Annotate a tokenlist based on rsyntaxNodes
@@ -55,7 +62,7 @@ annotate <- function(tokens, queries, column, block=NULL, fill=T, overwrite=F, c
 #' Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
 #' Two columns will be added.
 #' One column contains the ids for each hit. The other column contains the annotations.
-#' Only nodes that are given a name in the tquery (using the 'save' parameter) will be added as annotation.
+#' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
 #' 
 #' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param nodes      A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.
@@ -65,10 +72,10 @@ annotate <- function(tokens, queries, column, block=NULL, fill=T, overwrite=F, c
 annotate_nodes <- function(tokens, nodes, column) {
   tokens = as_tokenindex(tokens)
   if (nrow(nodes) == 0) stop('Cannot annotate nodes, because no nodes are provided')
-  if (ncol(nodes) <= 3) stop('Cannot annotate nodes, because no nodes are specified (using the save parameter in find_nodes() or tquery())')
+  if (ncol(nodes) <= 3) stop('Cannot annotate nodes, because no nodes are specified (using the label parameter in find_nodes() or tquery())')
   id_column = paste0(column, '_id')
-  fill_column = paste0(column, '_FILL')
-  
+  fill_column = paste0(column, '_fill')
+
   #if (column %in% colnames(tokens)) tokens[, (column) := NULL]
   #if (id_column %in% colnames(tokens)) tokens[, (id_column) := NULL]
   #if (fill_column %in% colnames(tokens)) tokens[, (fill_column) := NULL]
@@ -95,7 +102,7 @@ annotate_nodes <- function(tokens, nodes, column) {
   
   #data.table::setnames(.NODES, c('.ROLE','.ID'), c(column, id_column))
   #if (show_fill) {
-  #  data.table::setnames(.NODES, '.FILL_LEVEL', paste0(column, '_FILL'))
+  #  data.table::setnames(.NODES, '.FILL_LEVEL', paste0(column, '_fill'))
   #} else {
   ##  .NODES[, .FILL_LEVEL := NULL]
   #}

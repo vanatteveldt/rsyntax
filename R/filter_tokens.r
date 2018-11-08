@@ -36,6 +36,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
     
     if (is(.V, 'tokenLookup')) {
       result = lookup_tokens(tokens, .V$lookup, boolean=.V$boolean)
+      if (is.null(result)) next
     } else {
       .COLNAME = gsub('__.*', '', .N)
       if (!.COLNAME %in% colnames(tokens)) stop(sprintf('%s is not a valid column name in tokens', .N))
@@ -45,15 +46,13 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
                          ignore_case = grepl('__N?R?F?I', .N), 
                          regex = grepl('__N?I?F?R', .N),
                          fixed = grepl('__N?R?I?F', .N))
-      if (!grepl('__R?I?L?N', .N)) {
-        result = tokens[list(.V), on=(.COLNAME), which=T]
-      } else {
-        result = tokens[!list(.V), on=(.COLNAME), which=T]
-      }
+      result = tokens[list(.V), on=(.COLNAME), which=T, nomatch=0]
     }
     if (is.null(i)) {
+      if (boolean == 'NOT') result = if (length(result) > 0) (1:nrow(tokens))[-result] else 1:nrow(tokens)
       i = result
     } else {
+      if (boolean == 'NOT') i = setdiff(i, result)
       if (boolean == 'AND') i = intersect(i, result)
       if (boolean == 'OR') i = union(i, result)
     }
@@ -129,6 +128,21 @@ OR <- function(...) {
 #' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
 AND <- function(...) {
   l = list(lookup = list(...), boolean='AND')
+  class(l) = c(class(l), 'tokenLookup')
+  l
+}
+
+#' Use NOT search in tquery
+#' 
+#' @param ... 
+#'
+#' @return A list, to be used as input to \link{tquery}
+#' @export
+#'
+#' @examples
+#' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
+NOT <- function(...) {
+  l = list(lookup = list(...), boolean='NOT')
   class(l) = c(class(l), 'tokenLookup')
   l
 }

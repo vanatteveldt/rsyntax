@@ -59,7 +59,7 @@ test_that("extracting clauses works with coreNLP", {
   
   # Mary is loved by John
   clauses = get_clauses(tokens[tokens$sentence == 5,])
-  annotate(tokens[tokens$sentence == 5,], corenlp_clause_queries(), 'test')
+  annotate(tokens[tokens$sentence == 5,], 'test', corenlp_clause_queries())
   testthat::expect_equal(nrow(clauses), 6)
   .check(tokens, clauses, subject=c("by","John"), predicate=c("is","loved","."), object='Mary')
   

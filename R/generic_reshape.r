@@ -61,7 +61,11 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL, copy=T) {
   for (i in seq_along(l)) {
     col = names(l)[i]
     if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
-    .VAL = eval(l[[i]][[2]], linked_node_vars, parent.frame())
+    if (is.expression(l[[i]][[2]])) {
+      .VAL = as.character(l[[i]][[2]][[1]])
+    } else {
+      .VAL = eval(l[[i]][[2]], linked_node_vars, parent.frame())
+    }
     if (!is.null(subset)) {
       .tokens[token_i[subset], (col) := .VAL[subset]]
     } else {
@@ -160,7 +164,7 @@ copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fi
   
   if (!is.character(node)) stop('"node" argument has to be a character value')
   if (!is.character(new)) stop('"new" argument has to be a character value')
-  if (!node %in% colnames(.nodes$nodes)) stop(sprintf('node (%s) is not a valid node in the tquery results (use the save= argument)', node))
+  if (!node %in% colnames(.nodes$nodes)) stop(sprintf('node (%s) is not a valid node in the tquery results (use the label= argument)', node))
   
   if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
   subset = if (subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, subset)
@@ -197,8 +201,8 @@ copy_fill <- function(.tokens, from_node, to_node, subset=NULL, subset_fill=NULL
   
   if (!is.character(from_node)) stop('"from_node" argument has to be a character value')
   if (!is.character(to_node)) stop('"to_node" argument has to be a character value')
-  if (!from_node %in% colnames(.nodes$nodes)) stop(sprintf('from_node (%s) is not a valid node in the tquery results (use the save= argument)', from_node))
-  if (!to_node %in% colnames(.nodes$nodes)) stop(sprintf('to_node (%s) is not a valid node in the tquery results (use the save= argument)', to_node))
+  if (!from_node %in% colnames(.nodes$nodes)) stop(sprintf('from_node (%s) is not a valid node in the tquery results (use the label= argument)', from_node))
+  if (!to_node %in% colnames(.nodes$nodes)) stop(sprintf('to_node (%s) is not a valid node in the tquery results (use the label= argument)', to_node))
   
   if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
   subset = if (subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, subset)
