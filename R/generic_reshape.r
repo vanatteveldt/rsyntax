@@ -42,6 +42,28 @@ unselect_nodes <- function(.tokens) {
   attr(.tokens, '.nodes')
 }
 
+subset_nodes <- function(.tokens, subset, copy=T) {
+  .nodes = .nodes_from_attr(.tokens)
+  if (nrow(.nodes$nodes) == 0) return(.tokens)
+  if (copy) .tokens = data.table::copy(.tokens)
+  
+  .tokens = data.table::copy(.tokens)
+  linked_node_vars = get_linked_node_vars(.tokens, .nodes)
+  
+  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
+  subset = if (subset == 'NULL') NULL else eval(parse(text=subset), envir=linked_node_vars, parent.frame())
+  
+  if (is.null(subset)) if (copy) .tokens[] else invisible(.tokens)
+  if (all(subset)) if (copy) .tokens[] else invisible(.tokens)
+  
+  .nodes$nodes = .nodes$nodes[subset,]
+  node_ids = unique(as.character(.nodes$nodes$.ID))
+  .nodes$fill = .nodes$fill[list(.ID=node_ids), on='.ID', nomatch=0]
+  
+  data.table::setattr(.tokens, '.nodes', value = .nodes)
+  if (copy) .tokens[] else invisible(.tokens)
+}
+
 mutate_nodes <- function(.tokens, node, ..., subset=NULL, copy=T) {
   .nodes = .nodes_from_attr(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -51,11 +73,9 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL, copy=T) {
   if (length(l) == 0) return(.tokens) 
   if (copy) .tokens = data.table::copy(.tokens)
   
-  .tokens = data.table::copy(.tokens)
   linked_node_vars = get_linked_node_vars(.tokens, .nodes)
   
   token_i = get_node_position(.tokens, .nodes, node)
-  
   if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
   subset = if (subset == 'NULL') NULL else eval(parse(text=subset), envir=linked_node_vars, parent.frame())
   for (i in seq_along(l)) {
@@ -139,8 +159,8 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
   
   if (!is.null(rm_subset)) {
     if (!any(rm_subset)) return(.nodes) ## if there are no nodes that meet the rm_subset condition, nothing is removed
-    node_ids = na.omit(node_ids[rm_subset])
-    fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0]
+    node_ids = unique(na.omit(node_ids[rm_subset]))
+    fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0, allow.cartesian=T]
   }
   if (nrow(fill_nodes) == 0) return(.tokens)
   
@@ -171,11 +191,14 @@ copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fi
   if (is.null(subset)) subset = rep(T, nrow(.nodes$nodes))
   
   node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=F]
-  node_ids = add_sub_id(.tokens, node_ids[subset]) ## beware of the subset being used here
+  node_ids = add_sub_id(.tokens, node_ids[subset])$token_id ## beware of the subset being used here
   .nodes$nodes[[new]] = double(nrow(.nodes$nodes))
   .nodes$nodes[subset, (new) := node_ids]
   
   node_vars = get_node_vars(.tokens, .nodes, node)
+  if (nrow(node_vars) > nrow(.nodes$nodes)) browser()
+  #.tokens[list(doc_id='text1042', sentence=1, token_id=7.3),]
+  
   node_vars = node_vars[subset]
   node_vars$token_id = node_ids
   if (!keep_relation) {
@@ -223,6 +246,7 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
   if (!is.null(subset_fill)) {
     fill_nodes = fill_nodes[subset_fill]
   }
+  
   if (nrow(fill_nodes) == 0) return(.tokens)
   
   if (!is.null(only_new)) {
@@ -237,9 +261,13 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
     fill_nodes = fill_nodes[!remove_fill, on=c('.FILL_LEVEL','.ID',only_new)]
   }
   if (nrow(fill_nodes) == 0) return(.tokens)
+  
+  
   if (!is.null(subset)) {
-    node_ids = .nodes$nodes$.ID[subset]
-    fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0]
+    if (!all(subset)) {
+      node_ids = unique(.nodes$nodes$.ID[subset])
+      fill_nodes = fill_nodes[list(.ID=node_ids), on='.ID', nomatch=0, allow.cartesian=TRUE]
+    }
   }
   if (nrow(fill_nodes) == 0) return(.tokens)
   
@@ -247,12 +275,13 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
   from_node_ids = .nodes$nodes[[from_node]][id_index]
   to_node_ids = .nodes$nodes[[to_node]][id_index]
   
-  fill_nodes[,.NEW_ID := add_sub_id(.tokens, fill_nodes[,c('doc_id','sentence','token_id')])]
+  fill_nodes[,.NEW_ID := add_sub_id(.tokens, fill_nodes[,c('doc_id','sentence','token_id')])$token_id]
+  
   parent_index = fill_nodes[,c('doc_id','sentence','token_id','parent','.ID','token')]
   parent_index[, .I := 1:nrow(parent_index)]
   
   match_id = fill_nodes[,c('doc_id','sentence','token_id','.ID','.NEW_ID')]
-  parent_index = merge(parent_index, match_id, by.x=c('doc_id','sentence','parent','.ID'), by.y=c('doc_id','sentence','token_id','.ID'))
+  parent_index = merge(parent_index, match_id, by.x=c('doc_id','sentence','parent','.ID'), by.y=c('doc_id','sentence','token_id','.ID'), allow.cartesian=T)
   .NEW_PARENT = rep(NA, nrow(fill_nodes))
   parent_index = na.omit(parent_index)
   .NEW_PARENT[parent_index$.I] = parent_index$.NEW_ID
@@ -320,7 +349,9 @@ add_to_fill <- function(.nodes, new_fill) {
 get_node_vars <- function(.tokens, .nodes, node) {
   node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=F]
   data.table::setnames(node_ids, old=node, new='token_id')
-  .tokens[node_ids, on=c('doc_id','sentence','token_id')]
+  node_vars = .tokens[node_ids, on=c('doc_id','sentence','token_id')]
+  #unique(node_vars, by=c('doc_id','sentence','token_id'))
+  node_vars
 }
   
 get_linked_node_vars <- function(.tokens, .nodes) {
@@ -353,17 +384,21 @@ increment_sub_id <- function(x) {
 }
 
 add_sub_id <- function(.tokens, ids) {
+  .EXISTS = NULL
   ## ids should be a data.table with the first three columns being: doc_id, sentence, token_id
   ids = data.table::copy(ids)
   data.table::setnames(ids, c('doc_id','sentence','token_id'))
   data.table::setkeyv(ids, c('doc_id','sentence','token_id'))
   
-  matched = rep(1, nrow(ids)) ## ids should initially exists
-  exists = rep(T, nrow(ids))
-  while (any(exists)) {
-    ids[exists, token_id := increment_sub_id(ids$token_id[exists])]
-    matched[exists] = .tokens[ids[exists], on=c('doc_id','sentence','token_id'), which=T]
-    exists = !is.na(matched)
+  #matched = rep(1, nrow(ids)) ## ids should initially exists
+  #exists = rep(T, nrow(ids))
+  ids[, .EXISTS := T]
+  while (any(ids$.EXISTS)) {
+    ids[ids$.EXISTS, token_id := increment_sub_id(ids$token_id[ids$.EXISTS])]
+    e = .tokens[unique(ids[ids$.EXISTS]), on=c('doc_id','sentence','token_id'), which=F, nomatch=0]
+    if (nrow(e) == 0) break
+    ids[, .EXISTS := F]
+    ids[e, on=c('doc_id','sentence','token_id'), .EXISTS := T]
   }
   
   dup = duplicated(ids, by = c('doc_id','sentence','token_id'))
@@ -371,7 +406,15 @@ add_sub_id <- function(.tokens, ids) {
     ids[dup, token_id := increment_sub_id(ids$token_id[dup])]
     dup = duplicated(ids, by = c('doc_id','sentence','token_id'))
   }
-  ids$token_id
+  
+  e = .tokens[unique(ids), on=c('doc_id','sentence','token_id'), which=F, nomatch=0]
+  if (nrow(e) > 0) {
+    ids[, .EXISTS := NULL]
+    #stop('en nog een keer!!')
+    ids = add_sub_id(.tokens, ids)
+  }
+  
+  ids
 }
 
 

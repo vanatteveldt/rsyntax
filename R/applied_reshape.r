@@ -102,6 +102,7 @@ climb_tree <- function(.tokens, node='conj', take_fill=T, give_fill=T, subset_fi
 }
 
 unpack_tree <- function(.tokens, relations, subset_fill=NULL) {
+  print('unpac')
   if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
   #dup = duplicated(.tokens, by = c('doc_id','sentence','parent','relation'))
   #dup_rel = unique(.tokens$relation[dup])
@@ -109,6 +110,7 @@ unpack_tree <- function(.tokens, relations, subset_fill=NULL) {
   #for (rel in dup_rel) {
   n = nrow(.tokens)
   for (rel in relations) {
+    if (rel == 'ROOT') next
     .tokens = do_unpack_tree(.tokens, rel, subset_fill)
   }
   
@@ -122,7 +124,7 @@ do_unpack_tree <- function(.tokens, relation, subset_fill) {
   while (TRUE) {
     dup = duplicated(.tokens, by = c('doc_id','sentence','parent','relation'))
     #dup = dup & !is.na(.tokens$parent)
-    dup = dup & .tokens$relation == relation
+    dup = dup & .tokens$relation == relation & !is.na(.tokens$parent)
     if (!any(dup)) break
     
     ## select duplicate nodes and their parents
@@ -137,7 +139,10 @@ do_unpack_tree <- function(.tokens, relation, subset_fill) {
     ## and add the parent fill for which relation is not already in copy
     .tokens = copy_fill(.tokens, 'parent', 'new_parent', only_new = 'relation', subset_fill=subset_fill)
     i = i + 1
-    if (i > 20) break ## just shouldn't happen
+    if (i > 20) {
+      warning('DEVELOPMENT ERROR. More than 20 depth in unpack tree. This should be (very very very) unlikely to happen irl')
+      break ## just shouldn't happen
+    }
     ## and repeat until no duplicates remain. (for each loop, 1 duplicate is resolved for each sentence, so this should take a few iterations at most)
   }
   .tokens
@@ -154,7 +159,7 @@ function(){
   
   library(spacyr)
   spacy_initialize()
-  tokens = spacy_parse('China may meet Russia for war games, and that doesn’t make them allies.', dependency=T)
+  tokens = spacy_parse('China may meet Russia for war games, but that doesn’t make them allies.', dependency=T)
   plot_tree(tokens, token, lemma, pos, use_color = T)
   
   

@@ -13,7 +13,7 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
     data.table::setnames(nodes, old = 'token_id', new='.ID')
     if (!is.na(tquery$label)) nodes[,(tquery$label) := .ID]
   } 
-  if (is.null(nodes)) return(NULL)
+  if (is.null(nodes)) return(NULL)  
   if (nrow(nodes) == 0) return(NULL)
 
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
@@ -51,6 +51,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
       nodes = add_fill(tokens, nodes, tq, block, level+1)
     }
   } 
+
   if (any(is_fill)) {
     if (is.na(tquery$label)) {
       if (level == 1) match_id = '.ID' else return(nodes)
@@ -61,6 +62,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))
+      
       nodes = merge(nodes, add, by.x=c('doc_id','sentence',match_id), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=T, allow.cartesian=T)
       dropcols = grep('.DROP.*', colnames(nodes), value=T)
       if (length(dropcols) > 0) nodes[, (dropcols) := NULL]
@@ -82,6 +84,9 @@ create_unique_key <- function(nodes, name){
   } else {
     key = paste0(nodes$doc_id, '.', nodes$sentence, '.', nodes[[id_col]])
   }
+
+
+  nodes$.ID = paste0(nodes$doc_id, '...', nodes$sentence, '...', nodes$.ID) ## quick fix for matching on 3 columns
   key = key[match(nodes$.ID, nodes$.ID)] ## give same id to nodes with same .ID
   #key = paste0(name, '#', 1:nrow(nodes))
   nodes$.ID = key

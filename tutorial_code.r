@@ -13,6 +13,12 @@ spacy_parse('', dependency=T) %>%
   annotate('clauses', p=passive, a=active, x=xcomp) %>%
   plot_tree(annotation = 'clauses', pdf_file = 'tutorial_plots/xcomp.pdf')
 
+tq = tquery(pos = "VERB", label = "predicate",
+       children(relation = "nsubj", label = "subject"))
+
+spacy_parse('Mary had a little lamb.', dependency=T) %>%
+  annotate('clauses', active=tq) %>%
+  plot_tree(annotation = 'clauses')
 
 
 library(rsyntax)
@@ -34,6 +40,7 @@ tq = tquery(
   
 ## create subset_nodes, to remove nodes where sub$token_id > pron$token_id
 select_nodes(tokens, tquery = tq) %>%
+  subset_nodes(sub$token_id < pron$token_id) %>%
   copy_nodes('sub', 'sub_copy', copy_fill = T) %>%
   mutate_nodes('sub_copy', parent = pron$parent) %>%
   remove_nodes('pron') %>%
@@ -126,10 +133,10 @@ spacy_parse('Hamas attacked the state of Israel, killing 20 civilians', dependen
   plot_tree(annotation = 'clauses', pdf_file='tutorial_plots/example_reshape.pdf')
 
 
-  spacy_parse('Bob and John ate bread and drank wine.', dependency=T) %>%
-    inherit('conj') %>%
-    chop(relation = 'cc') %>%
-    plot_tree()
+spacy_parse('Bob and John ate bread and drank wine.', dependency=T) %>%
+  inherit('conj') %>%
+  chop(relation = 'cc') %>%
+  plot_tree()
 
 
 spacy_parse('Hamas attacked the state of Israel, killing 20 civilians', dependency=T) %>%
@@ -180,7 +187,7 @@ tokens %>%
 plot_tree(tokens)
 
 tq = tquery(relation = 'relcl', label='relcl',
-            children(lemma = c("who", "that"), label='reference'),
+            children(lemma = "who", label='reference'),
             parents(label = "parent"))
 
 tokens = select_nodes(tokens, tq) %>%
@@ -227,11 +234,10 @@ agg_action = c('violence','attacks')  ## abbreviated
 nominal = tquery(lemma = agg_action, label = "predicate",
                  children(relation = "poss", label = "subject"))
 
-
 spacy_parse("Israel's excessive violence: UN condemns Israel's attacks", dependency=T) %>%
   annotate('clauses', d = direct, x = xcomp) %>%
   annotate('clauses', n = nominal, block_fill = T) %>%
-  plot_tree(annotation = 'clauses', pdf_file = 'tutorial_plots/nominal.pdf')
+  plot_tree(annotation = 'clauses')
 
 spacy_parse("Israel's attacks ", dependency=T) %>%
   annotate('clauses', d = direct) %>%
@@ -251,6 +257,10 @@ spacy_parse('John told Mary to go', dependency=T) %>%
 
 
 spacy_parse('John told Mary to go', dependency=T) %>%
+  annotate('clauses', p=passive, a=active, x=xcomp) %>%
+  plot_tree(annotation = 'clauses')
+
+spacy_parse('Mary had a little lamb.', dependency=T) %>%
   annotate('clauses', p=passive, a=active, x=xcomp) %>%
   plot_tree(annotation = 'clauses')
 

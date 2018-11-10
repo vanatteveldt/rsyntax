@@ -76,7 +76,7 @@ fix_missing_parents <- function(tokens, warn=T) {
   parent_ids = na.omit(unique(tokens[,c('doc_id','sentence','parent')]))
   data.table::setnames(parent_ids, old='parent', new='token_id')
   missing_parents = parent_ids[!tokens, on=c('doc_id','sentence','token_id')]
-  if (warn && nrow(missing_parents) > 0) warning(sprintf('There are %s tokens with missing parents. These have now been made roots (parent = NA, relation="ROOT")', length(missing_parents)))
+  if (warn && nrow(missing_parents) > 0) warning(sprintf('There are %s tokens with missing parents. These have now been made roots (parent = NA, relation="ROOT")', nrow(missing_parents)))
   
   if (nrow(missing_parents) > 0) {
     data.table::setnames(missing_parents, old='token_id', new='parent')
