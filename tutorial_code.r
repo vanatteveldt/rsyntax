@@ -26,6 +26,12 @@ library(rsyntax)
 quote_queries = spacy_english_quote_queries()
 clause_queries = spacy_english_clause_queries()
 
+
+
+t = spacy_parse("It's complicated.", dependency=T)
+plot_tree(t)
+
+
 spacy_parse('When the media talks about “moderate Muslims”, they are perpetuating a dangerous narrative of Islam.', dependency=T) %>%
   annotate('quotes', quote_queries) %>%
   annotate('clauses', clause_queries) %>%

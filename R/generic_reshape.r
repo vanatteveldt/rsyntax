@@ -1,3 +1,12 @@
+#' Apply tquery to initiate reshape operations
+#'
+#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param tquery      A \link{tquery} that selects and labels the nodes that are used in the reshape operations
+#' @param fill        Logical, should fill be used?
+#' @param fill_only_first  Logical, should a node only be filled once, with the nearest (first) labeled node?
+#'
+#' @return
+#' @export
 select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T){
   ## fill mode: all, only_first, 
   tokens = as_tokenindex(tokens)
@@ -27,11 +36,23 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T){
   tokens[]
 }
 
+#' Within a chain of reshape operations, reapply the tquery
+#'
+#' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#'
+#' @export
 reselect_nodes <- function(.tokens) {
   .nodes = .nodes_from_attr(.tokens)
   select_nodes(.tokens, tquery = .nodes$prov$tquery, fill = .nodes$prov$fill, fill_only_first = .nodes$prov$fill_only_first)
 }
 
+#' Undo select_nodes
+#'
+#' Not strictly required. Only available for elegance and minor memory efficiency
+#'
+#' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#'
+#' @export
 unselect_nodes <- function(.tokens) {
   data.table::setattr(.tokens, '.nodes', NULL)
   .tokens
@@ -42,7 +63,16 @@ unselect_nodes <- function(.tokens) {
   attr(.tokens, '.nodes')
 }
 
+#' Subset a select_nodes selection 
+#' 
+#' Enables more control in reshape operations
+#'
+#' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#' @param subset  A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
+#'
+#' @export
 subset_nodes <- function(.tokens, subset, copy=T) {
+  copy=T ## make optional if tested
   .nodes = .nodes_from_attr(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   if (copy) .tokens = data.table::copy(.tokens)
@@ -64,7 +94,16 @@ subset_nodes <- function(.tokens, subset, copy=T) {
   if (copy) .tokens[] else invisible(.tokens)
 }
 
-mutate_nodes <- function(.tokens, node, ..., subset=NULL, copy=T) {
+#' Mutate nodes
+#'
+#' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#' @param node    The name of the node that is to be mutated
+#' @param ...     named arguments. The name should be a column in tokens
+#' @param subset  A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
+#'
+#' @export
+mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
+  copy = T ## make optional if tested
   .nodes = .nodes_from_attr(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   if (!is.character(node)) stop('"node" argument has to be a character value')
@@ -98,6 +137,16 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL, copy=T) {
 }
 
 
+#' Remove nodes
+#'
+#' @param .tokens          A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#' @param node             The name of the node that is to be mutated
+#' @param rm_subset        A subset expression (that evaluates to a logical vector) to more specifically specify which nodes to remove. The token column for each labeled node in the tquery can be referred to as label$column.
+#' @param with_fill        If TRUE, also remove the fill nodes
+#' @param rm_subset_fill   A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to remove only verbs
+#' @param keep_shared      If there is another node that has the same fill nodes, should the fill nodes that are shared also be removed?
+#'
+#' @export
 remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_fill=NULL, keep_shared=F) {
   .nodes = .nodes_from_attr(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -132,6 +181,17 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
   .tokens[]
 }
 
+#' Remove fill
+#' 
+#' Like remove_nodes, but only removing the fill nodes
+#' 
+#' @param .tokens          A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#' @param node             The name of the node that is to be mutated
+#' @param rm_subset_fill   A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to remove only verbs
+#' @param rm_subset        A subset expression (that evaluates to a logical vector) to more specifically specify which nodes to remove. The token column for each labeled node in the tquery can be referred to as label$column.
+#' @param keep_shared      If there is another node that has the same fill nodes, should the fill nodes that are shared also be removed?
+#'
+#' @export
 remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep_shared=F) {
   .nodes = .nodes_from_attr(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -178,7 +238,19 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
   .tokens[]
 }
 
+#' Copy nodes
+#'
+#' @param .tokens          A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#' @param node             The name of the node that is to be copied
+#' @param new              The name given to the copy
+#' @param subset           A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
+#' @param keep_relation    If FALSE, remove relation (making node a root)
+#' @param copy_fill        If TRUE, also copy the fill
+#' @param subset_fill      A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to copy only verbs
+#'
+#' @export
 copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
+  
   .nodes = .nodes_from_attr(.tokens)  
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
@@ -213,11 +285,21 @@ copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fi
     fill_nodes = get_fill_nodes(.tokens, .nodes, node)
     if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill)) 
     subset_fill = if (subset_fill == 'NULL') NULL else eval(parse(text=subset_fill), envir = fill_nodes, parent.frame())
-    .tokens = do_copy_fill(.tokens, .nodes, fill_nodes, node, new, subset, subset_fill, only_new)
+    .tokens = do_copy_fill(.tokens, .nodes, fill_nodes, node, new, subset, subset_fill, only_new=NULL)
   }
   .tokens[]
 }
 
+#' Copy nodes
+#'
+#' @param .tokens          A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#' @param from_node        The name of the node from which fill is copied
+#' @param to_node              The name of the node to which fill is copied
+#' @param subset           A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
+#' @param subset_fill      A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to copy only verbs
+#' @param only_new         If TRUE, direct fill children will only be copied to to_node if it does not already have nodes of this relation. This is a good heuristic for dealing with argument drop. 
+#'
+#' @export
 copy_fill <- function(.tokens, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
   .nodes = .nodes_from_attr(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -250,6 +332,7 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
   if (nrow(fill_nodes) == 0) return(.tokens)
   
   if (!is.null(only_new)) {
+    only_new = 'relation' ## could be any column, but think only this makes sense
     first_children_parents = .nodes$nodes[,c('doc_id','sentence',to_node,'.ID'), with=F]
     first_children = rbind(
       merge(.tokens, first_children_parents, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence',to_node)),

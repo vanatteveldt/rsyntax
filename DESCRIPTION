@@ -14,6 +14,7 @@ Depends:
     stringi,
     Matrix,
     digest,
+    corpustools,
     magrittr
 Imports:
     data.table (>= 1.11.8),

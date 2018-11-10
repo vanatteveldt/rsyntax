@@ -32,7 +32,7 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   
   sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
   annotations = gsub('\\_.*', '', grep('\\_fill', colnames(nodes), value=T))
-  text_cols = get_text_cols(nodes, tidyselect::quos(...), annotations)
+  text_cols = get_text_cols(tokens, nodes, tidyselect::quos(...), annotations)
   edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
   
   text = NULL
@@ -119,7 +119,7 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
 }
 
 
-get_text_cols <- function(nodes, l, annotations) {
+get_text_cols <- function(tokens, nodes, l, annotations) {
   text_cols = list()
   if (length(l) > 0) {
     for (i in seq_along(l)) {
