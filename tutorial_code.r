@@ -1,7 +1,29 @@
-
 library(spacyr)
 spacy_initialize()
 tokens = spacy_parse('Mary had a little lamb.', dependency=T)
+
+spacy_parse('Media Research Center vice president Dan Gainor told Fox News that the Times’ front page is a microcosm of bias in the mainstream media.', dependency=T) %>%
+  plot_tree()
+
+spacy_parse('Thatcher attacks Argentina', dependency=T) %>%
+  plot_tree()
+
+
+spacy_parse('John gave Bob a book', dependency=T) %>%
+  plot_tree()
+
+spacy_parse('John was given a book by Bob', dependency=T) %>%
+  plot_tree()
+
+
+spacy_parse('Bob and John ate bread and drank wine.', dependency=T) %>%
+  plot_tree()
+
+spacy_parse('Bob and John ate bread and drank wine.', dependency=T) %>%
+  inherit('conj') %>%
+  chop(relation = 'cc') %>%
+  plot_tree()
+
 
 tokens = as_tokenindex(tokens)
 annotate(tokens, 'annotation', tq)
@@ -9,9 +31,6 @@ annotate(tokens, 'annotation', tq)
 plot_tree(tokens, token, lemma, pos, entity)
 
 
-spacy_parse('', dependency=T) %>%
-  annotate('clauses', p=passive, a=active, x=xcomp) %>%
-  plot_tree(annotation = 'clauses', pdf_file = 'tutorial_plots/xcomp.pdf')
 
 tq = tquery(pos = "VERB", label = "predicate",
        children(relation = "nsubj", label = "subject"))
@@ -107,7 +126,6 @@ tokens = spacy_parse('Mary loves John, and Mary was loved by John.', dependency=
 #plot_tree(tokens)
 
 annotate(tokens, 'subject', passive=passive, active=active)
-
 
 tokens = tokens %>%
   annotate('subject', passive=passive) %>%
