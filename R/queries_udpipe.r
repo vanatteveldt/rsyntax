@@ -1,75 +1,68 @@
-
-spacy_quotes <- function(tokens, verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
+udpipe_quotes <- function(tokens, verbs=NULL, exclude_verbs=NULL) {
   direct = tquery(lemma = verbs, NOT(lemma = exclude_verbs), label='verb',
                   children(req=F, relation = c('npadvmod'), block=T),
                   children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
                   children(label='quote'))
   
-  nosrc = tquery(pos='VERB*', 
+  nosrc = tquery(POS='VERB*', 
                  children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
                  children(lemma = verbs, NOT(lemma = exclude_verbs), relation='xcomp', label='verb',
                           children(relation=c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl"), label='quote')))
   
-  according = tquery(label='quote',
-                     children(relation='nmod:according_to', label='source',
-                              children(label='verb')))
+  according = tquery(lemma = 'accord', label = 'verb',                
+                     parents(label = 'source',
+                             parents(label = 'quote')))
   
   tokens = annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
   
-  span1 = tquery(pos = 'VERB*', lemma = verbs, 
+  ## add span quotes (Bob did not agree. "blablabla".)
+  span1 = tquery(POS = 'VERB*', lemma = verbs, 
                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'))
-  span2 = tquery(pos = 'VERB*', 
+  span2 = tquery(POS = 'VERB*', 
                  children(relation=c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'))
   tokens = add_span_quotes(tokens, 'token', quote_col = 'quote', source_val = 'source', quote_val = 'quote', tqueries=list(span1,span2))
   
   tokens
 }
 
-spacy_clauses <- function(tokens, verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F, sub_req=T, ob_req=F) {
-  subject_name = if (with_subject) 'subject' else NA
-  object_name = if (with_object) 'object' else NA
+udpipe_clauses <- function(tokens, verbs=NULL, exclude_verbs=NULL) {
+  passive = tquery(POS = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
+                   children(relation = 'aux:pass'),
+                   children(relation = c('dobj','obl','obj'), label = 'subject', req=T),
+                   children(relation = c('nsubj:pass','nsubj'), label='object', req=F)) 
   
-  passive = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
-                   children(relation = c('agent'), label = subject_name, req=sub_req),
-                   children(relation = c('nsubjpass','pobj','nsubj'), label=object_name, req=ob_req)) 
+  direct = tquery(POS = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
+                  not_children(relation = 'aux:pass'),
+                  children(relation = c('nsubj','nsubj:pass'), label='subject', req=T),
+                  children(relation = c('dobj','obl','obj'), label='object', req=F)) 
   
-  direct = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
+  nosub_passive = tquery(POS = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
+                   not_children(relation = c('agent')),
+                   children(relation = c('nsubjpass','pobj','nsubj','obl'), label='object')) 
+  
+  nosub_direct = tquery(POS = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
                   not_children(relation = 'auxpass'),
-                  children(relation = c('nsubj', 'nsubjpass'), label=subject_name, req=sub_req),
-                  children(relation = c('dobj'), label=object_name, req=ob_req)) 
+                  not_children(relation = c('nsubj', 'nsubjpass')),
+                  children(relation = c('dobj','obl'), label='object')) 
   
-  
-  copula_direct = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs), 
-                         parents(label='predicate', NOT(lemma = exclude_verbs),
-                                 children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
-                                 children(relation = c('dobj'), label=object_name, req=ob_req))) 
-  
-  copula_passive = tquery(pos = 'VERB*', lemma = verbs, NOT(lemma = exclude_verbs),
-                          parents(label='predicate', NOT(lemma = exclude_verbs),
-                                  children(relation = c('su', 'nsubj', 'agent'), label=subject_name, req=sub_req),
-                                  children(relation = c('dobj'), label=object_name, req=ob_req))) 
-  
-  
-  annotate(tokens, 'clause', pas=passive, dir=direct, cd=copula_direct, cp=copula_passive)
+  annotate(tokens, 'clause', pas=passive, dir=direct, nosub_pas=nosub_passive, nosub_dir=nosub_direct)
 }
 
-spacy_conjunctions <- function(tokens) {
-  no_fill = c('compound*','case', 'relcl')
-  tq = tquery(label='target', NOT(relation = 'conj'),
-              fill(NOT(relation = no_fill), window = c(Inf,0)),
-              children(relation = 'conj', label='origin',
-                       fill(NOT(relation = no_fill), window=c(0,Inf))))
-  tokens = climb_tree(tokens, tq)  
+udpipe_conjunctions <- function(tokens) {
+  no_fill = c('compound*','case', 'advmod', 'relcl')
+  tokens = inherit(tokens, 'conj', 
+                   take_fill = fill(NOT(relation = no_fill), connected=T), 
+                   give_fill = fill(NOT(relation = no_fill), connected=T))
   chop(tokens, relation = 'cc')
 }
 
 
-spacy_relcl <- function(tokens, pron=NULL) {
+udpipe_relcl <- function(tokens, pron=NULL) {
   if (!is.null(pron)) {
     tq = tquery(relation = c('acl:relcl', 'relcl'), label='relcl',
                 children(lemma =  pron, label='reference'),
-                parents(label = "parent", pos=c('PROPN','NOUN')))
-    
+                parents(label = "parent", POS=c('PROPN','NOUN')))
+
     tokens = select_nodes(tokens, tq)
     tokens = copy_nodes(tokens, 'parent', new = 'parent_copy', copy_fill = T)
     tokens = mutate_nodes(tokens, 'parent_copy', parent = reference$parent, relation = reference$relation)
@@ -83,49 +76,33 @@ spacy_relcl <- function(tokens, pron=NULL) {
   tokens
 }
 
-spacy_simplify <- function(tokens) {
-  tokens = spacy_relcl(tokens, pron=c('who','that','which','he','she','it','they'))
-  tokens = spacy_conjunctions(tokens)
+udpipe_simplify <- function(tokens) {
+  tokens = udpipe_relcl(tokens, pron=c('who','that','which','he','she','it','they'))
+  tokens = udpipe_conjunctions(tokens)
   tokens
-}
-
-spacy_tokenindex <- function(txt) {
-  require(spacyr)
-  as_tokenindex(spacy_parse(txt, dependency=T))
 }
 
 function(){
   sayverbs = c("tell", "show", "acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "call", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "post","predict", "proclaim", "promise", "reply", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "think","warn","write", "add")
-  
-  txt = 'Bob does not drink wine and eat cheese alone'
-  spacy_tokenindex(txt) %>%
-    plot_tree(token,pos)
-  
-  spacy_tokenindex(txt) %>%
-    spacy_simplify() %>%
-    plot_tree(token,pos)
-    
 
-  tokens = spacy_tokenindex(txt) %>%
-    spacy_simplify() %>%
-    spacy_quotes(verbs = sayverbs) %>%
-    spacy_clauses(exclude_verbs = sayverbs) %>%
-    chop(relation = 'punct') %>%
-    plot_tree(token, pos)
-  tokens
-    
+  tokens = udpipe_tokenindex('The Times’ front page is a microcosm of bias in the mainstream media.') %>%
+    udpipe_simplify() %>%
+    udpipe_quotes(verbs = sayverbs) %>%
+    udpipe_clauses(exclude_verbs = sayverbs) %>%
+    chop(relation = 'punct')
+  
   cast_tokens_text(tokens, 'token', by=list(quote='source', clause='subject'), id='token', collapse_id = T)
   
   inspect_family(tokens, )
   
   df = readRDS('testdata.rds')
   head(df)
-  rawtok = spacy_tokenindex(df$texts)
+  rawtok = udpipe_tokenindex(df$texts)
   saveRDS(rawtok, 'testtokens.rds')
   
   rawtok = readRDS('testtokens.rds')
   tokens = rawtok %>%
-    spacy_quotes(verbs = sayverbs)
+    udpipe_quotes(verbs = sayverbs)
   
   library(tokenbrowser)
   
@@ -135,19 +112,19 @@ function(){
   
   
   tokens = rawtok %>%
-    spacy_quotes(verbs = sayverbs) %>%
-    spacy_simplify() %>%
-    spacy_clauses(exclude_verbs = sayverbs) %>%
+    udpipe_quotes(verbs = sayverbs) %>%
+    udpipe_simplify() %>%
+    udpipe_clauses(exclude_verbs = sayverbs) %>%
     chop(relation = 'punct')
   
   testtok = rawtok[rawtok$doc_id==10 & rawtok$sentence==1,]
-  plot_tree(testtok, token, pos)
+  plot_tree(testtok, token, POS)
   
-  spacy_simplify(testtok) %>%
+  udpipe_simplify(testtok) %>%
     plot_tree(token)
   
-  spacy_tokenindex('I said hi to Bob and Mary') %>%
-    spacy_simplify() %>%
+  udpipe_tokenindex('I said hi to Bob and Mary') %>%
+    udpipe_simplify() %>%
     plot_tree(token)
   
   plot_tree(rawtok, token, sentence_i = 4)
@@ -165,9 +142,9 @@ function(){
   nrow(d)
   head(d)
   
-  spacy_simplify() %>%
-    spacy_quotes(verbs=sayverbs) %>%
-    plot_tree(token, pos, sentence_i = 68)
+  udpipe_simplify() %>%
+  udpipe_quotes(verbs=sayverbs) %>%
+  plot_tree(token, POS, sentence_i = 68)
   
   head(tokens,60)
   
@@ -197,33 +174,33 @@ function(){
   
   ## find quotes
   tokens = tokens %>%
-    annotate('quotes', spacy_quote_queries()) %>%
+    annotate('quotes', udpipe_quote_queries()) %>%
     add_span_quotes()
+    
+    
   
   
+  udpipe_tokenindex('The man that loved dogs and birds did not love cats.') %>%
+    udpipe_simplify() %>%
+    plot_tree(token, lemma, POS)
+
+  udpipe_tokenindex('Dogs and birds were loved by the man that did not like cats.') %>%
+    udpipe_simplify() %>%
+    plot_tree(token, lemma, POS)
   
-  
-  spacy_tokenindex('The man that loved dogs and birds did not love cats.') %>%
-    spacy_simplify() %>%
-    plot_tree(token, lemma, pos)
-  
-  spacy_tokenindex('Dogs and birds were loved by the man that did not like cats.') %>%
-    spacy_simplify() %>%
-    plot_tree(token, lemma, pos)
-  
-  spacy_tokenindex('Dogs and birds were loved by the man that did not like cats.') %>%
-    spacy_simplify() %>%
-    spacy_quotes(verbs=sayverbs) %>% 
-    spacy_clauses(exclude_verbs = sayverbs) %>%
+  udpipe_tokenindex('Dogs and birds were loved by the man that did not like cats.') %>%
+    udpipe_simplify() %>%
+    udpipe_quotes(verbs=sayverbs) %>% 
+    udpipe_clauses(exclude_verbs = sayverbs) %>%
     print() %>%
     cast_tokens_text('token', by=list(quote='source', clause='subject'), id='token', collapse_id = T)
   
+    
+
+    
   
-  
-  
-  
-  spacy_tokenindex('Bob did go to the meeting, but did he leave?') %>%
-    plot_tree(token, lemma, pos)
+  udpipe_tokenindex('Bob did go to the meeting, but did he leave?') %>%
+    plot_tree(token, lemma, POS)
   
   
   quote_queries = spacy_english_quote_queries()  
@@ -232,4 +209,3 @@ function(){
   tokens = annotate(tokens, clause_queries, column='clauses', fill=T)
   tokens
 }
-

@@ -73,10 +73,7 @@ test_that("extracting clauses works", {
 
   tq = tquery(label='target', 
               children(relation = 'cnj', label='conj'))
-  .tokens = tokens %>%
-    flatten_conjunctions(tq=tq, target_is_cc = T) %>%
-    plot_tree(token)
-  
+
   find_nodes(tokens[tokens$sentence == 1,], 
              tquery(POS='verb', label='pred',
                    children(relation='su', label='subject',

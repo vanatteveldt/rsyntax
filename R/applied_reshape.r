@@ -1,95 +1,69 @@
 ## generic_reshape.r contains generic functions for mangling the parse tree
 ## applied_reshape.r uses these functions to do usefull stuff.
 
-inherit <- function(.tokens, relation, take_fill=T, give_fill=F, unpack=T, subset=NULL, subset_fill=NULL, only_new='relation', depth=Inf) {
-  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset))
-  if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
+#' Have nodes with a certain relation inherit the position of their parent
+#'
+#' This is in particular usefull for removing conjunctions
+#'
+#' @param .tokens A tokenIndex
+#' @param relation A character string specifying the relation
+#' @param take_fill If TRUE, give the node that will inherit the parent position a copy of the parent children (but only if it does not already have children with this relation; see only_new)
+#' @param give_fill If TRUE, copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)
+#' @param unpack If TRUE, create separate branches for the parent and the node that inherits the parent position
+#' @param only_new A character vector giving one or multiple column names that need to be unique for take_fill and give_fill
+#' @param depth Certain relations can be recursively nested (e.g. conjunction within conjunction). Depth specifies how far to inherit (by default infinite)
+#'
+#' @export
+inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpack=T, only_new='relation', depth=Inf) {
+  tq = tquery(label='target', NOT(relation = relation),
+              take_fill,
+              children(relation = relation, label='origin',
+                       give_fill))
   
-  tq = tquery(label='target', 
-              children(relation = relation, label='origin'))
-  
-  .tokens = select_nodes(.tokens, tq, fill_only_first = F) 
-  .nodes = .nodes_from_attr(.tokens)
-  if (nrow(.nodes$nodes) > 0) {
-    if (unpack) target_vars = get_node_vars(.tokens, .nodes, 'target')
-    .tokens = climb_tree(.tokens, node='origin', take_fill=take_fill, give_fill=give_fill, subset_fill=subset_fill, only_new=only_new, subset=subset, depth=depth)
-    if (unpack) .tokens = unpack_tree(.tokens, relations = na.omit(unique(target_vars$relation)))
-  }
+  .tokens = climb_tree(.tokens, tq, unpack=unpack, take_fill=T, give_fill=T, only_new=only_new, depth=depth)
   unselect_nodes(.tokens)
   .tokens
 }
 
-chop <- function(.tokens, ...) {
-  tq = tquery(..., label = 'chop')
-  .tokens = .tokens %>%
-    select_nodes(tq) %>%
-    remove_nodes('chop')
-  unselect_nodes(.tokens)
-}
-
-isolate_relcl <- function(.tokens, relation='relcl', who_lemma=c('who','that')) { 
-  tq = tquery(relation = relation, label='relcl',
-              children(lemma = who_lemma, label='who'),
-              parents(relation = 'dobj', label='obj'))
-
-  .tokens = select_nodes(.tokens, tq)
-  .tokens = copy_nodes(.tokens, 'obj', new = 'who_obj', copy_fill = T)
-  .tokens = mutate_nodes(.tokens, 'who_obj', parent = who$parent, relation = who$relation) 
-  .tokens = remove_nodes(.tokens, 'who', with_fill = T) 
-  .tokens = mutate_nodes(.tokens, 'relcl', parent = NA, relation = 'ROOT')
-  .tokens = unselect_nodes(.tokens)
-  .tokens[]
-}
-
-flatten_conjunctions <- function(.tokens, conj=NULL, cc=NULL, tq=NULL, target_is_cc=F, rm_cc=T, take_fill=T, give_fill=T, subset=NULL, subset_fill=NULL, only_new='relation', depth=Inf) {
-  if (!is_deparsed_call(subset)) subset = deparse(substitute(subset))
-  if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
-  
-  if (is.null(tq)) {
-    if (is.null(conj)) stop('either conj or tq has to be given (currently both are NULL)')
-    tq = tquery(label='target', 
-              children(relation = conj, label='conj'),
-              if (is.null(cc)) NULL else children(relation = cc, label='cc', req = F))
-  }
-  
-  .tokens = select_nodes(.tokens, tq, fill_only_first = F) 
-  .nodes = .nodes_from_attr(.tokens)
-  has_cc = 'cc' %in% colnames(.nodes$nodes)
-  if (has_cc && rm_cc) .tokens = remove_nodes(.tokens, 'cc', with_fill = T)
-  .tokens = climb_tree(.tokens, node='conj', take_fill=take_fill, give_fill=give_fill, subset_fill=subset_fill, only_new=only_new, subset=subset, depth=depth)
-
-  if (target_is_cc) {
-    tq = tquery(label='cc', g_id = .nodes$nodes[,c('doc_id','sentence','target')])
-    .tokens = select_nodes(.tokens, tq) 
-    .tokens = remove_nodes(.tokens, 'cc', with_fill = T)
-  }
-  unselect_nodes(.tokens)
-  .tokens
-}
-
-
-
-climb_tree <- function(.tokens, node='conj', take_fill=T, give_fill=T, subset_fill=NULL, only_new='relation', subset=NULL, depth=Inf) {
+climb_tree <- function(.tokens, tq, unpack=T, take_fill=T, give_fill=T, only_new='relation', depth=Inf) {
   ## given a node selection that identifies pairs of 'child' and 'parent', 
   ## recursively have child adopt parent relation (parent and relation column)
   ## and adopt parents fill nodes. only_new restricts adding fill nodes to relations that child
   ## does not already have. This seems to be a good heuristic for dealing with argument drop
   i = 1
   
+  .tokens = select_nodes(.tokens, tq, fill_only_first = F)
+  if (nrow(attr(.tokens, '.nodes')$nodes) == 0) return(.tokens)
+  .tokens = one_per_sentence(.tokens)
+  
   last_nodes = .nodes_from_attr(.tokens)
   while (i < depth) {
     if (nrow(last_nodes$nodes) == 0) return(.tokens)
     
     if (take_fill) {
-      .tokens = copy_fill(.tokens, 'target', node, subset_fill = subset_fill, subset = subset, only_new=only_new)
+      .tokens = copy_fill(.tokens, 'target', 'origin', only_new=only_new)
     }
     if (give_fill) {
-      .tokens = copy_fill(.tokens, node, 'target', subset_fill = subset_fill, subset = subset, only_new=only_new)
+      .tokens = copy_fill(.tokens, 'origin', 'target', only_new=only_new)
     }
     
-    .tokens = mutate_nodes(.tokens, node, subset=subset, parent=target$parent, relation=target$relation)
+    .tokens = mutate_nodes(.tokens, 'origin', parent=target$parent, relation=target$relation)
     
-    .tokens = reselect_nodes(.tokens)
+    if (unpack) {
+      tq2 = tquery(label = 'child', g_id = last_nodes$nodes[,c('doc_id','sentence','origin')],
+                   parents(label = 'parent'))
+      .tokens = select_nodes(.tokens, tq2, fill_only_first = F)
+      ## copy the parent 
+      .tokens = copy_nodes(.tokens, 'parent', 'new_parent', copy_fill = F)
+      ## point the duplicate childen towards new  copy
+      .tokens = mutate_nodes(.tokens, 'child', parent=new_parent$token_id)
+      ## and add the parent fill for which relation is not already in copy
+      .tokens = copy_fill(.tokens, 'parent', 'new_parent', only_new = 'relation')
+    }
+    
+    .tokens = select_nodes(.tokens, tq, fill_only_first = F) 
+    if (nrow(attr(.tokens, '.nodes')$nodes) == 0) return(.tokens)
+    .tokens = one_per_sentence(.tokens)
     
     if (identical(.nodes_from_attr(.tokens)$nodes, last_nodes$nodes)) {
       break
@@ -101,54 +75,29 @@ climb_tree <- function(.tokens, node='conj', take_fill=T, give_fill=T, subset_fi
   .tokens
 }
 
-unpack_tree <- function(.tokens, relations, subset_fill=NULL) {
-  print('unpac')
-  if (!is_deparsed_call(subset_fill)) subset_fill = deparse(substitute(subset_fill))
-  #dup = duplicated(.tokens, by = c('doc_id','sentence','parent','relation'))
-  #dup_rel = unique(.tokens$relation[dup])
-  #dup_rel = setdiff(dup_rel, 'ROOT')
-  #for (rel in dup_rel) {
-  n = nrow(.tokens)
-  for (rel in relations) {
-    if (rel == 'ROOT') next
-    .tokens = do_unpack_tree(.tokens, rel, subset_fill)
-  }
-  
-  ## it can be that unpacking some relations duplicates others, so repeat until no changes occr
-  if (n < nrow(.tokens)) .tokens = unpack_tree(.tokens, relations, subset_fill)
-  unselect_nodes(.tokens)
-}
-
-do_unpack_tree <- function(.tokens, relation, subset_fill) {
-  i = 1
-  while (TRUE) {
-    dup = duplicated(.tokens, by = c('doc_id','sentence','parent','relation'))
-    #dup = dup & !is.na(.tokens$parent)
-    dup = dup & .tokens$relation == relation & !is.na(.tokens$parent)
-    if (!any(dup)) break
-    
-    ## select duplicate nodes and their parents
-    tq = tquery(label = 'child', g_id = .tokens[dup,c('doc_id','sentence','token_id')],
-                parents(label = 'parent'))
-    
-    .tokens = select_nodes(.tokens, tq)
-    ## copy the parent 
-    .tokens = copy_nodes(.tokens, 'parent', 'new_parent', copy_fill = F)
-    ## point the duplicate childen towards new  copy
-    .tokens = mutate_nodes(.tokens, 'child', parent=new_parent$token_id)
-    ## and add the parent fill for which relation is not already in copy
-    .tokens = copy_fill(.tokens, 'parent', 'new_parent', only_new = 'relation', subset_fill=subset_fill)
-    i = i + 1
-    if (i > 20) {
-      warning('DEVELOPMENT ERROR. More than 20 depth in unpack tree. This should be (very very very) unlikely to happen irl')
-      break ## just shouldn't happen
-    }
-    ## and repeat until no duplicates remain. (for each loop, 1 duplicate is resolved for each sentence, so this should take a few iterations at most)
-  }
+one_per_sentence <- function(.tokens) {
+  ## cannot unpack multiple pairs within the same branch, so force unique per sentence
+  attr(.tokens, '.nodes')$nodes = attr(.tokens, '.nodes')$nodes[!duplicated(attr(.tokens, '.nodes')$nodes[,c('doc_id','sentence')]),]
+  attr(.tokens, '.nodes')$fill = attr(.tokens, '.nodes')$fill[attr(.tokens, '.nodes')$fill$.ID %in% attr(.tokens, '.nodes')$nodes$.ID,]
   .tokens
 }
 
 
+#' Chop of a branch of the tree
+#'
+#' Using the query language for tquery, chop of the branch down from the node that is found
+#'
+#' @param .tokens 
+#' @param ... Arguments passed to tquery. For instance, relation = 'punct' cuts off all punctuation dependencies (in universal dependencies)
+#'
+#' @export
+chop <- function(.tokens, ...) {
+  tq = tquery(..., label = 'chop')
+  .tokens = .tokens %>%
+    select_nodes(tq) %>%
+    remove_nodes('chop')
+  unselect_nodes(.tokens)
+}
 
 function(){
   library(spacyr)

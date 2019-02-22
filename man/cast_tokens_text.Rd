@@ -4,7 +4,7 @@
 \alias{cast_tokens_text}
 \title{Like cast_tokens, but prints for easier inspection}
 \usage{
-cast_tokens_text(tokens, text, by, id, collapse_id = F)
+cast_tokens_text(tokens, text, by, id, collapse_id = F, rm.na = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex with rsyntax annotations}

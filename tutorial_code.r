@@ -2,6 +2,24 @@ library(spacyr)
 spacy_initialize()
 tokens = spacy_parse('Mary had a little lamb.', dependency=T)
 
+say_verbs = ENGLISH_SAY_VERBS  ## lemma of source indicating verbs (e.g., say, tell, admit)
+
+direct = tquery(pos = 'VERB*', NOT(lemma = say_verbs), label='predicate',
+                children(relation = c('nsubj', 'agent'), label = "subject"))
+xcomp = tquery(pos = 'VERB*',
+               children(relation = 'xcomp', NOT(lemma=say_verbs), label = "predicate"),
+               children(relation = 'dobj', label = "subject"))
+
+
+speechverb = tquery(lemma = say_verbs, label='verb',
+                    children(relation=c('nsubj', 'agent'), label='source'),
+                    children(label='quote'))
+according = tquery(lemma = 'accord', label = 'verb',                
+                   children(relation='prep',        
+                            children(relation = 'pobj', label='source')),
+                   parents(label = 'quote'))
+
+
 spacy_parse('Media Research Center vice president Dan Gainor told Fox News that the Times’ front page is a microcosm of bias in the mainstream media.', dependency=T) %>%
   plot_tree()
 
@@ -19,10 +37,18 @@ spacy_parse('John was given a book by Bob', dependency=T) %>%
 spacy_parse('Bob and John ate bread and drank wine.', dependency=T) %>%
   plot_tree()
 
-spacy_parse('Bob and John ate bread and drank wine.', dependency=T) %>%
-  inherit('conj') %>%
+
+library(spacyr)
+spacy_parse('Bob and John ate bread, cheese and sausage.', dependency=T) %>%
+  inherit2('conj') %>%
   chop(relation = 'cc') %>%
-  plot_tree()
+  plot_tree(token, pos)
+
+
+spacy_parse('Bob said he and John like cheese and blue wine.', dependency=T) %>%
+  inherit2('conj') %>%
+  chop(relation = 'cc') %>%
+  plot_tree(token, pos)
 
 
 tokens = as_tokenindex(tokens)
@@ -290,15 +316,6 @@ spacy_parse('Mary had a little lamb.', dependency=T) %>%
 
 
 
-say_verbs = ENGLISH_SAY_VERBS  ## lemma of source indicating verbs (e.g., say, tell, admit)
-
-speechverb = tquery(lemma = say_verbs, label='verb',
-                    children(relation=c('nsubj', 'agent'), label='source'),
-                    children(label='quote'))
-according = tquery(lemma = 'accord', label = 'verb',                
-                   children(relation='prep',        
-                            children(relation = 'pobj', label='source')),
-                   parents(label = 'quote'))
 
 spacy_parse("John said he loves Mary, but according to Bob that's a lie.", dependency=T) %>%
   annotate('quotes', a=according, s=speechverb) %>%
@@ -316,12 +333,6 @@ spacy_parse("John said he loves Mary, but according to Bob that's a lie.", depen
 
 spacy_parse('John told Mary to go.', dependency=T) %>%
   plot_tree()
-
-direct = tquery(pos = 'VERB*', NOT(lemma = say_verbs), label='predicate',
-                children(relation = c('nsubj', 'agent'), label = "subject"))
-xcomp = tquery(pos = 'VERB*',
-               children(relation = 'xcomp', NOT(lemma=say_verbs), label = "predicate"),
-               children(relation = 'dobj', label = "subject"))
 
 spacy_parse("Mary fell in love with Bob, so John told Mary to go.", dependency=T) %>%
   annotate('clauses', d=direct, x=xcomp) %>%

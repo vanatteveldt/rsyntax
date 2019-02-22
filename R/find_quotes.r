@@ -30,7 +30,6 @@ add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='so
   if (copy) tokens = data.table::copy(tokens)
   
   is_quote = get_quote_positions(tokens, text_col, par_col, space_col)
-  
   ## if a previously found source occurs in a span quote (all source nodes within the quote), remove it. nested queries are a challenge for another day
   tokens = remove_nested_source(tokens, is_quote, quote_col, source_val)
   
@@ -89,8 +88,8 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
   no_source = unique(no_source, by=c('doc_id','.QUOTE'))
   
   candidates = select_candidates(tokens, is_quote, quote_col, source_val, tqueries)
+  if (nrow(candidates) == 0) return(tokens)
   
-
   no_source$start_sentence = no_source$sentence
   for (i in 0:lag_sentences) {
     no_source$sentence = no_source$start_sentence - i
@@ -112,16 +111,23 @@ select_candidates <- function(tokens, is_quote, quote_col, source_val, tqueries)
   quote_id_col = paste0(quote_col,'_id')
   #is_source = tokens[!is.na(tokens[[quote_col]]),]  ## use any value for quote_col, but need to filter out quote value before add_selected_sources
   is_source = tokens[!is.na(tokens[[quote_col]]) & tokens[[quote_col]] == source_val,]
-  is_source = data.table::data.table(doc_id=is_source$doc_id, sentence=is_source$sentence, candidate_id=is_source$token_id,
-                                     .ROLE=source_val, .ID=is_source[[quote_id_col]])
-
-  candidates = apply_queries(tokens, tqueries)
-  candidate_in_quote = subset(tokens, !is.na(is_quote), select=c('doc_id','sentence','token_id'))
-  candidates = candidates[!candidate_in_quote,on=c('doc_id','sentence','token_id')]
-  candidates = data.table::data.table(doc_id=candidates$doc_id, sentence=candidates$sentence, candidate_id=candidates$token_id, 
-                                      .ROLE=candidates$.ROLE, .ID=candidates$.ID)
+  if (nrow(is_source) > 0) {
+    is_source = data.table::data.table(doc_id=is_source$doc_id, sentence=is_source$sentence, candidate_id=is_source$token_id,
+                                       .ROLE=source_val, .ID=is_source[[quote_id_col]])
+  }
   
-  rbind(is_source, candidates)
+  candidates = apply_queries(tokens, tqueries)
+  if (nrow(candidates) > 0) {
+    candidate_in_quote = subset(tokens, !is.na(is_quote), select=c('doc_id','sentence','token_id'))
+    candidates = candidates[!candidate_in_quote,on=c('doc_id','sentence','token_id')]
+    candidates = data.table::data.table(doc_id=candidates$doc_id, sentence=candidates$sentence, candidate_id=candidates$token_id, 
+                                      .ROLE=candidates$.ROLE, .ID=candidates$.ID)
+  }
+  
+  if (nrow(is_source) > 0 && nrow(candidates)) return(rbind(is_source, candidates))
+  if (nrow(is_source) > 0) return(is_source)
+  if (nrow(candidates) > 0) return(candidates)
+  return(is_source)
 }
 
 add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_val, quote_val) {
@@ -158,14 +164,17 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
 
 get_quote_positions <- function(tokens, text_col, par_col=NULL, space_col=NULL) {
   par = get_paragraph(tokens, text_col, par_col, space_col)
-  is_quote = grepl('[“”\"]', tokens[[text_col]])
+  is_quote = grepl('[“”\"„]', tokens[[text_col]])
+  is_quote[c(F,is_quote[-length(is_quote)])] = F ## to ignore double quotes after reshaping
   par_quotes = split(is_quote, par)
   par_quotes = lapply(par_quotes, get_spans)
   
   add_count = cumsum(sapply(par_quotes, function(x) max(c(x,0), na.rm=T)))
   add_count = data.table::shift(add_count, 1, fill = 0)
   par_quotes = lapply(1:length(par_quotes), function(i) par_quotes[[i]] + add_count[i])
-  as.integer(unlist(par_quotes))
+  out = as.integer(unlist(par_quotes))
+  out[is_quote] = NA
+  out
 }
 
 get_spans <- function(quotes) {

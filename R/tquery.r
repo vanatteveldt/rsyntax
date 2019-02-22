@@ -158,6 +158,8 @@ safe_names <- function(tq, label_names=c()) {
 #'                function (a special version of the children function). 
 #' @param block   Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
 #'                but also don't want to 'label' it. Essentially, block is shorthand for using label and then removing the node afterwards. If block is TRUE, label has to be NA.
+#' @param window  Set the max token distance of the children/parents to the node. Has to be a numerical vector of length 2, where the first value is the max distance to the left, 
+#'                and the second value the max distance to the right. Default is c(Inf, Inf) meaning that no max distance is used.
 #'
 #' @details 
 #' Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
@@ -177,7 +179,7 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, recursive=F) {
+children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, recursive=F, window=c(Inf,Inf)) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   validate_label_name(label)
@@ -211,9 +213,9 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive)
+    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive, window=window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive, window=window)
   }
   
   
@@ -224,7 +226,7 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
 
 #' @rdname nested_nodes
 #' @export
-not_children <- function(..., g_id=NULL, depth=1, connected=F) {
+not_children <- function(..., g_id=NULL, depth=1, connected=F, window=c(Inf,Inf)) {
   label=NA
   req = T
   NOT = T
@@ -234,9 +236,9 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F) {
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
     if (any(sapply(l, is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   }
   
   
@@ -247,7 +249,7 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F) {
 
 #' @rdname nested_nodes
 #' @export
-parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F) {
+parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, window=c(Inf,Inf)) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   validate_label_name(label)
@@ -284,9 +286,9 @@ parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   }
   
   class(q) = c('tQueryParent', class(q))
@@ -295,7 +297,7 @@ parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=
 
 #' @rdname nested_nodes
 #' @export
-not_parents <- function(..., g_id=NULL, depth=1, connected=F) {
+not_parents <- function(..., g_id=NULL, depth=1, connected=F, window=c(Inf,Inf)) {
   label=NA
   req = T
   NOT = T
@@ -305,9 +307,9 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=F) {
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
     if (any(sapply(l, is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   }
   
   class(q) = c('tQueryParent', class(q))
@@ -317,18 +319,66 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=F) {
 
 #' @rdname nested_nodes
 #' @export
-fill <- function(..., g_id=NULL, depth=Inf, connected=F) {
+fill <- function(..., g_id=NULL, depth=Inf, connected=F, window=c(Inf,Inf)) {
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
     if (any(is_nested)) stop('Cannot use nested queries (children(), parents(), etc.) in fill()')
-    q = list(g_id=g_id, label='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=F, NOT=F, depth=depth, connected=connected)
+    q = list(g_id=g_id, label='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=F, NOT=F, depth=depth, connected=connected, window=window)
   } else {
-    q = list(g_id=g_id, label='fill', lookup =NULL, nested=NULL, level = 'children', req=F, NOT=F, depth=depth, connected=connected)
+    q = list(g_id=g_id, label='fill', lookup =NULL, nested=NULL, level = 'children', req=F, NOT=F, depth=depth, connected=connected, window=window)
   }
   
   class(q) = c('tQueryFill', class(q))
   q
 }
+
+
+#' Use OR search in tquery
+#' 
+#' @param ... 
+#'
+#' @return A list, to be used as input to \link{tquery}
+#' @export
+#'
+#' @examples
+#' tquery(OR(lemma = 'walk', POS='Noun'))
+OR <- function(...) {
+  l = list(lookup = list(...), boolean='OR')
+  class(l) = c(class(l), 'tokenLookup')
+  l
+}
+
+#' Use AND search in tquery
+#' 
+#' @param ... 
+#'
+#' @return A list, to be used as input to \link{tquery}
+#' @export
+#'
+#' @examples
+#' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
+AND <- function(...) {
+  l = list(lookup = list(...), boolean='AND')
+  class(l) = c(class(l), 'tokenLookup')
+  l
+}
+
+#' Use NOT search in tquery
+#' 
+#' @param ... 
+#'
+#' @return A list, to be used as input to \link{tquery}
+#' @export
+#'
+#' @examples
+#' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
+NOT <- function(...) {
+  l = list(lookup = list(...), boolean='NOT')
+  class(l) = c(class(l), 'tokenLookup')
+  l
+}
+
+
 

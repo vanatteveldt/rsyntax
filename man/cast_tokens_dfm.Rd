@@ -4,7 +4,8 @@
 \alias{cast_tokens_dfm}
 \title{Like cast_tokens, but instead returns the tokens as a quanteda document-feature matrix}
 \usage{
-cast_tokens_dfm(tokens, x, FUN, by, id, collapse_id = F, ...)
+cast_tokens_dfm(tokens, x, FUN, by, id, collapse_id = F, ...,
+  rm.na = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex with rsyntax annotations}

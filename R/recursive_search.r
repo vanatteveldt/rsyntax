@@ -129,6 +129,13 @@ select_tokens <- function(tokens, ids, q, block=NULL) {
     selection = subset(selection, select=c('.MATCH_ID', 'doc_id','sentence','.FILL_LEVEL','token_id'))
     data.table::setnames(selection, c('token_id','.FILL_LEVEL'), c(q$label, paste0(q$label, '_LEVEL')))
   }
+  
+  if (!identical(q$window, c(Inf,Inf))) {
+    dist = selection[[q$label]] - selection$.MATCH_ID
+    distfilter = dist > (-q$window[1]) & dist < q$window[2]
+    selection = selection[distfilter,]
+  }
+  
   selection
 }
 

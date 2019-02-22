@@ -46,7 +46,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
                          ignore_case = grepl('__N?R?F?I', .N), 
                          regex = grepl('__N?I?F?R', .N),
                          fixed = grepl('__N?R?I?F', .N))
-      result = tokens[list(.V), on=(.COLNAME), which=T, nomatch=0]
+      result = tokens[list(.V), on=(.COLNAME), which=T, nomatch=0, allow.cartesian=T]
     }
     if (is.null(i)) {
       if (boolean == 'NOT') result = if (length(result) > 0) (1:nrow(tokens))[-result] else 1:nrow(tokens)
@@ -100,50 +100,5 @@ prepare_terms <- function(x, terms, ignore_case=T, regex=F, fixed=F) {
       return(unique(x))
     }
   }
-}
-
-#' Use OR search in tquery
-#' 
-#' @param ... 
-#'
-#' @return A list, to be used as input to \link{tquery}
-#' @export
-#'
-#' @examples
-#' tquery(OR(lemma = 'walk', POS='Noun'))
-OR <- function(...) {
-  l = list(lookup = list(...), boolean='OR')
-  class(l) = c(class(l), 'tokenLookup')
-  l
-}
-
-#' Use AND search in tquery
-#' 
-#' @param ... 
-#'
-#' @return A list, to be used as input to \link{tquery}
-#' @export
-#'
-#' @examples
-#' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
-AND <- function(...) {
-  l = list(lookup = list(...), boolean='AND')
-  class(l) = c(class(l), 'tokenLookup')
-  l
-}
-
-#' Use NOT search in tquery
-#' 
-#' @param ... 
-#'
-#' @return A list, to be used as input to \link{tquery}
-#' @export
-#'
-#' @examples
-#' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
-NOT <- function(...) {
-  l = list(lookup = list(...), boolean='NOT')
-  class(l) = c(class(l), 'tokenLookup')
-  l
 }
 
