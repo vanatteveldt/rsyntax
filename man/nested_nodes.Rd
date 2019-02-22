@@ -10,16 +10,20 @@
 \title{Search for parents or children in tquery}
 \usage{
 children(..., g_id = NULL, label = NA, req = T, depth = 1,
-  connected = F, fill = T, block = F, recursive = F)
+  connected = F, fill = T, block = F, recursive = F,
+  window = c(Inf, Inf))
 
-not_children(..., g_id = NULL, depth = 1, connected = F)
+not_children(..., g_id = NULL, depth = 1, connected = F,
+  window = c(Inf, Inf))
 
 parents(..., g_id = NULL, label = NA, req = T, depth = 1,
-  connected = F, fill = T, block = F)
+  connected = F, fill = T, block = F, window = c(Inf, Inf))
 
-not_parents(..., g_id = NULL, depth = 1, connected = F)
+not_parents(..., g_id = NULL, depth = 1, connected = F,
+  window = c(Inf, Inf))
 
-fill(..., g_id = NULL, depth = Inf, connected = F)
+fill(..., g_id = NULL, depth = Inf, connected = F, window = c(Inf,
+  Inf))
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -54,6 +58,9 @@ function (a special version of the children function).}
 
 \item{block}{Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
 but also don't want to 'label' it. Essentially, block is shorthand for using label and then removing the node afterwards. If block is TRUE, label has to be NA.}
+
+\item{window}{Set the max token distance of the children/parents to the node. Has to be a numerical vector of length 2, where the first value is the max distance to the left, 
+and the second value the max distance to the right. Default is c(Inf, Inf) meaning that no max distance is used.}
 }
 \value{
 Should not be used outside of \link{find_nodes}

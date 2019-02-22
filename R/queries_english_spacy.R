@@ -97,7 +97,7 @@ spacy_tokenindex <- function(txt) {
 function(){
   sayverbs = c("tell", "show", "acknowledge", "admit", "affirm", "allege", "announce", "assert", "attest", "avow", "call", "claim", "comment", "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", "note", "post","predict", "proclaim", "promise", "reply", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "think","warn","write", "add")
   
-  txt = 'Bob does not drink wine and eat cheese alone'
+  txt = 'Bob does not consume wine and delicious cheese alone'
   spacy_tokenindex(txt) %>%
     plot_tree(token,pos)
   

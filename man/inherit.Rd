@@ -5,8 +5,7 @@
 \title{Have nodes with a certain relation inherit the position of their parent}
 \usage{
 inherit(.tokens, relation, take_fill = fill(), give_fill = fill(),
-  unpack = T, subset = NULL, subset_take_fill = NULL,
-  subset_give_fill = NULL, only_new = "relation", depth = Inf)
+  unpack = T, only_new = "relation", depth = Inf)
 }
 \arguments{
 \item{.tokens}{A tokenIndex}
@@ -18,12 +17,6 @@ inherit(.tokens, relation, take_fill = fill(), give_fill = fill(),
 \item{give_fill}{If TRUE, copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)}
 
 \item{unpack}{If TRUE, create separate branches for the parent and the node that inherits the parent position}
-
-\item{subset}{Optionally, a subset expression for selecting only specific nodes that have the relation}
-
-\item{subset_take_fill}{Optionally, a subset expression for the take_fill children}
-
-\item{subset_give_fill}{Optionally, a subset expression for the give_fill children}
 
 \item{only_new}{A character vector giving one or multiple column names that need to be unique for take_fill and give_fill}
 
