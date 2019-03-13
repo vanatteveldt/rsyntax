@@ -25,11 +25,28 @@ inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpac
   .tokens
 }
 
+#' Have a node adopt its parent's position
+#'
+#' This function is mainly used for removing conjunctions from dependency trees.
+#' 
+#' given a tquery that identfies a node labeled "origin", that has a parent labeled "target", 
+#' recursively have child adopt the parent's position (parent and relation column)
+#' and adopt parents fill nodes. only_new restricts adding fill nodes to relations that child
+#' does not already have. This seems to be a good heuristic for dealing with argument drop
+#'
+#' @param .tokens     A tokenIndex
+#' @param tq          A tquery. Needs to have a node labeled "origin" that has a parent labeled "target" 
+#' @param unpack      If TRUE, create separate branches for the parent and the node that inherits the parent position
+#' @param take_fill   If TRUE, give the node that will inherit the parent position a copy of the parent children (but only if it does not already have children with this relation; see only_new)
+#' @param give_fill   If TRUE, copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)
+#' @param only_new    A character vector giving one or multiple column names that need to be unique for take_fill and give_fill
+#' @param depth       Certain relations can be recursively nested (e.g. conjunction within conjunction). Depth specifies how far to inherit (by default infinite)
+#'
+#' @return
+#' @export
+#'
+#' @examples
 climb_tree <- function(.tokens, tq, unpack=T, take_fill=T, give_fill=T, only_new='relation', depth=Inf) {
-  ## given a node selection that identifies pairs of 'child' and 'parent', 
-  ## recursively have child adopt parent relation (parent and relation column)
-  ## and adopt parents fill nodes. only_new restricts adding fill nodes to relations that child
-  ## does not already have. This seems to be a good heuristic for dealing with argument drop
   i = 1
   
   .tokens = select_nodes(.tokens, tq, fill_only_first = F)
