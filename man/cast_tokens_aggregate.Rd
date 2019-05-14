@@ -23,6 +23,8 @@ if the id column contains text instead of unique codes, the collapse_id argument
 \item{collapse_id}{see id}
 
 \item{...}{Additional arguments passed to FUN}
+
+\item{rm.na}{drop NA's}
 }
 \value{
 a data.table

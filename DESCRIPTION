@@ -1,25 +1,28 @@
 Package: rsyntax
 Type: Package
-Title: R library to help dealing with syntactic structure
-Version: 0.1
-Date: 2015-10-17
-Author: Wouter van Atteveldt and Kasper Welbers
+Title: Extract Semantic Relations from Text by Querying and Reshaping Syntax
+Version: 0.1.0
+Date: 2019-05-14
+Author: Kasper Welbers and Wouter van Atteveldt
 Maintainer: Kasper Welbers <kasperwelbers@gmail.com>
-Depends:
+Depends: 
+    R (>= 3.2.0)
+Imports:
     igraph,
-    reshape2,
-    plyr,
-    colorspace,
     tidyselect,
+    methods,
     stringi,
     Matrix,
     digest,
     corpustools,
-    magrittr
-Imports:
-    data.table (>= 1.11.8),
+    magrittr,
+    data.table (>= 1.11.8)
 LazyData: true
-Description: R library to help dealing with syntactic structure
-License: MIT license
-RoxygenNote: 6.1.0
+Encoding: UTF-8
+Description: Various functions for querying and reshaping dependency trees, 
+    as for instance created with the spacyr, udpipe or coreNLP packages.
+    This enables the automatic extraction of usefull semantic relations from texts,
+    such as quotes (who said what) and clauses (who did what).
+License: GPL-3
+RoxygenNote: 6.1.1
 Suggests: testthat

@@ -15,9 +15,8 @@
 S3 print for tQuery class
 }
 \examples{
-q = tquery(lemma = .VIND_VERBS, 
-                   children(label = 'source', p_rel=.SUBJECT_REL),
-                   children(p_rel='vc', POS = c('C', 'comp'),
-                            children(label='quote', p_rel=.SUBJECT_BODY)))
+q = tquery(label='quote',
+           children(relation='nmod:according_to', label='source',
+                    children(label='verb')))
 q 
 }

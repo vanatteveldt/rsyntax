@@ -1,17 +1,19 @@
+pipe_tr <- function() intToUtf8(9492)
+pipe_tb <- function() intToUtf8(9474)
+pipe_trb <- function() intToUtf8(9500)
+
 abbrev_str <- function(string, maxlen) {
   if (nchar(string) > maxlen) string = paste(stringi::stri_sub(string, 0, maxlen-3), '...', sep='')
   string
 }
 
-
-
-recprint <- function(x, pd, level=1, connector='└', pipe_level=c(), max_char=getOption('tQuery_print_max_char', default=30), ...) {
+recprint <- function(x, pd, level=1, connector=pipe_tr(), pipe_level=c(), max_char=getOption('tQuery_print_max_char', default=30), ...) {
   #cat(level, ': ', sep='')
   if (level > 0) {
     type = if('level' %in% names(x)) ifelse(x$level == 'children', ' c', ' p') else '  n'
     
     level_space = rep('  ', level-1)
-    level_space[pipe_level] = '│ '
+    level_space[pipe_level] = sprintf('%s ', pipe_tb())
     text = paste(paste(level_space, collapse=''), connector, type, ' ', sep='')
     if (nchar(text) < pd[1]) text = paste(text, paste(rep(' ', pd[1] - nchar(text)), collapse=''), sep='')
     cat(text, sep='')
@@ -48,9 +50,9 @@ recprint <- function(x, pd, level=1, connector='└', pipe_level=c(), max_char=g
   for (i in seq_along(x$nested)) {
     pipe_level = if (level < 2) pipe_level else c(pipe_level, level)
     if (i == length(x$nested))
-      recprint(x$nested[[i]], pd, level+1, '└', pipe_level=pipe_level, max_char=max_char)
+      recprint(x$nested[[i]], pd, level+1, pipe_tr(), pipe_level=pipe_level, max_char=max_char)
     else
-      recprint(x$nested[[i]], pd, level+1, '├', pipe_level=pipe_level, max_char=max_char)
+      recprint(x$nested[[i]], pd, level+1, pipe_trb(), pipe_level=pipe_level, max_char=max_char)
   }
 }
 
@@ -61,7 +63,7 @@ rec_lookup_print <- function(l, first, max_char, op = 'AND', level=1) {
   }
   for (i in seq_along(l)) {
     if (is.null(l[[i]])) next
-    if (is(l[[i]], 'tokenLookup')) {
+    if (methods::is(l[[i]], 'tokenLookup')) {
       rec_lookup_print(l[[i]]$lookup, first=T, max_char, l[[i]]$boolean, level=level+1)
       if (!first) cat(', ') else cat(' ')
       first = F
@@ -93,10 +95,9 @@ get_print_data <- function(x, d=c(0,0)) {
 #'
 #' @method print tQuery
 #' @examples
-#' q = tquery(lemma = .VIND_VERBS, 
-#'                    children(label = 'source', p_rel=.SUBJECT_REL),
-#'                    children(p_rel='vc', POS = c('C', 'comp'),
-#'                             children(label='quote', p_rel=.SUBJECT_BODY)))
+#' q = tquery(label='quote',
+#'            children(relation='nmod:according_to', label='source',
+#'                     children(label='verb')))
 #' q 
 #' @export
 print.tQuery <- function(x, ...) {
@@ -107,29 +108,3 @@ print.tQuery <- function(x, ...) {
   #if (!is.na(x$label) &! x$label == '') cat(x$label, '\n', sep = '') else cat('...', sep='')
   recprint(x, pd, connector='', ...)
 }
-
-#' S3 print for tReshape class
-#'
-#' @param x a tReshape
-#' @param ... not used
-#'
-#' @method print tReshape
-#' @examples
-#' r = treshape(bypass = 'conj', remove='cc', link_children='nsubj')
-#' r
-#' @export
-print.tReshape <- function(x, ...) {
-  msg = c()
-  for (i in seq_along(x)){
-    if (!is.null(x[[i]])) {
-      if (is.logical(x[[i]])) {
-        if (!x[[i]]) msg = c(msg, paste(names(x)[i], '= FALSE'))
-      } else {
-        msg = c(msg, paste(names(x)[i], paste(x[[i]], collapse=', '), sep=':\t'))
-      }
-    }
-  }  
-  cat(paste(msg, collapse='\n'))
-}
-
-

@@ -49,19 +49,3 @@ construct_triples <- function(tokens, concept_column="concept") {
   
   merge(sources, merge(subjects, objects, all=T), all=T)
 }
-
-#' Create a tokens dataframe from a CoreNLP annotation object
-#'
-#' @param a coreNLP annotation as returned by coreNLP::annotate*
-#'
-#' @return a data frame compatible with getclauses / getquotes
-#' @export
-tokens_from_coreNLP <- function(a) {
-  tokens = coreNLP::getToken(a)
-  deps = coreNLP::getDependency(a, type="CCprocessed")
-  deps = data.frame(sentence=deps$sentence, id=deps$dependentIdx, parent=deps$governorIdx, relation=deps$type)
-  tokens = merge(tokens, deps)
-  tokens$pos1 = substr(tokens$POS, 1, 1)
-  tokens = plyr::arrange(tokens, sentence, id)
-  unique_ids(tokens, context=tokens$sentence)
-}

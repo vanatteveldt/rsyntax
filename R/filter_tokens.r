@@ -12,13 +12,13 @@ filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BL
   .BLOCK = get_long_ids(.BLOCK)
   if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]], .BLOCK[[3]]), on=c('doc_id','sentence','token_id'), which=T])
   if (!is.null(i)) {
-    i = na.omit(i)
+    i = stats::na.omit(i)
     tokens = tokens[as.numeric(i),]  
   }
   
   i = lookup_tokens(tokens, lookup, use_index=use_index)
   if (!is.null(i)) {
-    i = na.omit(i)
+    i = stats::na.omit(i)
     tokens = tokens[as.numeric(i),]  
   }
   
@@ -34,7 +34,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
     .V = lookup[[lookup_i]]
     if (is.null(.V)) next
     
-    if (is(.V, 'tokenLookup')) {
+    if (methods::is(.V, 'tokenLookup')) {
       result = lookup_tokens(tokens, .V$lookup, boolean=.V$boolean)
       if (is.null(result)) next
     } else {
@@ -61,7 +61,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
 }
 
 get_full_terms <- function(x, terms, batchsize=25, ignore_case=T) {
-  terms = if (is(terms, 'factor')) levels(terms) else unique(terms)
+  terms = if (methods::is(terms, 'factor')) levels(terms) else unique(terms)
   if (length(x) > 1) { ## if there are multiple terms, make batches of terms and turn each batch into a single regex
     x = split(as.character(x), ceiling(seq_along(x)/batchsize))
     x = sapply(x, stringi::stri_paste, collapse='|')

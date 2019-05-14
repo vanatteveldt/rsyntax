@@ -8,7 +8,7 @@ plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
   sentence = NULL, annotation = NULL, pdf_file = NULL,
   allign_text = T, ignore_rel = NULL, all_lower = F,
   all_abbrev = NULL, textsize = 1, spacing = 1, use_color = T,
-  max_curve = 0.3, palette = terrain.colors)
+  max_curve = 0.3, palette = grDevices::terrain.colors)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -20,6 +20,10 @@ plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
 \item{doc_id}{Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document.}
 
 \item{sentence}{Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well.}
+
+\item{annotation}{Optionally, a column with an rsyntax annotation, to add boxes around the annotated nodes.}
+
+\item{pdf_file}{Directly save the plot as a pdf file}
 
 \item{allign_text}{If TRUE (default) allign text (the columns specified in ...) in a single horizontal line at the bottom, instead of following the different levels in the tree}
 

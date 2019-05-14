@@ -23,7 +23,7 @@ token_family(tokens, ids, level = "children", depth = Inf,
 
 \item{replace}{If TRUE, re-use nodes in deep_family()}
 
-\item{show_level}{}
+\item{show_level}{If TRUE, add a column showing the level (depth in tree) of a node.}
 
 \item{lookup}{filter tokens by lookup values. Will be applied at each level (if depth > 1)}
 

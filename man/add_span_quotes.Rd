@@ -26,6 +26,8 @@ add_span_quotes(tokens, text_col, quote_col = "quotes",
 \item{space_col}{If par_col is not used, paragraphs will be identified based on hard enters in the text_col. In some parsers, there is an additional "space" column that hold the whitespace and linebreaks, which can be included here.}
 
 \item{lag_sentences}{The max number of sentences looked backwards to find source candidates. Default is 1, which means the source candidates have to occur in the sentence where the quote begins (lag = 0) or the sentence before that (lag = 1)}
+
+\item{copy}{If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)}
 }
 \value{
 the tokenIndex

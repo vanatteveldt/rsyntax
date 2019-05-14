@@ -6,6 +6,7 @@
 #' @param ids      A data.table with global ids (doc_id,sentence,token_id). 
 #' @param ql       a list of queriers (possibly the list nested in another query, or containing nested queries)
 #' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
+#' @param fill     Include or exclude fill nodes
 rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
   .DROP = NULL
   out_req = list()
@@ -13,7 +14,7 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
   for (i in seq_along(ql)) {
     q = ql[[i]]
     #if (only_req && !q$req) next   ## only look for required nodes. unrequired nodes are added afterwards with add_unrequired()
-    if (!fill && is(q, 'tQueryFill')) next   
+    if (!fill && methods::is(q, 'tQueryFill')) next   
     
     if (is.na(q$label)) {
       q$label = paste('.DROP', i) ## if label is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
@@ -159,7 +160,7 @@ select_token_family <- function(tokens, ids, q, block) {
 #' @param minimal  If TRUE, only return doc_id, sentence, token_id and parent
 #' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
 #' @param replace  If TRUE, re-use nodes in deep_family() 
-#' @param show_level 
+#' @param show_level If TRUE, add a column showing the level (depth in tree) of a node.
 #' @param lookup   filter tokens by lookup values. Will be applied at each level (if depth > 1) 
 #' @param g_id     filter tokens by id. See lookup
 token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F, show_level=F, lookup=NULL, g_id=NULL) {
@@ -203,6 +204,8 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
 #' @param replace  If TRUE, re-use nodes 
 #' @param show_level If TRUE, return a column with the level at which the node was found (e.g., as a parent, grantparent, etc.)
 #' @param only_new If TRUE, only return new found family. Otherwise, the id input is included as well.
+#' @param lookup   Optional lookup filter
+#' @param g_id     Optional filter with specific global token ids
 deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F, show_level=F, only_new=F, lookup=NULL, g_id=NULL) {
   id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed (don't think this actually requires reallocation).
   id_list[[1]] = id

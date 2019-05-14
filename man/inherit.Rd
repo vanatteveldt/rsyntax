@@ -5,7 +5,7 @@
 \title{Have nodes with a certain relation inherit the position of their parent}
 \usage{
 inherit(.tokens, relation, take_fill = fill(), give_fill = fill(),
-  unpack = T, only_new = "relation", depth = Inf)
+  unpack = T, only_new = "relation")
 }
 \arguments{
 \item{.tokens}{A tokenIndex}
@@ -19,8 +19,6 @@ inherit(.tokens, relation, take_fill = fill(), give_fill = fill(),
 \item{unpack}{If TRUE, create separate branches for the parent and the node that inherits the parent position}
 
 \item{only_new}{A character vector giving one or multiple column names that need to be unique for take_fill and give_fill}
-
-\item{depth}{Certain relations can be recursively nested (e.g. conjunction within conjunction). Depth specifies how far to inherit (by default infinite)}
 }
 \description{
 This is in particular usefull for removing conjunctions

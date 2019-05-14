@@ -1,4 +1,5 @@
 melt_nodes_list <- function(nodes, fill_only_first=T) {
+  .ROLE = NULL; token_id = NULL; .FILL_LEVEL = NULL
   ## the nodes created in find_nodes have a weird structure, which is only usefull for efficiently merging data.tables
   ## here we melt the nodes to a more convenient format
   
@@ -43,13 +44,13 @@ melt_nodes_list <- function(nodes, fill_only_first=T) {
 
 #' Get ids in various forms to extract token_ids
 #'
-#' @param ... Either a data.table with the columns doc_id, sentence and token_id, or the output of \link{find_nodes}
+#' @param ... Either a data.table with the columns doc_id, sentence and token_id, or the output of \link{apply_queries}
+#' @param select    If not null, a character vector for selecting column names
 #' @param with_fill If TRUE, include the ids of the fill nodes
-#' @param with_parents if TRUE, include the ids of the parent nodes
 #'
 #' @return A data.table with the columns doc_id, sentence and token_id
 #' @export
-get_long_ids <- function(..., names=NULL, with_fill=F) {
+get_long_ids <- function(..., select=NULL, with_fill=F) {
   l = list(...)
   
   len = length(l)
@@ -57,11 +58,11 @@ get_long_ids <- function(..., names=NULL, with_fill=F) {
   for (i in 1:len) {
     d = l[[i]]
     if (is.null(d)) next
-    if (is(d, 'data.table')) {
+    if (methods::is(d, 'data.table')) {
       if (!'token_id' %in% colnames(d)) {
-        if (!is.null(names)) {
-          names = setdiff(names, '.TQUERY')
-          d = subset(d, select = colnames(d) %in% union('doc_id', 'sentence', names))
+        if (!is.null(select)) {
+          select = setdiff(select, '.TQUERY')
+          d = subset(d, select = colnames(d) %in% union(c('doc_id', 'sentence'), select))
         } else {
           d = subset(d, select = colnames(d) %in% setdiff(colnames(d), '.TQUERY'))
         }
@@ -84,7 +85,7 @@ get_long_ids <- function(..., names=NULL, with_fill=F) {
       out[[i]] = d[,c('doc_id','sentence','token_id')]
       next
     }
-    if (is(d, 'list')) {
+    if (methods::is(d, 'list')) {
       out[[i]] = get_long_ids(d)
     }
     stop('Not a valid input for get_long_ids')

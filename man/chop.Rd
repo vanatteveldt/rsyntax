@@ -7,7 +7,7 @@
 chop(.tokens, ...)
 }
 \arguments{
-\item{.tokens}{}
+\item{.tokens}{A tokenIndex}
 
 \item{...}{Arguments passed to tquery. For instance, relation = 'punct' cuts off all punctuation dependencies (in universal dependencies)}
 }

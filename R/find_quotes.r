@@ -22,6 +22,7 @@
 #' @param par_col       If available in the parser output, the column with the paragraph id. We can assume that quotes do not span across paragraphs. By using this argument, quotes that are not properly closed (uneven number of quotes) will stop at the end of the paragraph 
 #' @param space_col     If par_col is not used, paragraphs will be identified based on hard enters in the text_col. In some parsers, there is an additional "space" column that hold the whitespace and linebreaks, which can be included here. 
 #' @param lag_sentences The max number of sentences looked backwards to find source candidates. Default is 1, which means the source candidates have to occur in the sentence where the quote begins (lag = 0) or the sentence before that (lag = 1) 
+#' @param copy          If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)
 #'
 #' @return the tokenIndex
 #' @export
@@ -162,9 +163,13 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   tokens
 }
 
+smartquotes <- function() intToUtf8(c(8220,8221,8222))
+
 get_quote_positions <- function(tokens, text_col, par_col=NULL, space_col=NULL) {
   par = get_paragraph(tokens, text_col, par_col, space_col)
-  is_quote = grepl('[“”\"„]', tokens[[text_col]])
+  
+  is_quote_regex = sprintf('[%s\"]', smartquotes())
+  is_quote = grepl(is_quote_regex, tokens[[text_col]])
   is_quote[c(F,is_quote[-length(is_quote)])] = F ## to ignore double quotes after reshaping
   par_quotes = split(is_quote, par)
   par_quotes = lapply(par_quotes, get_spans)
@@ -198,27 +203,4 @@ get_paragraph <- function(tokens, text_col, par_col, space_col) {
     par = cumsum(is_new)
   } else par = tokens[[par_col]]
   par
-}
-
-function(){
-  
-  library(tokenbrowser)
-  
-  tokens = read.csv('~/projects/bron_extractie_demo/tokens.csv')
-  tokens = annotate(tokens, alpino_quote_queries(), column='quotes')
-  
-  tqueries = list(span1 = tquery(POS = 'verb*', lemma = rsyntax:::DUTCH_SAY_VERBS, children(relation='su', label='source')),
-                  span2 = tquery(POS = 'verb*', children(relation='su', label='source')))
-  tokens = add_span_quotes(tokens, 'token', quote_col = 'quotes', source_val = 'source', quote_val = 'quote', tqueries=tqueries)
-  
-  url = syntax_reader(tokens, 'quotes', 'source', 'quote')
-  view_reader(url)
-  browseURL(url)
-  url = syntax_reader(tokens, 'quotes', 'source', 'quote', filename = '~/Documents/bronherkenning.html')
-  
-  
-  library(DT)
-  datatable(tokens, selection = list(mode = 'multiple', select=c(1,2,3)))
-  
-  View(tokens)
 }

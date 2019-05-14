@@ -19,7 +19,6 @@
 #' @format data.frame
 'tokens_corenlp'
 
-
 #' Dutch lemma
 #'
 #' Various categories of lemma, for use in syntax queries

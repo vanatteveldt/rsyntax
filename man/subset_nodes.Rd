@@ -10,6 +10,8 @@ subset_nodes(.tokens, subset, copy = T)
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}
 
 \item{subset}{A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.}
+
+\item{copy}{If TRUE, make a deep copy of .tokens. Use if output does not overwrite .tokens}
 }
 \description{
 Enables more control in reshape operations

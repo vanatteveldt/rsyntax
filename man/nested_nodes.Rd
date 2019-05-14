@@ -10,8 +10,7 @@
 \title{Search for parents or children in tquery}
 \usage{
 children(..., g_id = NULL, label = NA, req = T, depth = 1,
-  connected = F, fill = T, block = F, recursive = F,
-  window = c(Inf, Inf))
+  connected = F, fill = T, block = F, window = c(Inf, Inf))
 
 not_children(..., g_id = NULL, depth = 1, connected = F,
   window = c(Inf, Inf))
@@ -63,7 +62,7 @@ but also don't want to 'label' it. Essentially, block is shorthand for using lab
 and the second value the max distance to the right. Default is c(Inf, Inf) meaning that no max distance is used.}
 }
 \value{
-Should not be used outside of \link{find_nodes}
+Should not be used outside of \link{tquery}
 }
 \description{
 Should only be used inside of the \link{tquery} function.

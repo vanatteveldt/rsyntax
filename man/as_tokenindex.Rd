@@ -23,7 +23,7 @@ as_tokenindex(tokens, doc_id = c("doc_id", "document_id"),
 \item{relation}{candidate names for the relation column}
 }
 \description{
-Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
+Creates a tokenIndex data.table. 
 Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent, relation) are present.
 The names of these columns must be one of the values specified in the respective arguments.
 

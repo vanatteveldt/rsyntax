@@ -1,5 +1,5 @@
 find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T, melt=T) {
-  .MATCH_ID = NULL; .DROP = NULL ## declare data.table bindings
+  .MATCH_ID = NULL; .DROP = NULL; .ID = NULL ## declare data.table bindings
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
   nodes = filter_tokens(tokens, lookup=tquery$lookup, .G_ID=tquery$g_id, .BLOCK=block, use_index=use_index)
@@ -25,6 +25,7 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
 }
 
 find_nested <- function(tokens, nodes, tquery, block, fill) {
+  .ID = NULL; .MATCH_ID = NULL
   nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill)
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
@@ -43,8 +44,7 @@ find_nested <- function(tokens, nodes, tquery, block, fill) {
 }
 
 add_fill <- function(tokens, nodes, tquery, block, level=1) {
-  #is_req = sapply(tquery$nested, function(x) x$req)
-  is_fill = sapply(tquery$nested, is, 'tQueryFill')
+  is_fill = sapply(tquery$nested, methods::is, 'tQueryFill')
   
   if (any(!is_fill)) {
     for (tq in tquery$nested[!is_fill]) {
@@ -58,7 +58,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     } else match_id = tquery$label
     if (!match_id %in% colnames(nodes)) return(nodes)
     ids = subset(nodes, select = c('doc_id','sentence',match_id))
-    ids = unique(na.omit(ids))
+    ids = unique(stats::na.omit(ids))
     add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))

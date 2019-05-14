@@ -26,6 +26,10 @@ deep_family(tokens, id, level, depth, minimal = F, block = NULL,
 \item{show_level}{If TRUE, return a column with the level at which the node was found (e.g., as a parent, grantparent, etc.)}
 
 \item{only_new}{If TRUE, only return new found family. Otherwise, the id input is included as well.}
+
+\item{lookup}{Optional lookup filter}
+
+\item{g_id}{Optional filter with specific global token ids}
 }
 \description{
 Get the parents or children of a set of ids

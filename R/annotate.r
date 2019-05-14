@@ -19,7 +19,7 @@
 #' @export
 annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T) {
   queries = list(...)
-  is_tquery = sapply(queries, is, 'tQuery')
+  is_tquery = sapply(queries, methods::is, 'tQuery')
   queries = c(queries[is_tquery], unlist(queries[!is_tquery], recursive = F))
   
   
@@ -65,11 +65,13 @@ annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block
 #' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
 #' 
 #' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param nodes      A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.
+#' @param nodes      A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
 #' @param column     The name of the column in which the annotations are added. The unique ids are added as [column]_id
 #'
 #' @export
 annotate_nodes <- function(tokens, nodes, column) {
+  .FILL_LEVEL = NULL
+  
   tokens = as_tokenindex(tokens)
   if (nrow(nodes) == 0) stop('Cannot annotate nodes, because no nodes are provided')
   if (ncol(nodes) <= 3) stop('Cannot annotate nodes, because no nodes are specified (using the label parameter in find_nodes() or tquery())')
@@ -116,10 +118,11 @@ annotate_nodes <- function(tokens, nodes, column) {
  
 }
 
+
 #' Transform the nodes to long format and match with token data
 #'
 #' @param tokens     A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param nodes      A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.
+#' @param nodes      A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
 #' @param use        Optionally, specify which columns from nodes to add. Other than convenient, this is slighly different 
 #'                   from subsetting the columns in 'nodes' beforehand if fill is TRUE. When the children are collected,
 #'                   the ids from the not-used columns are still blocked (see 'block')
@@ -141,6 +144,7 @@ get_nodes <- function(tokens, nodes, use=NULL, token_cols=c('token')) {
   
 
 prepare_nodes <- function(tokens, nodes, use=NULL) {
+  .ROLE = NULL
   #.NODES = data.table::copy(nodes)
   ##if (unique_fill) {
   ##  print('wtf')

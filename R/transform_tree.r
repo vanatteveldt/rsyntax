@@ -79,7 +79,7 @@ unpack_bypass <- function(tokens, bypass, link_children, only_first_level=T, cop
         add = subset(add, subset=add$.CONJ_LEVEL > 0, select=colnames(tokens))
       
         add = as_tokenindex(add)
-        fam = token_family(tokens, id = unique(add[,c('doc_id','sentence','token_id')]), minimal=F, 
+        fam = token_family(tokens, ids = unique(add[,c('doc_id','sentence','token_id')]), minimal=F, 
                           level='children', depth = Inf)
 
         largest_id = max(nchar(unique(tokens$token_id)))

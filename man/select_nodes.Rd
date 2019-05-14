@@ -4,7 +4,8 @@
 \alias{select_nodes}
 \title{Apply tquery to initiate reshape operations}
 \usage{
-select_nodes(tokens, tquery, fill = T, fill_only_first = T)
+select_nodes(tokens, tquery, fill = T, fill_only_first = T,
+  .one_per_sentence = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -14,6 +15,11 @@ select_nodes(tokens, tquery, fill = T, fill_only_first = T)
 \item{fill}{Logical, should fill be used?}
 
 \item{fill_only_first}{Logical, should a node only be filled once, with the nearest (first) labeled node?}
+
+\item{.one_per_sentence}{If true, only the first match in each sentence is used. This is currently used internally in the climb_tree function.}
+}
+\value{
+A tokenIndex with a .nodes attribute, that enables the use of reshape operations on the selected nodes
 }
 \description{
 Apply tquery to initiate reshape operations

@@ -1,7 +1,7 @@
 #' Prepare a tokenIndex
 #' 
 #' @description
-#' Creates a tokenIndex data.table, that is required to use \link{find_nodes}. 
+#' Creates a tokenIndex data.table. 
 #' Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent, relation) are present.
 #' The names of these columns must be one of the values specified in the respective arguments.
 #' 
@@ -22,7 +22,7 @@
 #'
 #' @export
 as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel')) {
-  new_index = !is(tokens, 'tokenIndex')
+  new_index = !methods::is(tokens, 'tokenIndex')
 
   for (cols_obj in c('doc_id','sentence','token_id','parent','relation')) {
     cols = get(cols_obj)
@@ -32,7 +32,7 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
     assign(cols_obj, value = col)
   }
   
-  if (!is(tokens, 'data.table')) {
+  if (!methods::is(tokens, 'data.table')) {
     tokens = data.table::data.table(tokens)
     data.table::setnames(tokens, old = c(doc_id, sentence, token_id, parent, relation), new=c('doc_id','sentence','token_id','parent', 'relation'))
   } else {
@@ -42,7 +42,7 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
     }
   }
   
-  if (is(tokens$token_id, 'numeric') && is(tokens$parent, 'numeric')) {
+  if (methods::is(tokens$token_id, 'numeric') && methods::is(tokens$parent, 'numeric')) {
     tokens$token_id = as.numeric(tokens$token_id)   ## token_id and parent need to be identical (not integer vs numeric)
     tokens$parent = as.numeric(tokens$parent)
   } else {
@@ -57,7 +57,7 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
     levels(tokens$relation) = union(levels(tokens$relation), 'ROOT')
     tokens$relation[is.na(tokens$parent)] = 'ROOT'
   }
-  
+
   has_keys = data.table::key(tokens)
   if (!identical(has_keys, c('doc_id','sentence','token_id'))) data.table::setkeyv(tokens, c('doc_id','sentence','token_id'))
   has_indices = data.table::indices(tokens)
@@ -73,7 +73,8 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
 }
 
 fix_missing_parents <- function(tokens, warn=T) {
-  parent_ids = na.omit(unique(tokens[,c('doc_id','sentence','parent')]))
+  parent = NULL; relation = NULL
+  parent_ids = stats::na.omit(unique(tokens[,c('doc_id','sentence','parent')]))
   data.table::setnames(parent_ids, old='parent', new='token_id')
   missing_parents = parent_ids[!tokens, on=c('doc_id','sentence','token_id')]
   if (warn && nrow(missing_parents) > 0) warning(sprintf('There are %s tokens with missing parents. These have now been made roots (parent = NA, relation="ROOT")', nrow(missing_parents)))

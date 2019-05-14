@@ -1,18 +1,20 @@
 #' Apply tquery to initiate reshape operations
 #'
-#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param tquery      A \link{tquery} that selects and labels the nodes that are used in the reshape operations
-#' @param fill        Logical, should fill be used?
-#' @param fill_only_first  Logical, should a node only be filled once, with the nearest (first) labeled node?
-#'
-#' @return
+#' @param tokens            A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param tquery            A \link{tquery} that selects and labels the nodes that are used in the reshape operations
+#' @param fill              Logical, should fill be used?
+#' @param fill_only_first   Logical, should a node only be filled once, with the nearest (first) labeled node?
+#' @param .one_per_sentence If true, only the first match in each sentence is used. This is currently used internally in the climb_tree function.
+#'                        
+#' @return A tokenIndex with a .nodes attribute, that enables the use of reshape operations on the selected nodes
 #' @export
-select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T){
+select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sentence=F){
   ## fill mode: all, only_first, 
   tokens = as_tokenindex(tokens)
   nodes = find_nodes(tokens, tquery, fill = F, melt = F)
-  
+
   if (!is.null(nodes)) {
+    if (.one_per_sentence) nodes = nodes[!duplicated(nodes, by=c('doc_id','sentence')),]
     if (fill) {
       if (fill_only_first) {
         ids = unique(add_fill(tokens, nodes, tquery, block=nodes))
@@ -69,6 +71,7 @@ unselect_nodes <- function(.tokens) {
 #'
 #' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
 #' @param subset  A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
+#' @param copy    If TRUE, make a deep copy of .tokens. Use if output does not overwrite .tokens
 #'
 #' @export
 subset_nodes <- function(.tokens, subset, copy=T) {
@@ -169,7 +172,7 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
   }
   
   drop_ids = .nodes$nodes[rm_subset, c('doc_id','sentence',node), with=F]
-  drop_ids = na.omit(drop_ids)
+  drop_ids = stats::na.omit(drop_ids)
   if (nrow(drop_ids) > 0) {
     data.table::setnames(drop_ids, old=node, new='token_id')
     .tokens = .tokens[!drop_ids, on=c('doc_id','sentence','token_id')]
@@ -219,7 +222,7 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
   
   if (!is.null(rm_subset)) {
     if (!any(rm_subset)) return(.nodes) ## if there are no nodes that meet the rm_subset condition, nothing is removed
-    node_ids = unique(na.omit(node_ids[rm_subset]))
+    node_ids = unique(stats::na.omit(node_ids[rm_subset]))
     fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0, allow.cartesian=T]
   }
   if (nrow(fill_nodes) == 0) return(.tokens)
@@ -247,9 +250,11 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
 #' @param keep_relation    If FALSE, remove relation (making node a root)
 #' @param copy_fill        If TRUE, also copy the fill
 #' @param subset_fill      A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to copy only verbs
+#' @param only_new         If TRUE, direct fill children will only be copied to to_node if it does not already have nodes of this relation. This is a good heuristic for dealing with argument drop. 
 #'
 #' @export
 copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
+  parent = NULL; relation = NULL
   
   .nodes = .nodes_from_attr(.tokens)  
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -321,6 +326,7 @@ copy_fill <- function(.tokens, from_node, to_node, subset=NULL, subset_fill=NULL
 }
 
 do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
+  .NEW_ID = NULL; token_id = NULL; parent = NULL; .ROLE = NULL
   ## here from_node and to_node must already be characters, and subset and subset_fill must already be logical vectors (or NULL)
   
   if (nrow(fill_nodes) == 0) return(.tokens)
@@ -366,7 +372,7 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
   match_id = fill_nodes[,c('doc_id','sentence','token_id','.ID','.NEW_ID')]
   parent_index = merge(parent_index, match_id, by.x=c('doc_id','sentence','parent','.ID'), by.y=c('doc_id','sentence','token_id','.ID'), allow.cartesian=T)
   .NEW_PARENT = rep(NA, nrow(fill_nodes))
-  parent_index = na.omit(parent_index)
+  parent_index = stats::na.omit(parent_index)
   .NEW_PARENT[parent_index$.I] = parent_index$.NEW_ID
   
   fill_nodes[, token_id := .NEW_ID]
@@ -388,6 +394,8 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
 }
 
 remove_isolate_fill <- function(fill_nodes) {
+  parent = NULL
+  
   iso = fill_nodes[is.na(parent),] ## removes isolates, which can result from subsetting or using only_new
   fill_nodes = fill_nodes[!is.na(parent),]
   while (nrow(iso) > 0) {
@@ -467,6 +475,8 @@ increment_sub_id <- function(x) {
 }
 
 add_sub_id <- function(.tokens, ids) {
+  token_id = NULL
+  
   .EXISTS = NULL
   ## ids should be a data.table with the first three columns being: doc_id, sentence, token_id
   ids = data.table::copy(ids)

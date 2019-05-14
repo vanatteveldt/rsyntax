@@ -5,7 +5,7 @@
 #' To find nodes you can use named arguments, where the names are column names (in the data.table on which the
 #' queries will be used) and the values are vectors with lookup values. 
 #' 
-#' Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
+#' Children or parents of nodes can be queried by passing the \link{children} or \link{parents} function as (named or unnamed) arguments.
 #' These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
 #'
 #' The fill() function (also see fill argument) can be nested to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
@@ -64,7 +64,7 @@ tquery <- function(..., g_id=NULL, label=NA, fill=T, block=F) {
     label = 'BLOCK'
   }
   
-  is_fill = if (length(l) > 0) sapply(l, is, 'tQueryFill') else c()
+  is_fill = if (length(l) > 0) sapply(l, methods::is, 'tQueryFill') else c()
   if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
   if (any(is_fill)) {
     if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
@@ -78,8 +78,8 @@ tquery <- function(..., g_id=NULL, label=NA, fill=T, block=F) {
 
   
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild') | sapply(l, is, 'tQueryFill') 
-    for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
+    is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild') | sapply(l, methods::is, 'tQueryFill') 
+    for (fill_i in which(sapply(l, methods::is, 'tQueryFill'))) {
       if (!is.na(label)) {
         l[[fill_i]]$label = paste(label, 'FILL', sep='_')
       } else {
@@ -172,14 +172,14 @@ safe_names <- function(tq, label_names=c()) {
 #' If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
 #' Multiple flags can be combined, such as lemma__RI, or lemma__IR  (order of flags is irrelevant)
 #' 
-#' @return Should not be used outside of \link{find_nodes}
+#' @return Should not be used outside of \link{tquery}
 #' @name nested_nodes
 #' @rdname nested_nodes
 NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, recursive=F, window=c(Inf,Inf)) {
+children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, window=c(Inf,Inf)) {
   NOT = F
   if (NOT && !req) stop('cannot combine NOT=T and req=F')
   validate_label_name(label)
@@ -191,7 +191,7 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
     label = 'BLOCK'
   }
   
-  is_fill = if (length(l) > 0) sapply(l, is, 'tQueryFill') else c()
+  is_fill = if (length(l) > 0) sapply(l, methods::is, 'tQueryFill') else c()
   if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
   if (any(is_fill)) {
     if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
@@ -204,8 +204,8 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
   }
  
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill') 
-    for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
+    is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill') 
+    for (fill_i in which(sapply(l, methods::is, 'tQueryFill'))) {
       if (!is.na(label)) {
         l[[fill_i]]$label = paste(label, 'FILL', sep='_')
       } else {
@@ -213,9 +213,9 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive, window=window)
+    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=F, window=window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=recursive, window=window)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=F, window=window)
   }
   
   
@@ -234,8 +234,8 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F, window=c(Inf,Inf)
   
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
-    if (any(sapply(l, is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
+    is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
+    if (any(sapply(l, methods::is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
     q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   } else {
     q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
@@ -263,7 +263,7 @@ parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=
   }
 
   
-  is_fill = if (length(l) > 0) sapply(l, is, 'tQueryFill') else c()
+  is_fill = if (length(l) > 0) sapply(l, methods::is, 'tQueryFill') else c()
   if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
   if (any(is_fill)) {
     if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
@@ -277,8 +277,8 @@ parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=
   
 
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
-    for (fill_i in which(sapply(l, is, 'tQueryFill'))) {
+    is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
+    for (fill_i in which(sapply(l, methods::is, 'tQueryFill'))) {
       if (!is.na(label)) {
         l[[fill_i]]$label = paste(label, 'FILL', sep='_')
       } else {
@@ -305,8 +305,8 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=F, window=c(Inf,Inf))
   
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
-    if (any(sapply(l, is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
+    is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
+    if (any(sapply(l, methods::is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
     q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
   } else {
     q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, window=window)
@@ -323,7 +323,7 @@ fill <- function(..., g_id=NULL, depth=Inf, connected=F, window=c(Inf,Inf)) {
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
-    is_nested = sapply(l, is, 'tQueryParent') | sapply(l, is, 'tQueryChild')  | sapply(l, is, 'tQueryFill')
+    is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
     if (any(is_nested)) stop('Cannot use nested queries (children(), parents(), etc.) in fill()')
     q = list(g_id=g_id, label='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=F, NOT=F, depth=depth, connected=connected, window=window)
   } else {
@@ -337,7 +337,7 @@ fill <- function(..., g_id=NULL, depth=Inf, connected=F, window=c(Inf,Inf)) {
 
 #' Use OR search in tquery
 #' 
-#' @param ... 
+#' @param ... name-value pairs for lookup terms. see ?query.
 #'
 #' @return A list, to be used as input to \link{tquery}
 #' @export
@@ -352,7 +352,7 @@ OR <- function(...) {
 
 #' Use AND search in tquery
 #' 
-#' @param ... 
+#' @param ... name-value pairs for lookup terms. see ?query.
 #'
 #' @return A list, to be used as input to \link{tquery}
 #' @export
@@ -367,7 +367,7 @@ AND <- function(...) {
 
 #' Use NOT search in tquery
 #' 
-#' @param ... 
+#' @param ... name-value pairs for lookup terms. see ?query.
 #'
 #' @return A list, to be used as input to \link{tquery}
 #' @export

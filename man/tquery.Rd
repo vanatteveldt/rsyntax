@@ -36,7 +36,7 @@ A tQuery object, that can be used with the \link{apply_queries} function.
 To find nodes you can use named arguments, where the names are column names (in the data.table on which the
 queries will be used) and the values are vectors with lookup values. 
 
-Children or parents of nodes can be queried by passing the \link{childen} or \link{parents} function as (named or unnamed) arguments.
+Children or parents of nodes can be queried by passing the \link{children} or \link{parents} function as (named or unnamed) arguments.
 These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
 
 The fill() function (also see fill argument) can be nested to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,

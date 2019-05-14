@@ -12,7 +12,10 @@ udpipe_tokenindex(text, udpipe_model = "english",
 
 \item{udpipe_model}{The name of a udpipe language model (e.g., "english", "dutch", "german"), to use the udpipe package to perform natural language processing. On first use, the model will be downloaded to the location specified in the udpipe_model_path argument.}
 
-\item{udpipe_model_path}{If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. If no path is given, the directory in which the \link{corpustools} package was installed will be used.}
+\item{udpipe_model_path}{If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. If no path is given, the directory in which the corpustools package is installed will be used.}
+}
+\value{
+A tokenIndex
 }
 \description{
 Parse text using udpipe

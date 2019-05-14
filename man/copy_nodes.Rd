@@ -21,6 +21,8 @@ copy_nodes(.tokens, node, new, subset = NULL, keep_relation = T,
 \item{copy_fill}{If TRUE, also copy the fill}
 
 \item{subset_fill}{A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to copy only verbs}
+
+\item{only_new}{If TRUE, direct fill children will only be copied to to_node if it does not already have nodes of this relation. This is a good heuristic for dealing with argument drop.}
 }
 \description{
 Copy nodes

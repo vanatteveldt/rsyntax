@@ -5,7 +5,7 @@
 \title{Have a node adopt its parent's position}
 \usage{
 climb_tree(.tokens, tq, unpack = T, take_fill = T, give_fill = T,
-  only_new = "relation", depth = Inf)
+  only_new = "relation")
 }
 \arguments{
 \item{.tokens}{A tokenIndex}
@@ -18,9 +18,10 @@ climb_tree(.tokens, tq, unpack = T, take_fill = T, give_fill = T,
 
 \item{give_fill}{If TRUE, copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)}
 
-\item{only_new}{A character vector giving one or multiple column names that need to be unique for take_fill and give_fill}
-
-\item{depth}{Certain relations can be recursively nested (e.g. conjunction within conjunction). Depth specifies how far to inherit (by default infinite)}
+\item{only_new}{A characetr vector giving one or multiple column names that need to be unique for take_fill and give_fill}
+}
+\value{
+A tokenIndex
 }
 \description{
 This function is mainly used for removing conjunctions from dependency trees.

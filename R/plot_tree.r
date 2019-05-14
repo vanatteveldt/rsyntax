@@ -10,6 +10,8 @@
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
+#' @param annotation  Optionally, a column with an rsyntax annotation, to add boxes around the annotated nodes.
+#' @param pdf_file    Directly save the plot as a pdf file
 #' @param allign_text If TRUE (default) allign text (the columns specified in ...) in a single horizontal line at the bottom, instead of following the different levels in the tree
 #' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
 #' @param all_lower   If TRUE, make all text lowercase
@@ -22,8 +24,8 @@
 #'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=terrain.colors) {  
-  if (is.null(pdf_file)) plot.new()
+plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=grDevices::terrain.colors) {  
+  if (is.null(pdf_file)) graphics::plot.new()
   
   tokens = as_tokenindex(tokens) 
   nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
@@ -48,15 +50,14 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   }
   
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
-  V(g)$id = as.numeric(V(g)$name)
+  igraph::V(g)$id = as.numeric(igraph::V(g)$name)
   
   ## order nodes, split by roots
   comps = igraph::decompose(g)
   if (length(comps) > 1) {
-    reorder_list = sapply(comps, function(x) sort(V(x)$id), simplify = F)
+    reorder_list = sapply(comps, function(x) sort(igraph::V(x)$id), simplify = F)
     reorder = unlist(reorder_list)
-    g = permute(g, match(as.numeric(V(g)$id), as.numeric(reorder)))
-    
+    g = igraph::permute(g, match(as.numeric(igraph::V(g)$id), as.numeric(reorder)))
     reorder_i = match(as.numeric(reorder), as.numeric(nodes$token_id))
     text = text[reorder_i]
     nodes = nodes[reorder_i,]
@@ -66,11 +67,11 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   root = find_roots(g)
   g$layout = igraph::layout_as_tree(g, root = root)
   
-  if (!is.null(ignore_rel)) g = delete.edges(g, which(get.edge.attribute(g, 'relation') %in% ignore_rel))
+  if (!is.null(ignore_rel)) g = igraph::delete.edges(g, which(igraph::get.edge.attribute(g, 'relation') %in% ignore_rel))
   
   
   co = g$layout
-  e = get.edges(g, E(g))
+  e = igraph::get.edges(g, igraph::E(g))
   co[,1] = arrange_horizontal(g, text, tree_boundaries)
   g = format_edges(g, max_curve, e)
   co[,2] = arrange_vertical(co, text_cols)
@@ -78,25 +79,25 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   ## make empty plot to get positions in current plot device
   if (!is.null(pdf_file)) {
     height = 7
-    width = height * (dev.size()[1] / dev.size()[2])
-    pdf(pdf_file, height = height, width=width)
+    width = height * (grDevices::dev.size()[1] / grDevices::dev.size()[2])
+    grDevices::pdf(pdf_file, height = height, width=width)
   }
   
-  par(mar=c(0,0,0,0))
-  plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(co[,1]),ylim=extendrange(c(-1,1)))
+  graphics::par(mar=c(0,0,0,0))
+  graphics::plot(0, type="n", ann=FALSE, axes=FALSE, xlim=grDevices::extendrange(co[,1]),ylim=grDevices::extendrange(c(-1,1)))
   
   cex = calc_cex(g, co, text, tree_boundaries, spacing, textsize)
   g = set_graph_attr(g, e, cex, ignore_rel, palette, use_color) 
  
-  plot(g, layout=co, rescale=FALSE, add=TRUE)
+  graphics::plot(g, layout=co, rescale=FALSE, add=TRUE)
   
-  text(co[,1], co[,2]+(0.02*cex), labels=V(g)$rel_label, 
+  graphics::text(co[,1], co[,2]+(0.02*cex), labels=igraph::V(g)$rel_label, 
        col = 'black', cex=cex*0.9, pos=3, font = 3)
 
   ## add text and lines
   
   ## non-integers are added. highlight these in red for clarity
-  added = as.numeric(V(g)$name)
+  added = as.numeric(igraph::V(g)$name)
   added = (round(added) - added) != 0
   if (any(added)) {
     
@@ -109,12 +110,12 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
     texty = co[,2]
   }
   
-  text(co[,1], texty-(0.1*cex), labels=text, col = col, cex=cex, adj=c(0.5,1))
+  graphics::text(co[,1], texty-(0.1*cex), labels=text, col = col, cex=cex, adj=c(0.5,1))
   add_annotation(co, annotation, nodes, cex)
   message(sentmes)
-  drop = if (is.null(ignore_rel)) rep(F, vcount(g)) else V(g)$relation %in% ignore_rel
-  if (allign_text && length(text_cols) > 0) segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
-  if (!is.null(pdf_file)) dev.off()
+  drop = if (is.null(ignore_rel)) rep(F, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
+  if (allign_text && length(text_cols) > 0) graphics::segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
+  if (!is.null(pdf_file)) grDevices::dev.off()
   invisible(tokens)
 }
 
@@ -182,26 +183,26 @@ format_edges <- function(g, max_curve, e) {
   maxcurve = min(maxcurve, max_curve) # max_curve, with underscore, is a parameter
   curve = rescale_var(abs(vdist)^2, 0, maxcurve) * sign(vdist)
   #curve = maxcurve * sign(vdist)
-  E(g)$curved = curve
-  E(g)$width = 2
-  E(g)$color = 'darkgrey'
+  igraph::E(g)$curved = curve
+  igraph::E(g)$width = 2
+  igraph::E(g)$color = 'darkgrey'
   g  
 }
 
 calc_cex <- function(g, co, text, tree_boundaries, spacing, textsize) {
-  width_label = strwidth(V(g)$label, units='inches')
+  width_label = graphics::strwidth(igraph::V(g)$label, units='inches')
   width_label = centered_width(width_label)
-  width_label2 = strwidth(V(g)$rel_label, units='inches')
+  width_label2 = graphics::strwidth(igraph::V(g)$rel_label, units='inches')
   width_label2 = centered_width(width_label2)
   width_label = ifelse(width_label > width_label2, width_label, width_label2)
   
-  width_text = strwidth(text, units='inches')
+  width_text = graphics::strwidth(text, units='inches')
   need_width = ifelse(width_label > width_text, width_label, width_text)
   need_width = width_boundaries(need_width, tree_boundaries)
   need_width = sum(need_width)
-  need_width = need_width + (strwidth('  ', units='inches') * (spacing+0.1) * vcount(g))
+  need_width = need_width + (graphics::strwidth('  ', units='inches') * (spacing+0.1) * igraph::vcount(g))
   
-  max_width = dev.size(units = 'in')[1]
+  max_width = grDevices::dev.size(units = 'in')[1]
   max_width = max_width * (1 - min(co[,1])) / 2
   cex = if (max_width < need_width) max_width / need_width else 1
   textsize * cex
@@ -209,44 +210,44 @@ calc_cex <- function(g, co, text, tree_boundaries, spacing, textsize) {
 
 
 set_graph_attr <- function(g, e, cex, ignore_rel, palette, use_color) {
-  width = (strwidth(V(g)$label, cex=cex) + strwidth(' ', cex=cex*0.5)) * 100
-  width2 = (strwidth(V(g)$rel_label, cex=cex) + strwidth(' ', cex=cex*0.5)) * 100
+  width = (graphics::strwidth(igraph::V(g)$label, cex=cex) + graphics::strwidth(' ', cex=cex*0.5)) * 100
+  width2 = (graphics::strwidth(igraph::V(g)$rel_label, cex=cex) + graphics::strwidth(' ', cex=cex*0.5)) * 100
   width = ifelse(width > width2, width, width2)
   
-  height = (max(strheight(V(g)$label, cex=cex), strheight('I', cex=cex)) + strheight('I',cex=cex)*0.25) * 100
-  V(g)$label.cex = cex
-  V(g)$label.color = 'black'
-  V(g)$shape = 'rectangle'
-  V(g)$size = width
-  V(g)$size2 = height
-  V(g)$color = 'white'
-  V(g)$border.color = 'white'
-  V(g)$frame.color = 'white'
-  V(g)$label.font=2
+  height = (max(graphics::strheight(igraph::V(g)$label, cex=cex), graphics::strheight('I', cex=cex)) + graphics::strheight('I',cex=cex)*0.25) * 100
+  igraph::V(g)$label.cex = cex
+  igraph::V(g)$label.color = 'black'
+  igraph::V(g)$shape = 'rectangle'
+  igraph::V(g)$size = width
+  igraph::V(g)$size2 = height
+  igraph::V(g)$color = 'white'
+  igraph::V(g)$border.color = 'white'
+  igraph::V(g)$frame.color = 'white'
+  igraph::V(g)$label.font=2
   
-  drop = if (is.null(ignore_rel)) rep(F, vcount(g)) else V(g)$relation %in% ignore_rel
-  V(g)$size[drop] = 0
-  V(g)$size2[drop] = 0
-  V(g)$label[drop] = ''
+  drop = if (is.null(ignore_rel)) rep(F, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
+  igraph::V(g)$size[drop] = 0
+  igraph::V(g)$size2[drop] = 0
+  igraph::V(g)$label[drop] = ''
   
   if ('.REL_LEVEL' %in% igraph::vertex_attr_names(g)) {
-    hl = !is.na(V(g)$.REL_LEVEL)
-  } else hl = rep(F, vcount(g))
+    hl = !is.na(igraph::V(g)$.REL_LEVEL)
+  } else hl = rep(F, igraph::vcount(g))
   
   if (use_color) {
-    V(g)$color = festival(V(g)$label, palette)
-    E(g)$color = V(g)$color[e[,2]]
-    V(g)$frame.color[hl] = 'red'
-    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
+    igraph::V(g)$color = festival(igraph::V(g)$label, palette)
+    igraph::E(g)$color = igraph::V(g)$color[e[,2]]
+    igraph::V(g)$frame.color[hl] = 'red'
+    igraph::E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   } else {
-    V(g)$color =  'lightgrey'
-    V(g)$frame.color =  'darkgrey'
-    V(g)$frame.color[hl] =  'black'
-    E(g)$lty = ifelse(hl[e[,2]], 2, 1)
+    igraph::V(g)$color =  'lightgrey'
+    igraph::V(g)$frame.color =  'darkgrey'
+    igraph::V(g)$frame.color[hl] =  'black'
+    igraph::E(g)$lty = ifelse(hl[e[,2]], 2, 1)
   }
   
-  E(g)$arrow.mode=2
-  E(g)$arrow.size=0.4
+  igraph::E(g)$arrow.mode=2
+  igraph::E(g)$arrow.size=0.4
   
   g
 }
@@ -305,10 +306,10 @@ arrange_vertical <- function(co, text_cols) {
 }
 
 get_width <- function(g, text, tree_boundaries){
-  textwidth = strwidth(text)
+  textwidth = graphics::strwidth(text)
   textwidth = centered_width(textwidth)
-  relwidth = strwidth(V(g)$label)
-  relwidth2 = strwidth(V(g)$rel_label)
+  relwidth = graphics::strwidth(igraph::V(g)$label)
+  relwidth2 = graphics::strwidth(igraph::V(g)$rel_label)
   relwidth = ifelse(relwidth > relwidth2, relwidth, relwidth2)
   relwidth = centered_width(relwidth) ## relwidth is annoying, because nodes are centered. Therefore, use halved length of current node and next
   
@@ -382,12 +383,12 @@ draw_box <- function(co, start, end, vdist, label, is_outer=F, hexp=1, vexp=1, c
   if (is_outer) yt = yt + vdist
   yb = min(co[start:end,2]) - (vdist/2)*vexp
   if (yb < -0.5) yb = -0.5 - (0.05*cex)
-  rect(xl,yb,xr,yt, lty=if(is_outer) 1 else 2, ...)
+  graphics::rect(xl,yb,xr,yt, lty=if(is_outer) 1 else 2, ...)
   labelx = mean(c(xl,xr))
   labely = yt + (vdist/2)
   if (is_outer) {
-    text(labelx, labely, label, cex=cex*0.8, font= 2)
+    graphics::text(labelx, labely, label, cex=cex*0.8, font= 2)
   } else {
-    text(labelx, labely, label, cex=cex*0.8, font= 4)
+    graphics::text(labelx, labely, label, cex=cex*0.8, font= 4)
   }
 }

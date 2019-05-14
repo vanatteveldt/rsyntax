@@ -8,6 +8,7 @@
 #' @param collapse_id  see id
 #' @param columns      Optionally, specify which column from 'tokens' will be included in the output. If NULL, all columns are returned, but it is recommended 
 #'                     to specify only the columns that you want to use for clarity.
+#' @param rm.na        drop NA's
 #'
 #' @return a tokenindex
 #' @export
@@ -26,6 +27,7 @@ cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL, rm.na=F){
       out = l$tg
     } else {
       out = out[!l$d, on=c('doc_id','sentence','token_id')] ## ignore id tokens  as well
+      if (colnames(l$tg)[1] %in% colnames(out)) l$tg = l$tg[,-1]
       out = merge(out, l$tg, by=c('doc_id','sentence','token_id'), all=!rm.na, allow.cartesian=T)
     }
     
@@ -51,40 +53,6 @@ cast_tokens <- function(tokens, by, id, collapse_id=F, columns=NULL, rm.na=F){
   out
 }
 
-#' Like cast_tokens, but instead returns the tokens as a quanteda document-feature matrix
-#' 
-#' @param tokens       A tokenIndex with rsyntax annotations
-#' @param x            The name of the column that will be aggregated (!not the vector itself)
-#' @param FUN          The function used to aggregate.
-#' @param by           A list or named vector to specify the grouping elements, where names are columns and values are values in the columns. For example, if there are 
-#'                     "quotes" and "clauses" columns, that have "source" and "subject" respectively, use c(quotes = "source", clauses = "subject"). 
-#' @param id           The name of the column the contains the ids/codes of the groups. By default, each unique code is casted to a subsentence. Alternatively,
-#'                     if the id column contains text instead of unique codes, the collapse_id argument can be used to collapse the text into an id.
-#' @param collapse_id  see id
-#' @param ...          Additional arguments passed to FUN
-#'
-#' @return a data.table
-#' @export
-cast_tokens_dfm <- function(tokens, x, FUN, by, id, collapse_id=F, ..., rm.na=F){
-  out = cast_tokens(tokens, by=by, id=id, collapse_id=collapse_id, columns=x, rm.na=rm.na)
-  if (is.null(out)) return(NULL)
-  docs = as.factor(out$subsent_id)
-  feature = as.factor(out[[x]])
-  m = Matrix::spMatrix(length(levels(docs)), length(levels(feature)),
-                       as.numeric(docs), as.numeric(feature),
-                       rep(1, length(docs)))
-  m = quanteda::as.dfm(methods::as(m, 'dgCMatrix'))
-  dimnames(m) = list(levels(docs), levels(feature))
-  
-  #dvars = tc$get_meta(copy=T)
-  dvars = unique(subset(out, select = c('doc_id', 'subsent_id', paste(names(by), by, sep='.'))))
-  dvars = dvars[match(rownames(m), dvars$subsent_id),]  ## in case of subsetting
-  for (dvar in colnames(dvars)) {
-    if (dvar == 'subsent_id') next
-    quanteda::docvars(m, field = dvar) = dvars[[dvar]]
-  }
-  m
-}
 
 #' Like cast_tokens, but instead of returning the tokens, aggregate one column
 #' 
@@ -97,6 +65,7 @@ cast_tokens_dfm <- function(tokens, x, FUN, by, id, collapse_id=F, ..., rm.na=F)
 #'                     if the id column contains text instead of unique codes, the collapse_id argument can be used to collapse the text into an id.
 #' @param collapse_id  see id
 #' @param ...          Additional arguments passed to FUN
+#' @param rm.na        drop NA's
 #'
 #' @return a data.table
 #' @export
@@ -120,6 +89,7 @@ cast_tokens_aggregate <- function(tokens, x, FUN, by, id, collapse_id=F, ..., rm
 #' @param id           The name of the column the contains the ids/codes of the groups. By default, each unique code is casted to a subsentence. Alternatively,
 #'                     if the id column contains text instead of unique codes, the collapse_id argument can be used to collapse the text into an id.
 #' @param collapse_id  see id
+#' @param rm.na        drop NA's
 #' 
 #' @return a data.table
 #' @export

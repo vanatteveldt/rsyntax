@@ -9,7 +9,7 @@ annotate_nodes(tokens, nodes, column)
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
-\item{nodes}{A data.table, as created with \link{find_nodes} or \link{apply_queries}. Can be a list of multiple data.tables.}
+\item{nodes}{A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.}
 
 \item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id}
 }

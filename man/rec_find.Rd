@@ -14,6 +14,8 @@ rec_find(tokens, ids, ql, block = NULL, fill = T)
 \item{ql}{a list of queriers (possibly the list nested in another query, or containing nested queries)}
 
 \item{block}{A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search}
+
+\item{fill}{Include or exclude fill nodes}
 }
 \description{
 Recursive search tokens

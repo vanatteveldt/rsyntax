@@ -18,6 +18,8 @@ cast_tokens_text(tokens, text, by, id, collapse_id = F, rm.na = F)
 if the id column contains text instead of unique codes, the collapse_id argument can be used to collapse the text into an id.}
 
 \item{collapse_id}{see id}
+
+\item{rm.na}{drop NA's}
 }
 \value{
 a data.table
