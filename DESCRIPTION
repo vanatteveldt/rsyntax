@@ -22,7 +22,8 @@ Encoding: UTF-8
 Description: Various functions for querying and reshaping dependency trees, 
     as for instance created with the spacyr, udpipe or coreNLP packages.
     This enables the automatic extraction of usefull semantic relations from texts,
-    such as quotes (who said what) and clauses (who did what).
+    such as quotes (who said what) and clauses (who did what). Method proposed in 
+    Van Atteveldt et al. (2017) <doi:10.1017/pan.2016.12>.
 License: GPL-3
 RoxygenNote: 6.1.1
 Suggests: testthat
