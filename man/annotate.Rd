@@ -24,6 +24,9 @@ annotate(tokens, column, ..., block = NULL, fill = T, overwrite = F,
 
 \item{copy}{If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional.}
 }
+\value{
+The tokenIndex with the annotation columns
+}
 \description{
 Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
 One column contains the ids for each hit. The other column contains the annotations.
@@ -32,4 +35,19 @@ Only nodes that are given a name in the tquery (using the 'label' parameter) wil
 \details{
 Note that while queries only find 1 node for each labeld component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
 all children of these nodes can be annotated by settting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
+}
+\examples{
+## spacy tokens for: Mary loves John, and Mary was loved by John
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+
+## two simple example tqueries
+passive = tquery(pos = "VERB*", label = "predicate",
+                 children(relation = c("agent"), label = "subject"))
+active =  tquery(pos = "VERB*", label = "predicate",
+                 children(relation = c("nsubj", "nsubjpass"), label = "subject"))
+
+tokens = annotate(tokens, "clause", pas=passive, act=active)
+
+tokens
+plot_tree(tokens, annotation='clause')
 }

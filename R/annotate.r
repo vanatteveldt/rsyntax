@@ -17,6 +17,21 @@
 #' @param copy        If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional. 
 #' 
 #' @export
+#' @return The tokenIndex with the annotation columns
+#' @examples
+#' ## spacy tokens for: Mary loves John, and Mary was loved by John
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+#' 
+#' ## two simple example tqueries
+#' passive = tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("agent"), label = "subject"))
+#' active =  tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
+#' 
+#' tokens = annotate(tokens, "clause", pas=passive, act=active)
+#' 
+#' tokens
+#' plot_tree(tokens, annotation='clause')
 annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T) {
   queries = list(...)
   is_tquery = sapply(queries, methods::is, 'tQuery')
@@ -58,17 +73,33 @@ annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block
 }
 
 #' Annotate a tokenlist based on rsyntaxNodes
-#'
+#' 
 #' Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
 #' Two columns will be added.
 #' One column contains the ids for each hit. The other column contains the annotations.
 #' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
+#' 
+#' Note that you can also directly use \link{annotate}.
 #' 
 #' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param nodes      A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
 #' @param column     The name of the column in which the annotations are added. The unique ids are added as [column]_id
 #'
 #' @export
+#' @return A data.table with nodes
+#' 
+#' @examples 
+#' ## spacy tokens for: Mary loves John, and Mary was loved by John
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+#' 
+#' ## two simple example tqueries
+#' passive = tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("agent"), label = "subject"))
+#' active =  tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
+#'
+#' nodes = apply_queries(tokens, pas=passive, act=active)
+#' annotate_nodes(tokens, nodes, 'clause')
 annotate_nodes <- function(tokens, nodes, column) {
   .FILL_LEVEL = NULL
   
@@ -119,6 +150,8 @@ annotate_nodes <- function(tokens, nodes, column) {
 }
 
 
+
+
 #' Transform the nodes to long format and match with token data
 #'
 #' @param tokens     A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
@@ -130,6 +163,18 @@ annotate_nodes <- function(tokens, nodes, column) {
 #'
 #' @return A data.table with the nodes in long format, and the specified token_cols attached 
 #' @export
+#' @examples 
+#' ## spacy tokens for: Mary loves John, and Mary was loved by John
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+#' 
+#' ## two simple example tqueries
+#' passive = tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("agent"), label = "subject"))
+#' active =  tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
+#'
+#' nodes = apply_queries(tokens, pas=passive, act=active)
+#' get_nodes(tokens, nodes)
 get_nodes <- function(tokens, nodes, use=NULL, token_cols=c('token')) {
   tokens = as_tokenindex(tokens)
   

@@ -15,8 +15,13 @@ Imports:
     Matrix,
     digest,
     corpustools,
+    rlang,
     magrittr,
-    data.table (>= 1.11.8)
+    tokenbrowser,
+    data.table (>= 1.11.8),
+    cleanNLP,
+    rJava,
+    dplyr
 LazyData: true
 Encoding: UTF-8
 Description: Various functions for querying and reshaping dependency trees, 

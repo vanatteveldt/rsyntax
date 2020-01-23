@@ -11,6 +11,7 @@
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
 #' @param sentence    Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well. 
 #' @param annotation  Optionally, a column with an rsyntax annotation, to add boxes around the annotated nodes.
+#' @param only_annotation If annotation is given, only_annotation = TRUE will print only the nodes with annotations.
 #' @param pdf_file    Directly save the plot as a pdf file
 #' @param allign_text If TRUE (default) allign text (the columns specified in ...) in a single horizontal line at the bottom, instead of following the different levels in the tree
 #' @param ignore_rel  Optionally, a character vector with relation names that will not be shown in the tree
@@ -21,26 +22,43 @@
 #' @param use_color   If true, use colors
 #' @param max_curve   A number for controlling the allowed amount of curve in the edges. 
 #' @param palette     A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation
+#' @param pdf_viewer  If TRUE, view the plot as a pdf. If no pdf_file is specified, the pdf will be saved to the temp folder
+#' @param viewer_mode By default, the plot is saved as a PNG embedded in a HTML and opened in the viewer. This hack makes it independent of the 
+#'                    size of the plotting device and enables scrolling. By setting viewer_mode to False, the current plotting device is used.
+#' @param viewer_size A vector of length 2, that multiplies the width (first value) and height (second value) of the viewer_mode PNG 
 #'   
 #' @return an igraph graph
 #' @export
-plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=grDevices::terrain.colors) {  
-  if (is.null(pdf_file)) graphics::plot.new()
+plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=F, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=F, viewer_mode=T, viewer_size=c(100,100)) {  
+  if (pdf_viewer && is.null(pdf_file)) pdf_file = tempfile('plot_tree', fileext = '.pdf')
+  if (!is.null(pdf_file)) if (!grepl('\\.pdf$', pdf_file)) stop('pdf_file needs to have extension ".pdf"')
+  if (!is.null(pdf_file)) viewer_mode = FALSE
+  
+  if (is.null(pdf_file) && is.null(viewer_mode)) graphics::plot.new()
+  require_plot_new()
   
   tokens = as_tokenindex(tokens) 
+  
+  if (!is.null(annotation) && only_annotation) {
+    tokens = tokens[!is.na(tokens[[annotation]]),]
+  }
+  
   nodes =  get_sentence(tokens, doc_id, sentence, sentence_i)
   nodes$rel_label = if (!is.null(all_abbrev)) abbreviate(nodes[['relation']], all_abbrev) else nodes[['relation']]
   nodes$label = nodes$token_id
+
+  nodes = split_adjacent(nodes)
   
   sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
   annotations = gsub('\\_.*', '', grep('\\_fill', colnames(nodes), value=T))
   text_cols = get_text_cols(tokens, nodes, tidyselect::quos(...), annotations)
   edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
+  edges = edges[edges$parent %in% nodes$token_id,]
   
   text = NULL
   for (tc in text_cols) {
     textval = if (!is.null(all_abbrev)) abbreviate(tc, minlength = all_abbrev) else tc
-    textval = ifelse(is.na(textval), '', as.character(textval))
+    textval = ifelse(is.na(textval), '', gsub('\n|\t', '', as.character(textval)))
     text = if (is.null(text)) textval else paste(text, textval, sep='\n')
   }
   if (!is.null(ignore_rel)) nodes$label[nodes$label %in% ignore_rel] = ''
@@ -64,33 +82,42 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
     tree_boundaries = sapply(reorder_list, length)
   } else tree_boundaries = NULL
   
+
   root = find_roots(g)
   g$layout = igraph::layout_as_tree(g, root = root)
   
   if (!is.null(ignore_rel)) g = igraph::delete.edges(g, which(igraph::get.edge.attribute(g, 'relation') %in% ignore_rel))
   
-  
   co = g$layout
   e = igraph::get.edges(g, igraph::E(g))
   co[,1] = arrange_horizontal(g, text, tree_boundaries)
   g = format_edges(g, max_curve, e)
+  nlevels = max(co[,2]) - min(co[,2])  ## remember for png mode
   co[,2] = arrange_vertical(co, text_cols)
 
+  
   ## make empty plot to get positions in current plot device
   if (!is.null(pdf_file)) {
     height = 7
     width = height * (grDevices::dev.size()[1] / grDevices::dev.size()[2])
     grDevices::pdf(pdf_file, height = height, width=width)
   }
+  if (viewer_mode) {
+    png_file = tempfile(fileext = '.png')
+    height = max(c(400, (nlevels/2) * viewer_size[1]))
+    width = max(400,sum(graphics::strwidth(text, units='inches')*1.25) * viewer_size[2])
+    grDevices::png(png_file, height = height, width=width)
+  }
   
   graphics::par(mar=c(0,0,0,0))
   graphics::plot(0, type="n", ann=FALSE, axes=FALSE, xlim=grDevices::extendrange(co[,1]),ylim=grDevices::extendrange(c(-1,1)))
   
+  text = stringi::stri_trans_general(text,"any-latin")
+  text = stringi::stri_trans_general(text,"latin-ascii")
   cex = calc_cex(g, co, text, tree_boundaries, spacing, textsize)
   g = set_graph_attr(g, e, cex, ignore_rel, palette, use_color) 
  
   graphics::plot(g, layout=co, rescale=FALSE, add=TRUE)
-  
   graphics::text(co[,1], co[,2]+(0.02*cex), labels=igraph::V(g)$rel_label, 
        col = 'black', cex=cex*0.9, pos=3, font = 3)
 
@@ -110,12 +137,22 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
     texty = co[,2]
   }
   
+  
   graphics::text(co[,1], texty-(0.1*cex), labels=text, col = col, cex=cex, adj=c(0.5,1))
   add_annotation(co, annotation, nodes, cex)
   message(sentmes)
   drop = if (is.null(ignore_rel)) rep(F, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
   if (allign_text && length(text_cols) > 0) graphics::segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
-  if (!is.null(pdf_file)) grDevices::dev.off()
+  if (!is.null(pdf_file) || !is.null(viewer_mode)) grDevices::dev.off()
+  
+  if (pdf_viewer) {
+    viewer = getOption('viewer')
+    viewer(pdf_file)
+  }
+  if (viewer_mode) {
+    png_in_viewer(png_file)
+  }
+  corpustools:::preprocess_tokens
   invisible(tokens)
 }
 
@@ -124,8 +161,9 @@ get_text_cols <- function(tokens, nodes, l, annotations) {
   text_cols = list()
   if (length(l) > 0) {
     for (i in seq_along(l)) {
-      if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
-      text_cols[[names(l)[[i]]]] = eval(l[[i]][[2]], nodes)
+      e = rlang::quo_get_expr(l[[i]])
+      if (is.character(i)) i = parse(text=i)
+      text_cols[[names(l)[[i]]]] = eval(e, nodes)
     }
   } else {
     cols = setdiff(colnames(tokens), c('doc_id','sentence','token_id','parent','relation'))
@@ -137,6 +175,8 @@ get_text_cols <- function(tokens, nodes, l, annotations) {
   }
   text_cols
 }
+
+
 
 get_sentence <- function(tokens, .DOC_ID=NULL, .SENTENCE=NULL, sentence_i=1) {
   if (!length(sentence_i) == 1) stop('Can only select one sentence_i') 
@@ -233,17 +273,21 @@ set_graph_attr <- function(g, e, cex, ignore_rel, palette, use_color) {
   if ('.REL_LEVEL' %in% igraph::vertex_attr_names(g)) {
     hl = !is.na(igraph::V(g)$.REL_LEVEL)
   } else hl = rep(F, igraph::vcount(g))
+  if ('.IS_SPLIT' %in% igraph::vertex_attr_names(g)) {
+    is_split = igraph::V(g)$.IS_SPLIT
+  } else is_split = rep(F, igraph::vcount(g))
   
   if (use_color) {
     igraph::V(g)$color = festival(igraph::V(g)$label, palette)
     igraph::E(g)$color = igraph::V(g)$color[e[,2]]
+    igraph::E(g)$color[is_split[e[,2]]] = 'red'
     igraph::V(g)$frame.color[hl] = 'red'
-    igraph::E(g)$lty = ifelse(hl[e[,2]], 2, 1)
+    igraph::E(g)$lty = ifelse(hl[e[,2]] | is_split[e[,2]], 2, 1)
   } else {
     igraph::V(g)$color =  'lightgrey'
     igraph::V(g)$frame.color =  'darkgrey'
     igraph::V(g)$frame.color[hl] =  'black'
-    igraph::E(g)$lty = ifelse(hl[e[,2]], 2, 1)
+    igraph::E(g)$lty = ifelse(hl[e[,2]] | is_split[e[,2]], 2, 1)
   }
   
   igraph::E(g)$arrow.mode=2
@@ -288,6 +332,23 @@ find_roots <- function(g) {
   roots
 }
 
+split_adjacent <- function(nodes) {
+  nodes$.IS_SPLIT = F
+  is_dup = duplicated(data.table(token_id=round(nodes$token_id), parent=nodes$parent))
+  is_dup = is_dup &! is.na(nodes$parent)
+  if (any(is_dup)) {
+    tolast_ids = nodes$token_id[which(is_dup)]
+    for (tolast_id in rev(tolast_ids)) {
+      tolast_i = which(nodes$token_id == tolast_id)
+      nodes$.IS_SPLIT[tolast_i] = TRUE
+      tolast_i = get_children_i(nodes, tolast_i)
+      tolast_i = sort(tolast_i)
+      nodes = rbind(nodes[-tolast_i,], nodes[tolast_i,])  
+    } 
+  }
+  nodes
+}
+
 arrange_horizontal <- function(g, text, tree_boundaries) {
   width = get_width(g, text, tree_boundaries)
   right_allign = cumsum(width)
@@ -303,6 +364,12 @@ arrange_vertical <- function(co, text_cols) {
   bottom_offset = -(1 - bottom_offset / 10)
   maxheight = if (levels > 10) 1 else bottom_offset + levels*0.15
   rescale_var(co[,2], new_min = bottom_offset, new_max = maxheight)
+}
+
+require_plot_new <- function() {
+  ## this is a ridiculous function to trigger plot.new if necessary
+  trigger = tryCatch(graphics::strwidth('banana'), error=function(e) 0)
+  if (trigger == 0) graphics::plot.new()
 }
 
 get_width <- function(g, text, tree_boundaries){
@@ -391,4 +458,37 @@ draw_box <- function(co, start, end, vdist, label, is_outer=F, hexp=1, vexp=1, c
   } else {
     graphics::text(labelx, labely, label, cex=cex*0.8, font= 4)
   }
+}
+
+crop_png <- function(png_file, new_file=tempfile(), margins=c(10,10)) {
+  m = png::readPNG(png_file)
+  
+  margin_x = margins[1]
+  white_x = colMeans(m[,,1]) == 1
+  white_x = c(which(!white_x)[1], length(white_x) - which(!rev(white_x))[1]) 
+  white_x = c(max(white_x[1] - margin_x, 0), min(white_x[2] + margin_x, ncol(m))) 
+  
+  margin_y = margins[2]
+  white_y = rowMeans(m[,,1]) == 1
+  white_y = c(which(!white_y)[1], length(white_y) - which(!rev(white_y))[1]) 
+  white_y = c(max(white_y[1] - margin_y, 0), min(white_y[2] + margin_y, nrow(m)))
+  
+  png::writePNG(m[white_y[1]:white_y[2],
+                  white_x[1]:white_x[2],], 
+                  new_file)
+  new_file
+}
+
+png_in_viewer <- function(png_file) {
+  png_file = crop_png(png_file)
+  png = paste0('data:image/png;base64,', base64enc::base64encode(png_file))
+  tf = tempfile(fileext = '.html')
+  
+  html = sprintf('<!DOCTYPE html><html>
+                  <body><div>
+                      <img src="%s" alt="Could not display (viewer_mode not working)">
+                  </div></body></html>', png)
+  writeLines(html , tf)
+  v = getOption('viewer')  
+  v(tf)
 }

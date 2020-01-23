@@ -4,15 +4,18 @@
 \alias{udpipe_tokenindex}
 \title{Parse text using udpipe}
 \usage{
-udpipe_tokenindex(text, udpipe_model = "english",
-  udpipe_model_path = getOption("corpustools_resources", NULL))
+udpipe_tokenindex(text, udpipe_model = "english-ewt",
+  udpipe_model_path = getwd())
 }
 \arguments{
 \item{text}{A character vector with text(s) to parse}
 
-\item{udpipe_model}{The name of a udpipe language model (e.g., "english", "dutch", "german"), to use the udpipe package to perform natural language processing. On first use, the model will be downloaded to the location specified in the udpipe_model_path argument.}
+\item{udpipe_model}{Optionally, the name of a Universal Dependencies language model (e.g., "english-ewt", "dutch-alpino"), to use the udpipe package
+(\code{\link[udpipe]{udpipe_annotate}}) for natural language processing. You can use \code{\link{show_udpipe_models}} to get
+an overview of the available models. For more information about udpipe and performance benchmarks of the UD models, see the
+GitHub page of the \href{https://github.com/bnosac/udpipe}{udpipe package}.}
 
-\item{udpipe_model_path}{If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. If no path is given, the directory in which the corpustools package is installed will be used.}
+\item{udpipe_model_path}{This path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. Defaults to working directory}
 }
 \value{
 A tokenIndex

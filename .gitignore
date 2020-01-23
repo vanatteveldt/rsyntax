@@ -5,6 +5,9 @@
 # Example code in package build process
 *-Ex.R
 
+# udpipe models 
+udpipe_models/*
+
 # RStudio files
 .Rproj.user/
 

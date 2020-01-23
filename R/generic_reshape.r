@@ -4,17 +4,45 @@
 #' @param tquery            A \link{tquery} that selects and labels the nodes that are used in the reshape operations
 #' @param fill              Logical, should fill be used?
 #' @param fill_only_first   Logical, should a node only be filled once, with the nearest (first) labeled node?
-#' @param .one_per_sentence If true, only the first match in each sentence is used. This is currently used internally in the climb_tree function.
+#' @param .one_per_sentence If true, only one match per sentence is used, giving priority to paterns closest to the root (or fartest from the root if .order = -1). 
+#'                          This is sometimes necessary to deal with recursion.
+#' @param .order            If .one_per_sentence is used, .order determines whether the paterns closest to (1) or farthest away (-1) are used.
 #'                        
 #' @return A tokenIndex with a .nodes attribute, that enables the use of reshape operations on the selected nodes
 #' @export
-select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sentence=F){
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(relation = "relcl", label = "relative_clause")
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' ## as an example, we make the parent of the relative_clause
+#' ## nodes NA, effectively cutting of the relcl from the tree
+#' tokens2 = mutate_nodes(tokens2, "relative_clause", parent=NA)
+#' 
+#' plot_tree(tokens2)
+#' 
+#' ## this is designed to work nicely with magrittr piping
+#' \donttest{
+#'   tokens %>%
+#'     select_nodes(tq) %>%
+#'     mutate_nodes("relative_clause", parent=NA) %>%
+#'     plot_tree()
+#' }
+select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sentence=F, .order=1){
   ## fill mode: all, only_first, 
   tokens = as_tokenindex(tokens)
-  nodes = find_nodes(tokens, tquery, fill = F, melt = F)
-
+  nodes = find_nodes(tokens, tquery, fill = F, melt = F, root_dist = .one_per_sentence)
+  
   if (!is.null(nodes)) {
-    if (.one_per_sentence) nodes = nodes[!duplicated(nodes, by=c('doc_id','sentence')),]
+    if (.one_per_sentence) {
+      if (!.order %in% c(-1,1)) stop('.order has to be 1 or -1')
+      nodes = data.table::setorderv(nodes, '.ROOT_DIST', order = .order)
+      nodes = nodes[!duplicated(nodes, by=c('doc_id','sentence'), fromLast = F),]
+    }
     if (fill) {
       if (fill_only_first) {
         ids = unique(add_fill(tokens, nodes, tquery, block=nodes))
@@ -24,7 +52,7 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
     } else ids = NULL
     if (!is.null(ids)) {
       ids = melt_nodes_list(ids, fill_only_first=fill_only_first)
-    
+      ids = unique(ids, by=c('doc_id','sentence','token_id'))
       is_fill = ids$.FILL_LEVEL > 0
       fill_table = subset(ids, is_fill)
       data.table::setindexv(fill_table, '.ROLE')
@@ -33,10 +61,12 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
   } else {
     l = list(nodes =data.table::data.table(), fill=data.table::data.table(), prov = list(tquery=tquery, fill=fill, fill_only_first=fill_only_first))
   }
+  
   data.table::setattr(tokens, '.nodes', value = l)  ## .nodes is assigned to attribute. This way it will automatically be deleted
                                                     ## if tokens is changes (which in this case is convenient)
   tokens[]
 }
+
 
 #' Within a chain of reshape operations, reapply the tquery
 #'
@@ -44,7 +74,7 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
 #'
 #' @export
 reselect_nodes <- function(.tokens) {
-  .nodes = .nodes_from_attr(.tokens)
+  .nodes = selected_nodes(.tokens)
   select_nodes(.tokens, tquery = .nodes$prov$tquery, fill = .nodes$prov$fill, fill_only_first = .nodes$prov$fill_only_first)
 }
 
@@ -55,12 +85,41 @@ reselect_nodes <- function(.tokens) {
 #' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
 #'
 #' @export
+#' @examples
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' tq = tquery(relation = "relcl", label = "relative_clause")
+#' tokens = select_nodes(tokens, tq) 
+#' selected_nodes(tokens)
+#' 
+#' tokens = unselect_nodes(tokens)
+#' \donttest{
+#' selected_nodes(tokens)
+#' }
 unselect_nodes <- function(.tokens) {
   data.table::setattr(.tokens, '.nodes', NULL)
   .tokens
 }
 
-.nodes_from_attr <- function(.tokens) {
+#' If select_nodes() is used, the selected nodes can be extracted with selected_nodes().
+#' This is mainly for internal use, but it can also be usefull for debugging, and to controll
+#' loops of reshape operation (e.g. break if no selected nodes left)
+#'
+#' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
+#'
+#' @export
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(relation = "relcl", label = "relative_clause")
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' ## Get selected nodes from tokenindex
+#' selected_nodes(tokens2)
+selected_nodes <- function(.tokens) {
   if (is.null(attr(.tokens, '.nodes'))) stop('.tokens data.table does not have selected nodes. Please use select_nodes(tokens, tquery, ...) before using this function. See ?select_nodes documentation for details')
   attr(.tokens, '.nodes')
 }
@@ -76,7 +135,7 @@ unselect_nodes <- function(.tokens) {
 #' @export
 subset_nodes <- function(.tokens, subset, copy=T) {
   copy=T ## make optional if tested
-  .nodes = .nodes_from_attr(.tokens)
+  .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   if (copy) .tokens = data.table::copy(.tokens)
   
@@ -107,7 +166,7 @@ subset_nodes <- function(.tokens, subset, copy=T) {
 #' @export
 mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
   copy = T ## make optional if tested
-  .nodes = .nodes_from_attr(.tokens)
+  .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   if (!is.character(node)) stop('"node" argument has to be a character value')
     
@@ -122,12 +181,14 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
   subset = if (subset == 'NULL') NULL else eval(parse(text=subset), envir=linked_node_vars, parent.frame())
   for (i in seq_along(l)) {
     col = names(l)[i]
-    if (is.character(l[[i]][[2]])) l[[i]][[2]] = parse(text=l[[i]][[2]])
-    if (is.expression(l[[i]][[2]])) {
-      .VAL = as.character(l[[i]][[2]][[1]])
+    e = rlang::quo_get_expr(l[[i]])
+    if (is.character(e)) e = parse(text=e)
+    if (is.expression(e)) {
+      .VAL = as.character(e[[1]])
     } else {
-      .VAL = eval(l[[i]][[2]], linked_node_vars, parent.frame())
+      .VAL = eval(e, linked_node_vars, parent.frame())
     }
+    
     if (!is.null(subset)) {
       .tokens[token_i[subset], (col) := .VAL[subset]]
     } else {
@@ -151,7 +212,7 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
 #'
 #' @export
 remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_fill=NULL, keep_shared=F) {
-  .nodes = .nodes_from_attr(.tokens)
+  .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
   if (!is.character(node)) stop('"node" argument has to be a character value')
@@ -168,7 +229,7 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
     if (!is_deparsed_call(rm_subset_fill)) rm_subset_fill = deparse(substitute(rm_subset_fill)) 
     rm_subset_fill = if (rm_subset_fill == 'NULL') NULL else eval(parse(text=rm_subset_fill), envir = fill_nodes, parent.frame())
     .tokens = do_remove_fill(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared)
-    .nodes = .nodes_from_attr(.tokens)
+    .nodes = selected_nodes(.tokens)
   }
   
   drop_ids = .nodes$nodes[rm_subset, c('doc_id','sentence',node), with=F]
@@ -196,7 +257,7 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
 #'
 #' @export
 remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep_shared=F) {
-  .nodes = .nodes_from_attr(.tokens)
+  .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
   if (!is.character(node)) stop('"node" argument has to be a character value')
@@ -256,7 +317,7 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
 copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
   parent = NULL; relation = NULL
   
-  .nodes = .nodes_from_attr(.tokens)  
+  .nodes = selected_nodes(.tokens)  
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
   if (!is.character(node)) stop('"node" argument has to be a character value')
@@ -306,7 +367,7 @@ copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fi
 #'
 #' @export
 copy_fill <- function(.tokens, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
-  .nodes = .nodes_from_attr(.tokens)
+  .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
   if (!is.character(from_node)) stop('"from_node" argument has to be a character value')
@@ -418,14 +479,14 @@ is_deparsed_call <- function(x) {
 
 add_to_tokens <- function(.tokens, new_tokens) {
   if (!identical(colnames(.tokens), colnames(new_tokens))) new_tokens = subset(new_tokens, select = colnames(.tokens))
-  .tokens = unique(rbind(.tokens, new_tokens))
+  .tokens = unique(rbindlist(list(.tokens, new_tokens), use.names = T, fill=T))
   .tokens = as_tokenindex(.tokens)
   .tokens
 }
 
 add_to_fill <- function(.nodes, new_fill) {
   if (!identical(colnames(.nodes$fill), colnames(new_fill))) new_fill = subset(new_fill, select = colnames(.nodes$fill))
-  .nodes$fill = unique(rbind(.nodes$fill, new_fill))
+  .nodes$fill = unique(rbindlist(list(.nodes$fill, new_fill), use.names = T, fill=T))
   data.table::setindexv(.nodes$fill, '.ROLE')
   .nodes
 }

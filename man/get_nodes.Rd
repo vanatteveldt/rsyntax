@@ -23,3 +23,16 @@ A data.table with the nodes in long format, and the specified token_cols attache
 \description{
 Transform the nodes to long format and match with token data
 }
+\examples{
+## spacy tokens for: Mary loves John, and Mary was loved by John
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+
+## two simple example tqueries
+passive = tquery(pos = "VERB*", label = "predicate",
+                 children(relation = c("agent"), label = "subject"))
+active =  tquery(pos = "VERB*", label = "predicate",
+                 children(relation = c("nsubj", "nsubjpass"), label = "subject"))
+
+nodes = apply_queries(tokens, pas=passive, act=active)
+get_nodes(tokens, nodes)
+}

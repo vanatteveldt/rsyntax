@@ -8,27 +8,24 @@
 #' @param check    If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
 #' @param fill     If TRUE (default) the fill nodes are added. Otherwise these are ignored, even if the queries include fill()
 #'
+#' @export
 #' @return        A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
 #'                (parents / children) with names as specified in the label argument.
 #'                
-#' @examples
-#' ## it's convenient to first prepare vectors with relevant words/pos-tags/relations
-#' .SAY_VERBS = c("tell", "show","say", "speak") ## etc.
-#' .QUOTE_RELS=  c("ccomp", "dep", "parataxis", "dobj", "nsubjpass", "advcl")
-#' .SUBJECT_RELS = c('su', 'nsubj', 'agent', 'nmod:agent') 
+#' @examples 
+#' ## spacy tokens for: Mary loves John, and Mary was loved by John
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
 #' 
-#' quotes_direct = tquery(lemma = .SAY_VERBS,
-#'                          children(label = 'source', relation = .SUBJECT_RELS),
-#'                          children(label = 'quote', relation = .QUOTE_RELS))
-#' quotes_direct ## print shows tquery
+#' ## two simple example tqueries
+#' passive = tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("agent"), label = "subject"))
+#' active =  tquery(pos = "VERB*", label = "predicate",
+#'                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
+#'
+#' nodes = apply_queries(tokens, pas=passive, act=active)
 #' 
-#' tokens = subset(tokens_corenlp, sentence == 1)
-#' 
-#' nodes = apply_queries(tokens, quotes_direct)
 #' nodes
-#' annotate(tokens, nodes, column = 'example')
-#' 
-#' @export
+#' annotate_nodes(tokens, nodes, 'clause')#' @export
 apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T) {
   tokens = as_tokenindex(tokens)
   r = list(...)

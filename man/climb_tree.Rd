@@ -4,31 +4,52 @@
 \alias{climb_tree}
 \title{Have a node adopt its parent's position}
 \usage{
-climb_tree(.tokens, tq, unpack = T, take_fill = T, give_fill = T,
-  only_new = "relation")
+climb_tree(.tokens, tq, unpack = T, isolate = T, take_fill = T,
+  give_fill = T, only_new = "relation", max_iter = 200)
 }
 \arguments{
 \item{.tokens}{A tokenIndex}
 
 \item{tq}{A tquery. Needs to have a node labeled "origin" that has a parent labeled "target"}
 
-\item{unpack}{If TRUE, create separate branches for the parent and the node that inherits the parent position}
+\item{unpack}{If TRUE (default), create separate branches for the parent and the node that inherits the parent position}
 
-\item{take_fill}{If TRUE, give the node that will inherit the parent position a copy of the parent children (but only if it does not already have children with this relation; see only_new)}
+\item{isolate}{If unpack is TRUE and isolate is TRUE (default is FALSE), isolate the new branch by recursively unpacking}
 
-\item{give_fill}{If TRUE, copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)}
+\item{take_fill}{If TRUE (default), give the node that will inherit the parent position a copy of the parent children (but only if it does not already have children with this relation; see only_new)}
+
+\item{give_fill}{If TRUE (default), copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)}
 
 \item{only_new}{A characetr vector giving one or multiple column names that need to be unique for take_fill and give_fill}
+
+\item{max_iter}{The climb tree function repeatedly resolves the first conjunction it encounters in a sentence. This can lead to many iterations
+for sentences with many (nested) conjunctions. It could be the case that in unforseen cases or with certain parsers
+an infinite loop is reached, which is why we use a max_iter argument that breaks the loop and sends a warning if the max is reached.}
 }
 \value{
 A tokenIndex
 }
 \description{
-This function is mainly used for removing conjunctions from dependency trees.
-}
-\details{
 given a tquery that identfies a node labeled "origin", that has a parent labeled "target", 
 recursively have child adopt the parent's position (parent and relation column)
 and adopt parents fill nodes. only_new restricts adding fill nodes to relations that child
 does not already have. This seems to be a good heuristic for dealing with argument drop
+}
+\examples{
+
+spacy_conjunctions <- function(tokens) {
+  no_fill = c('compound*','case', 'relcl')
+  tq = tquery(label='target', NOT(relation = 'conj'),
+              rsyntax::fill(NOT(relation = no_fill), max_window = c(Inf,0)),
+              children(relation = 'conj', label='origin',
+                       rsyntax::fill(NOT(relation = no_fill), max_window=c(0,Inf))))
+  tokens = climb_tree(tokens, tq)
+  chop(tokens, relation = 'cc')
+}
+
+## spacy tokens for "Bob and John ate bread and drank wine"
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
+
+tokens = spacy_conjunctions(tokens)
+plot_tree(tokens)
 }

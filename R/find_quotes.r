@@ -22,18 +22,80 @@
 #' @param par_col       If available in the parser output, the column with the paragraph id. We can assume that quotes do not span across paragraphs. By using this argument, quotes that are not properly closed (uneven number of quotes) will stop at the end of the paragraph 
 #' @param space_col     If par_col is not used, paragraphs will be identified based on hard enters in the text_col. In some parsers, there is an additional "space" column that hold the whitespace and linebreaks, which can be included here. 
 #' @param lag_sentences The max number of sentences looked backwards to find source candidates. Default is 1, which means the source candidates have to occur in the sentence where the quote begins (lag = 0) or the sentence before that (lag = 1) 
+#' @param add_quote_symbols   Optionally, add additional punctuation symbols for finding quotation marks. 
+#'                      In some contexts and languages it makes sense to add single quotes, but in that case it is oftne necessary to 
+#'                      also use the quote_subset argument. For instance, in Spacy (and probably other UD based annotations), single quotes in posessives (e.g., Bob's, scholars') have a
+#'                      PART POS tag, whereas quotation symbols have PUNCT, NOUN, VERB, or ADJ (for some reason).   
+#' @param quote_subset  Optionally, and expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
+#'                      pos != "PART" can be used for the example mentioned in add_quote_symbols. 
 #' @param copy          If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)
 #'
 #' @return the tokenIndex
 #' @export
-add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, copy=T) {
+#' @examples 
+#' ## This function is best used after first annotating regular quotes
+#' ## Here we first apply 3 tqueries for annotating quotes in spacy tokens
+#' 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
+#' 
+## a list of verbs that indicate communication acts is required. This is an example:
+#' verbs = c("tell", "show", "acknowledge", "admit", "affirm", "allege", 
+#'   "announce", "assert", "attest", "avow", "call", "claim", "comment", 
+#'   "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", 
+#'   "note", "post","predict", "proclaim", "promise", "reply", "remark", 
+#'   "report", "say", "speak", "state", "suggest", "talk", "tell", "think",
+#'   "warn","write", "add")
+#' 
+#' direct = tquery(lemma = verbs, label='verb',
+#'    children(req=FALSE, relation = c('npadvmod'), block=TRUE),
+#'    children(relation=c('su','nsubj','agent','nmod:agent'), label='source'),
+#'    children(label='quote'))
+#' 
+#' nosrc = tquery(pos='VERB*',
+#'    children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
+#'    children(lemma = verbs, relation='xcomp', label='verb',
+#'      children(relation=c("ccomp","dep","parataxis","dobj","nsubjpass","advcl"), label='quote')))
+#' 
+#' according = tquery(label='quote',
+#'    children(relation='nmod:according_to', label='source',
+#'         children(label='verb')))
+#'
+#' tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+#' tokens
+#'
+#' ## now we add the span quotes. If a span quote is found, the algorithm will first
+#' ## look for already annotated sources as source candidates. If there are none,
+#' ## additional tqueries can be used to find candidates. Here we simply look for
+#' ## the most recent PERSON entity
+#' 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
+#' tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+#' 
+#' 
+#' last_person = tquery(entity = 'PERSON*', label='source')
+#' tokens = add_span_quotes(tokens, 'token', 
+#'                          quote_col = 'quote', source_val = 'source', quote_val = 'quote', 
+#'                          tqueries=last_person)
+#' tokens
+#' 
+#' \donttest{
+#' ## view as full text
+#' syntax_reader(tokens, annotation = 'quote', value = 'source')
+#' }
+add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, add_quote_symbols=NULL, quote_subset=NULL, copy=T) {
   if (!quote_col %in% colnames(tokens)) stop('quote_col is not a column in tokens') 
   if (copy) tokens = data.table::copy(tokens)
   
-  is_quote = get_quote_positions(tokens, text_col, par_col, space_col)
+  quote_subset = eval(substitute(quote_subset), tokens)
+  if (!is.null(add_quote_symbols)) {
+    add_quote_symbols = paste(add_quote_symbols, collapse='')
+    quote_regex = sprintf('^[%s%s"]*$', smartquotes(), add_quote_symbols)
+  } else {
+    quote_regex = sprintf('^[%s"]*$', smartquotes())
+  }
+  is_quote = get_quote_positions(tokens, text_col, is_quote_regex=quote_regex, par_col = par_col, space_col = space_col, quote_subset=quote_subset)
   ## if a previously found source occurs in a span quote (all source nodes within the quote), remove it. nested queries are a challenge for another day
   tokens = remove_nested_source(tokens, is_quote, quote_col, source_val)
-  
   quotes = tokens[!is.na(is_quote),]
   quotes$.QUOTE = is_quote[!is.na(is_quote)]
   
@@ -79,7 +141,6 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
   if (lag_sentences < 0) stop('lag_sentences must be 0 or higher')
   quote_id_col = paste0(quote_col,'_id')
   uquotes = unique(subset(quotes, select = c('doc_id','sentence','token_id',quote_id_col,quote_col,'.QUOTE')))
-
   
   already_coded = tapply(!is.na(uquotes[[quote_col]]), uquotes$.QUOTE, FUN=mean)
   has_source = as.numeric(names(already_coded)[already_coded == 1])
@@ -89,15 +150,19 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
   no_source = unique(no_source, by=c('doc_id','.QUOTE'))
   
   candidates = select_candidates(tokens, is_quote, quote_col, source_val, tqueries)
+  
   if (nrow(candidates) == 0) return(tokens)
   
   no_source$start_sentence = no_source$sentence
+  
   for (i in 0:lag_sentences) {
     no_source$sentence = no_source$start_sentence - i
     if (!any(no_source$sentence >= 0)) break
-    sent = merge(no_source, candidates, by=c('doc_id','sentence'))
+    sent = merge(no_source, candidates, by=c('doc_id','sentence'), allow.cartesian=T)
     select_ids = unique(sent, by=c('.QUOTE'))$.ID
-    sent = sent[list(select_ids), on='.ID']
+    
+    sent = sent[list(unique(select_ids)), on='.ID']
+    
     #sent = sent[!sent$.ROLE == quote_val,]
     if (nrow(sent) > 0) 
       tokens = add_selected_sources(tokens, sent, is_quote, quote_col, source_val, quote_val)
@@ -163,14 +228,16 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   tokens
 }
 
+
 smartquotes <- function() intToUtf8(c(8220,8221,8222))
 
-get_quote_positions <- function(tokens, text_col, par_col=NULL, space_col=NULL) {
+get_quote_positions <- function(tokens, text_col, is_quote_regex, par_col=NULL, space_col=NULL, quote_subset=NULL) {
   par = get_paragraph(tokens, text_col, par_col, space_col)
   
-  is_quote_regex = sprintf('[%s\"]', smartquotes())
   is_quote = grepl(is_quote_regex, tokens[[text_col]])
+  if (!is.null(quote_subset)) is_quote = is_quote & quote_subset
   is_quote[c(F,is_quote[-length(is_quote)])] = F ## to ignore double quotes after reshaping
+  
   par_quotes = split(is_quote, par)
   par_quotes = lapply(par_quotes, get_spans)
   

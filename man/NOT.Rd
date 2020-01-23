@@ -16,5 +16,5 @@ A list, to be used as input to \link{tquery}
 Use NOT search in tquery
 }
 \examples{
-tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
+tquery(NOT(POS='Noun'))   
 }

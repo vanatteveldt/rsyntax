@@ -60,5 +60,5 @@ Multiple flags can be combined, such as lemma__RI, or lemma_IR  (order of flags 
 quotes_direct = tquery(lemma = .SAY_VERBS,
                          children(label = 'source', p_rel = .SUBJECT_RELS),
                          children(label = 'quote', p_rel = .QUOTE_RELS))
-quotes_direct ## print shows tquery
+quotes_direct 
 }

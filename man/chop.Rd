@@ -11,6 +11,27 @@ chop(.tokens, ...)
 
 \item{...}{Arguments passed to tquery. For instance, relation = 'punct' cuts off all punctuation dependencies (in universal dependencies)}
 }
+\value{
+A tokenIndex
+}
 \description{
 Using the query language for tquery, chop of the branch down from the node that is found
+}
+\examples{
+
+spacy_conjunctions <- function(tokens) {
+  no_fill = c('compound*','case', 'relcl')
+  tq = tquery(label='target', NOT(relation = 'conj'),
+              rsyntax::fill(NOT(relation = no_fill), max_window = c(Inf,0)),
+              children(relation = 'conj', label='origin',
+                       rsyntax::fill(NOT(relation = no_fill), max_window=c(0,Inf))))
+  tokens = climb_tree(tokens, tq)
+  chop(tokens, relation = 'cc')
+}
+
+## spacy tokens for "Bob and John ate bread and drank wine"
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
+
+tokens = spacy_conjunctions(tokens)
+plot_tree(tokens)
 }

@@ -1,7 +1,9 @@
-find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T, melt=T) {
+find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T, melt=T, root_dist=F) {
   .MATCH_ID = NULL; .DROP = NULL; .ID = NULL ## declare data.table bindings
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
+  
+  #nodes_list = list()
   nodes = filter_tokens(tokens, lookup=tquery$lookup, .G_ID=tquery$g_id, .BLOCK=block, use_index=use_index)
   if (nrow(nodes) == 0) return(NULL)
   nodes = subset(nodes, select = c('doc_id','sentence','token_id'))
@@ -16,7 +18,9 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
   if (is.null(nodes)) return(NULL)  
   if (nrow(nodes) == 0) return(NULL)
 
+  if (root_dist) nodes = get_root_dist(tokens, nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
+  
   nodes = create_unique_key(nodes, name)
   if (melt) {
     nodes = melt_nodes_list(nodes)
@@ -93,5 +97,19 @@ create_unique_key <- function(nodes, name){
   return(nodes)
 }
 
+
+get_root_dist <- function(tokens, nodes) {
+  
+  tf = token_family(tokens, unique(data.table(doc_id=nodes$doc_id, sentence=nodes$sentence, token_id=nodes$.ID)), 
+                    depth=Inf, level='parents', minimal=T, show_level=T, replace=T)
+  tf = data.table::setorderv(tf, cols = '.FILL_LEVEL', order = -1)
+  tf = unique(tf, by=c('doc_id','sentence','.MATCH_ID'))
+  data.table::setnames(tf, c('.FILL_LEVEL', '.MATCH_ID'), c('.ROOT_DIST', '.ID'))
+  tf = subset(tf, select=c('doc_id','sentence','.ID','.ROOT_DIST'))
+  nodes = merge(nodes, tf, by = c('doc_id','sentence','.ID'), all.x=T)
+  #nodes = nodes[list(tf$doc_id, tf$sentence, tf$.MATCH_ID), .ROOT_DIST := tf$.FILL_LEVEL, on=c('doc_id','sentence','.ID')]
+  nodes[is.na(nodes$.ROOT_DIST), .ROOT_DIST := 0]
+  nodes
+}
 
 

@@ -12,3 +12,15 @@ unselect_nodes(.tokens)
 \description{
 Not strictly required. Only available for elegance and minor memory efficiency
 }
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+
+tq = tquery(relation = "relcl", label = "relative_clause")
+tokens = select_nodes(tokens, tq) 
+selected_nodes(tokens)
+
+tokens = unselect_nodes(tokens)
+\donttest{
+selected_nodes(tokens)
+}
+}

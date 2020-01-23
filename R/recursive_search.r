@@ -131,9 +131,14 @@ select_tokens <- function(tokens, ids, q, block=NULL) {
     data.table::setnames(selection, c('token_id','.FILL_LEVEL'), c(q$label, paste0(q$label, '_LEVEL')))
   }
   
-  if (!identical(q$window, c(Inf,Inf))) {
+  if (nrow(selection) > 0 && !identical(q$max_window, c(Inf,Inf))) {
     dist = selection[[q$label]] - selection$.MATCH_ID
-    distfilter = dist > (-q$window[1]) & dist < q$window[2]
+    distfilter = dist >= (-q$max_window[1]) & dist <= q$max_window[2]
+    selection = selection[distfilter,]
+  }
+  if (nrow(selection) > 0 && !identical(q$min_window, c(0,0))) {
+    dist = selection[[q$label]] - selection$.MATCH_ID
+    distfilter = dist <= (-q$min_window[1]) | dist >= q$min_window[2]
     selection = selection[distfilter,]
   }
   

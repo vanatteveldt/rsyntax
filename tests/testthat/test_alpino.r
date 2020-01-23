@@ -66,7 +66,7 @@ alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
        impliciet=impliciet, impliciet2=impliciet2, moetzeggen=moetzeggen)
 }
 
-alpino_clause_queries <- function(verbs=NULL, exclude_verbs=DUTCH_SAY_VERBS, with_subject=T, with_object=F) {
+alpino_clause_queries <- function(verbs=NULL, exclude_verbs=DUTCH_SAY_VERBS) {
   
   passive = tquery(POS = 'verb', NOT(lemma = exclude_verbs), label='predicate',
                    parents(lemma = c('zijn','worden','hebben')),
@@ -204,5 +204,10 @@ test_that("extracting clauses works", {
   clauses = get_clauses(tokens[tokens$sentence == 6,])
   expect_equal(nrow(clauses), 6)
   .check(tokens, clauses, subject='ik', predicate = c('heb','Piet','niet','zomaar','geslagen'))
+  
+  #tokens_dutchclauses %>%
+  #  as_tokenindex() %>%
+  #  annotate('clauses', alpino_clause_queries()) %>%
+  #  syntax_reader(annotation='clauses', value='subject')
+  
 })
-

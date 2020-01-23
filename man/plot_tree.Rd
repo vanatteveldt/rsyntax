@@ -5,10 +5,12 @@
 \title{Create an igraph tree from a sentence}
 \usage{
 plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
-  sentence = NULL, annotation = NULL, pdf_file = NULL,
-  allign_text = T, ignore_rel = NULL, all_lower = F,
-  all_abbrev = NULL, textsize = 1, spacing = 1, use_color = T,
-  max_curve = 0.3, palette = grDevices::terrain.colors)
+  sentence = NULL, annotation = NULL, only_annotation = F,
+  pdf_file = NULL, allign_text = T, ignore_rel = NULL,
+  all_lower = F, all_abbrev = NULL, textsize = 1, spacing = 1,
+  use_color = T, max_curve = 0.3,
+  palette = grDevices::terrain.colors, pdf_viewer = F,
+  viewer_mode = T, viewer_size = c(100, 100))
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -22,6 +24,8 @@ plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
 \item{sentence}{Optionally, the sentence id can be specified (note that sentence_i refers to the position). If sentence is given, doc_id has to be given as well.}
 
 \item{annotation}{Optionally, a column with an rsyntax annotation, to add boxes around the annotated nodes.}
+
+\item{only_annotation}{If annotation is given, only_annotation = TRUE will print only the nodes with annotations.}
 
 \item{pdf_file}{Directly save the plot as a pdf file}
 
@@ -42,6 +46,13 @@ plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
 \item{max_curve}{A number for controlling the allowed amount of curve in the edges.}
 
 \item{palette}{A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation}
+
+\item{pdf_viewer}{If TRUE, view the plot as a pdf. If no pdf_file is specified, the pdf will be saved to the temp folder}
+
+\item{viewer_mode}{By default, the plot is saved as a PNG embedded in a HTML and opened in the viewer. This hack makes it independent of the 
+size of the plotting device and enables scrolling. By setting viewer_mode to False, the current plotting device is used.}
+
+\item{viewer_size}{A vector of length 2, that multiplies the width (first value) and height (second value) of the viewer_mode PNG}
 }
 \value{
 an igraph graph

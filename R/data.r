@@ -19,6 +19,13 @@
 #' @format data.frame
 'tokens_corenlp'
 
+#' Example tokens for spacy English
+#'
+#' @docType data
+#' @usage data(tokens_spacy)
+#' @format data.frame
+'tokens_spacy'
+
 #' Dutch lemma
 #'
 #' Various categories of lemma, for use in syntax queries

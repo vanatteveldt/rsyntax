@@ -5,7 +5,7 @@
 \title{Apply tquery to initiate reshape operations}
 \usage{
 select_nodes(tokens, tquery, fill = T, fill_only_first = T,
-  .one_per_sentence = F)
+  .one_per_sentence = F, .order = 1)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -16,11 +16,37 @@ select_nodes(tokens, tquery, fill = T, fill_only_first = T,
 
 \item{fill_only_first}{Logical, should a node only be filled once, with the nearest (first) labeled node?}
 
-\item{.one_per_sentence}{If true, only the first match in each sentence is used. This is currently used internally in the climb_tree function.}
+\item{.one_per_sentence}{If true, only one match per sentence is used, giving priority to paterns closest to the root (or fartest from the root if .order = -1). 
+This is sometimes necessary to deal with recursion.}
+
+\item{.order}{If .one_per_sentence is used, .order determines whether the paterns closest to (1) or farthest away (-1) are used.}
 }
 \value{
 A tokenIndex with a .nodes attribute, that enables the use of reshape operations on the selected nodes
 }
 \description{
 Apply tquery to initiate reshape operations
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+
+## use a tquery to label the nodes that you want to manipulate
+tq = tquery(relation = "relcl", label = "relative_clause")
+
+## apply query to select nodes
+tokens2 = select_nodes(tokens, tq) 
+
+## as an example, we make the parent of the relative_clause
+## nodes NA, effectively cutting of the relcl from the tree
+tokens2 = mutate_nodes(tokens2, "relative_clause", parent=NA)
+
+plot_tree(tokens2)
+
+## this is designed to work nicely with magrittr piping
+\donttest{
+  tokens \%>\%
+    select_nodes(tq) \%>\%
+    mutate_nodes("relative_clause", parent=NA) \%>\%
+    plot_tree()
+}
 }

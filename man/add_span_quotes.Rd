@@ -6,7 +6,8 @@
 \usage{
 add_span_quotes(tokens, text_col, quote_col = "quotes",
   source_val = "source", quote_val = "quote", tqueries = NULL,
-  par_col = NULL, space_col = NULL, lag_sentences = 1, copy = T)
+  par_col = NULL, space_col = NULL, lag_sentences = 1,
+  add_quote_symbols = NULL, quote_subset = NULL, copy = T)
 }
 \arguments{
 \item{tokens}{A tokenIndex with rsyntax annotations for 'sources' and 'quotes'}
@@ -27,6 +28,14 @@ add_span_quotes(tokens, text_col, quote_col = "quotes",
 
 \item{lag_sentences}{The max number of sentences looked backwards to find source candidates. Default is 1, which means the source candidates have to occur in the sentence where the quote begins (lag = 0) or the sentence before that (lag = 1)}
 
+\item{add_quote_symbols}{Optionally, add additional punctuation symbols for finding quotation marks. 
+In some contexts and languages it makes sense to add single quotes, but in that case it is oftne necessary to 
+also use the quote_subset argument. For instance, in Spacy (and probably other UD based annotations), single quotes in posessives (e.g., Bob's, scholars') have a
+PART POS tag, whereas quotation symbols have PUNCT, NOUN, VERB, or ADJ (for some reason).}
+
+\item{quote_subset}{Optionally, and expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
+pos != "PART" can be used for the example mentioned in add_quote_symbols.}
+
 \item{copy}{If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)}
 }
 \value{
@@ -44,4 +53,54 @@ Secondly, the source might be implied in the sentence where the quotes starts, o
 In the first case, the source can be found with a tquery. If there is a source (source_val) in the quote_col that is linked to a part of the quote (quote_val), this function will add the rest of the quote. 
 
 In the second case, we can look for candidates near the beginning of the quote. The candidate criteria can be specified as tqueries
+}
+\examples{
+## This function is best used after first annotating regular quotes
+## Here we first apply 3 tqueries for annotating quotes in spacy tokens
+
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
+
+verbs = c("tell", "show", "acknowledge", "admit", "affirm", "allege", 
+  "announce", "assert", "attest", "avow", "call", "claim", "comment", 
+  "concede", "confirm", "declare", "deny", "exclaim", "insist", "mention", 
+  "note", "post","predict", "proclaim", "promise", "reply", "remark", 
+  "report", "say", "speak", "state", "suggest", "talk", "tell", "think",
+  "warn","write", "add")
+
+direct = tquery(lemma = verbs, label='verb',
+   children(req=FALSE, relation = c('npadvmod'), block=TRUE),
+   children(relation=c('su','nsubj','agent','nmod:agent'), label='source'),
+   children(label='quote'))
+
+nosrc = tquery(pos='VERB*',
+   children(relation= c('su', 'nsubj', 'agent', 'nmod:agent'), label='source'),
+   children(lemma = verbs, relation='xcomp', label='verb',
+     children(relation=c("ccomp","dep","parataxis","dobj","nsubjpass","advcl"), label='quote')))
+
+according = tquery(label='quote',
+   children(relation='nmod:according_to', label='source',
+        children(label='verb')))
+
+tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+tokens
+
+## now we add the span quotes. If a span quote is found, the algorithm will first
+## look for already annotated sources as source candidates. If there are none,
+## additional tqueries can be used to find candidates. Here we simply look for
+## the most recent PERSON entity
+
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
+tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+
+
+last_person = tquery(entity = 'PERSON*', label='source')
+tokens = add_span_quotes(tokens, 'token', 
+                         quote_col = 'quote', source_val = 'source', quote_val = 'quote', 
+                         tqueries=last_person)
+tokens
+
+\donttest{
+## view as full text
+syntax_reader(tokens, annotation = 'quote', value = 'source')
+}
 }

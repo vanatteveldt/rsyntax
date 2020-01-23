@@ -1,8 +1,8 @@
 get_children_i <- function(tokens, i) {
   tokens = as_tokenindex(tokens)
-  select = tokens[i,c('doc_id','token_id'), with=F]
-  data.table::setnames(select, c('doc_id','parent'))
-  children = tokens[select, on=c('doc_id','parent'), nomatch=0, which=T]
+  select = tokens[i,c('doc_id','sentence','token_id'), with=F]
+  data.table::setnames(select, c('doc_id','sentence','parent'))
+  children = tokens[select, on=c('doc_id','sentence','parent'), nomatch=0, which=T]
   if (length(children) > 0) children = union(children, get_children_i(tokens, children)) 
   union(i, children)
 }
@@ -49,3 +49,7 @@ construct_triples <- function(tokens, concept_column="concept") {
   
   merge(sources, merge(subjects, objects, all=T), all=T)
 }
+
+
+
+

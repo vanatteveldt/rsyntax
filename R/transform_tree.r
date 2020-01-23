@@ -87,7 +87,7 @@ unpack_bypass <- function(tokens, bypass, link_children, only_first_level=T, cop
                     by.x='.MATCH_ID', by.y='token_id', allow.cartesian=T)
         # fam_match = match(add$token_id, fam$.MATCH_ID)
         # print(fam_match)
-        # fam = fam[na.omit(fam_match),]
+        # fam = fam[stats::na.omit(fam_match),]
         # fam_uberparent = add$parent[!is.na(fam_match)]
         add$token_id = (add$parent) + token_sub_id(add$token_id, largest_id)
         
