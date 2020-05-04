@@ -19,6 +19,10 @@
 #' @export
 as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel')) {
   new_index = !methods::is(tokens, 'tokenIndex')
+  
+  ## if we can confirm that this is udpipe input, do not give a warning for missing parents
+  is_udpipe = all(c('doc_id','token_id','head_token_id','dep_rel') %in% colnames(tokens))
+  warn = !is_udpipe
 
   for (cols_obj in c('doc_id','sentence','token_id','parent','relation')) {
     cols = get(cols_obj)
@@ -42,6 +46,22 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
   tokens$token_id = as.numeric(tokens$token_id)   
   tokens$parent = as.numeric(tokens$parent)
   
+  ## in some cases (such as udpipe) sentence_id has the sentence index, and sentence is a text column
+  if ('sentence_id' %in% colnames(tokens)) {
+    tokens$sentence_txt = tokens$sentence
+    tokens$sentence = tokens$sentence_id
+    tokens$sentence_id = NULL
+  }
+  if (!methods::is(tokens$sentence, 'numeric')) {
+    if (methods::is(tokens$sentence, 'factor')) 
+      tokens$sentence = as.numeric(tokens$sentence)
+    else {
+      ## create a counter that increments for every new sentence within a document 
+      tokens$sentence = tokens$sentence != data.table::shift(tokens$sentence, 1, fill=NA) 
+      tokens$sentence[1] = T
+      tokens[, sentence := cumsum(sentence), by='doc_id']
+    }
+  }
 
   if (new_index) {
     is_own_parent = tokens$parent == tokens$token_id
@@ -58,11 +78,11 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
   if (!'relation' %in% has_indices) data.table::setindexv(tokens, 'relation')
   
   if (new_index) {
-    tokens = fix_missing_parents(tokens)
+    tokens = fix_missing_parents(tokens, warn)
     data.table::setattr(tokens, name = 'class', c('tokenIndex', class(tokens)))
   }
   
-  tokens
+  tokens[]
 }
 
 fix_missing_parents <- function(tokens, warn=T) {

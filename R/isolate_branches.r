@@ -17,9 +17,11 @@
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
 #' tokens = as_tokenindex(tokens)
 #' 
-#' plot_tree(tokens)
 #' tokens2 = isolate_branch(tokens, relation = 'relcl', copy_parent = TRUE)
+#' tokens2
+#' \donttest{
 #' plot_tree(tokens2)
+#' }
 isolate_branch <- function(tokens, ..., copy_parent=T, copy_parent_fill=T) {
   parent = .ISOLATED = NULL
   

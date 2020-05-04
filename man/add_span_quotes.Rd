@@ -68,6 +68,9 @@ In the second case, we can look for candidates near the beginning of the quote. 
 ## This function is best used after first annotating regular quotes
 ## Here we first apply 3 tqueries for annotating quotes in spacy tokens
 
+## this example is not tested because it takes too long on CRAN
+\donttest{
+
 tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
 
 verbs = c("tell", "show", "acknowledge", "admit", "affirm", "allege", 
@@ -109,7 +112,6 @@ tokens = add_span_quotes(tokens, 'token',
                          tqueries=last_person)
 tokens
 
-\donttest{
 ## view as full text
 syntax_reader(tokens, annotation = 'quote', value = 'source')
 }

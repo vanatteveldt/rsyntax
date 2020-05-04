@@ -46,7 +46,10 @@ tokens2 = select_nodes(tokens, tq)
 ## nodes NA, effectively cutting of the relcl from the tree
 tokens2 = mutate_nodes(tokens2, "relative_clause", parent=NA)
 
+tokens2
+\donttest{
 plot_tree(tokens2)
+}
 
 ## this is designed to work nicely with magrittr piping
 \donttest{

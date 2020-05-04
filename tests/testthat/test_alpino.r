@@ -127,7 +127,6 @@ test_that("extracting sources works", {
   .check(tokens, quotes, source="Rutte", quote=c('Een','stem','op','de','PVV','is','een','verloren','stem'))
   
   # 3 : " Verkiezingsblabla " , zegt PvdA-Kamerlid Kuiken . 
-  #plot_tree(tokens, sentence_i = 3, token)
   quotes = get_quotes(tokens[tokens$sentence == 3,])
   #find_nodes2(tokens[tokens$sentence == 3,], alpino_quote_queries()[[3]])
   #find_nodes(tokens[tokens$sentence == 3,], alpino_quote_queries()[[3]])

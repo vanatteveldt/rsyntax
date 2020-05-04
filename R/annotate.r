@@ -31,7 +31,9 @@
 #' tokens = annotate(tokens, "clause", pas=passive, act=active)
 #' 
 #' tokens
+#' \donttest{
 #' plot_tree(tokens, annotation='clause')
+#' }
 annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T) {
   queries = list(...)
   is_tquery = sapply(queries, methods::is, 'tQuery')

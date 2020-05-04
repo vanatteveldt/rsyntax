@@ -58,7 +58,11 @@ inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpac
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
 #' 
 #' tokens = spacy_conjunctions(tokens)
+#' 
+#' tokens
+#' \donttest{
 #' plot_tree(tokens)
+#' }
 climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=T, only_new='relation', max_iter=200) {
   target = NULL; new_parent = NULL; branch_parent = NULL
   i = 1
@@ -200,7 +204,10 @@ one_per_sentence <- function(.tokens) {
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
 #' 
 #' tokens = spacy_conjunctions(tokens)
+#' tokens
+#' \donttest{
 #' plot_tree(tokens)
+#' }
 chop <- function(.tokens, ...) {
   tq = tquery(..., label = 'chop')
   .tokens = select_nodes(.tokens, tq)

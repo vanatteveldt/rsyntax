@@ -98,3 +98,5 @@ syntax_highlight_tokens <- function(doc_id, tokens, ann_id, value, value2, value
   
   tokens
 }
+
+
