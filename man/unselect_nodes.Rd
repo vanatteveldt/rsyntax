@@ -20,7 +20,7 @@ tokens = select_nodes(tokens, tq)
 selected_nodes(tokens)
 
 tokens = unselect_nodes(tokens)
-\donttest{
-selected_nodes(tokens)
-}
+
+## selected_nodes now gives error due to not having selected nodes
+## selected_nodes(tokens)
 }

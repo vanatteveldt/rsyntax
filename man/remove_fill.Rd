@@ -4,8 +4,13 @@
 \alias{remove_fill}
 \title{Remove fill}
 \usage{
-remove_fill(.tokens, node, rm_subset_fill = NULL, rm_subset = NULL,
-  keep_shared = F)
+remove_fill(
+  .tokens,
+  node,
+  rm_subset_fill = NULL,
+  rm_subset = NULL,
+  keep_shared = F
+)
 }
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}

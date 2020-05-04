@@ -2,7 +2,7 @@ Package: rsyntax
 Type: Package
 Title: Extract Semantic Relations from Text by Querying and Reshaping Syntax
 Version: 0.1.0
-Date: 2019-05-14
+Date: 2020-05-04
 Author: Kasper Welbers and Wouter van Atteveldt
 Maintainer: Kasper Welbers <kasperwelbers@gmail.com>
 Depends: 
@@ -18,17 +18,17 @@ Imports:
     rlang,
     magrittr,
     tokenbrowser,
-    data.table (>= 1.11.8),
-    cleanNLP,
-    rJava,
-    dplyr
+    base64enc,
+    png,
+    data.table (>= 1.11.8)
 LazyData: true
 Encoding: UTF-8
 Description: Various functions for querying and reshaping dependency trees, 
     as for instance created with the spacyr, udpipe or coreNLP packages.
-    This enables the automatic extraction of usefull semantic relations from texts,
+    This enables the automatic extraction of useful semantic relations from texts,
     such as quotes (who said what) and clauses (who did what). Method proposed in 
     Van Atteveldt et al. (2017) <doi:10.1017/pan.2016.12>.
 License: GPL-3
-RoxygenNote: 6.1.1
-Suggests: testthat
+RoxygenNote: 7.1.0
+Suggests: 
+    testthat

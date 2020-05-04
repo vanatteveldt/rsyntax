@@ -4,8 +4,7 @@
 \alias{cast_tokens_aggregate}
 \title{Like cast_tokens, but instead of returning the tokens, aggregate one column}
 \usage{
-cast_tokens_aggregate(tokens, x, FUN, by, id, collapse_id = F, ...,
-  rm.na = F)
+cast_tokens_aggregate(tokens, x, FUN, by, id, collapse_id = F, ..., rm.na = F)
 }
 \arguments{
 \item{tokens}{A tokenIndex with rsyntax annotations}

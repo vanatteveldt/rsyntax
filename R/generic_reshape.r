@@ -27,12 +27,15 @@
 #' 
 #' ## this is designed to work nicely with magrittr piping
 #' \donttest{
-#'   tokens %>%
-#'     select_nodes(tq) %>%
-#'     mutate_nodes("relative_clause", parent=NA) %>%
-#'     plot_tree()
+#' library(magrittr)
+#' tokens %>%
+#'   select_nodes(tq) %>%
+#'   mutate_nodes("relative_clause", parent=NA) %>%
+#'   plot_tree()
 #' }
 select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sentence=F, .order=1){
+  .ROOT_DIST = NULL
+  
   ## fill mode: all, only_first, 
   tokens = as_tokenindex(tokens)
   nodes = find_nodes(tokens, tquery, fill = F, melt = F, root_dist = .one_per_sentence)
@@ -42,6 +45,7 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
       if (!.order %in% c(-1,1)) stop('.order has to be 1 or -1')
       nodes = data.table::setorderv(nodes, '.ROOT_DIST', order = .order)
       nodes = nodes[!duplicated(nodes, by=c('doc_id','sentence'), fromLast = F),]
+      nodes[,.ROOT_DIST := NULL]
     }
     if (fill) {
       if (fill_only_first) {
@@ -50,9 +54,11 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
         ids = unique(add_fill(tokens, nodes, tquery, block=NULL))
       }
     } else ids = NULL
+    
     if (!is.null(ids)) {
       ids = melt_nodes_list(ids, fill_only_first=fill_only_first)
       ids = unique(ids, by=c('doc_id','sentence','token_id'))
+      
       is_fill = ids$.FILL_LEVEL > 0
       fill_table = subset(ids, is_fill)
       data.table::setindexv(fill_table, '.ROLE')
@@ -93,9 +99,9 @@ reselect_nodes <- function(.tokens) {
 #' selected_nodes(tokens)
 #' 
 #' tokens = unselect_nodes(tokens)
-#' \donttest{
-#' selected_nodes(tokens)
-#' }
+#' 
+#' ## selected_nodes now gives error due to not having selected nodes
+#' ## selected_nodes(tokens)
 unselect_nodes <- function(.tokens) {
   data.table::setattr(.tokens, '.nodes', NULL)
   .tokens

@@ -4,8 +4,11 @@
 \alias{udpipe_tokenindex}
 \title{Parse text using udpipe}
 \usage{
-udpipe_tokenindex(text, udpipe_model = "english-ewt",
-  udpipe_model_path = getwd())
+udpipe_tokenindex(
+  text,
+  udpipe_model = "english-ewt",
+  udpipe_model_path = getwd()
+)
 }
 \arguments{
 \item{text}{A character vector with text(s) to parse}

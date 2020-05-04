@@ -13,4 +13,5 @@ You can install directly from github:
 Tutorial
 =====
 
-The package is currently in development, but nearing a first stage of completion. Please see [this working paper](Querying_dependency_trees.pdf) for details. 
+Please see [this working paper](Querying_dependency_trees.pdf) for details. 
+

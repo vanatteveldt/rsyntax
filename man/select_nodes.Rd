@@ -4,8 +4,14 @@
 \alias{select_nodes}
 \title{Apply tquery to initiate reshape operations}
 \usage{
-select_nodes(tokens, tquery, fill = T, fill_only_first = T,
-  .one_per_sentence = F, .order = 1)
+select_nodes(
+  tokens,
+  tquery,
+  fill = T,
+  fill_only_first = T,
+  .one_per_sentence = F,
+  .order = 1
+)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -44,9 +50,10 @@ plot_tree(tokens2)
 
 ## this is designed to work nicely with magrittr piping
 \donttest{
-  tokens \%>\%
-    select_nodes(tq) \%>\%
-    mutate_nodes("relative_clause", parent=NA) \%>\%
-    plot_tree()
+library(magrittr)
+tokens \%>\%
+  select_nodes(tq) \%>\%
+  mutate_nodes("relative_clause", parent=NA) \%>\%
+  plot_tree()
 }
 }

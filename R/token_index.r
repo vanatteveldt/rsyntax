@@ -4,10 +4,6 @@
 #' Creates a tokenIndex data.table. 
 #' Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent, relation) are present.
 #' The names of these columns must be one of the values specified in the respective arguments.
-#' 
-#' The data will be sorted by the doc_id, sentence and token_id columns.
-#' Accordingly, it is recommended to use numeric token_id's. 
-#' Some parsers return token_id's as numbers with a prefix (t_1, w_1), in which case sorting is inconvenient (t_15 > t_100).
 #'
 #' The data in the data.frame will not be changed, with three exceptions. First, the columnnames will be changed if the default values are not used.
 #' Second, if a token has itself as its parent (which in some parsers is used to indicate the root), the parent is set to NA (as used in other parsers) to prevent infinite cycles.
@@ -16,8 +12,8 @@
 #' @param tokens     A data.frame, data.table, or tokenindex. 
 #' @param doc_id     candidate names for the document id columns
 #' @param sentence   candidate names for sentence (id/index) column
-#' @param token_id   candidate names for the  token id column
-#' @param parent     candidate names for the parent id column
+#' @param token_id   candidate names for the  token id column. Has to be numeric (Some parsers return token_id's as numbers with a prefix (t_1, w_1))
+#' @param parent     candidate names for the parent id column. Has to be numeric
 #' @param relation   candidate names for the relation column
 #'
 #' @export
@@ -42,13 +38,10 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
     }
   }
   
-  if (methods::is(tokens$token_id, 'numeric') && methods::is(tokens$parent, 'numeric')) {
-    tokens$token_id = as.numeric(tokens$token_id)   ## token_id and parent need to be identical (not integer vs numeric)
-    tokens$parent = as.numeric(tokens$parent)
-  } else {
-    tokens$token_id = as.factor(as.character(tokens$token_id))
-    tokens$parent = as.factor(as.character(tokens$parent))
-  }
+  ## token_id and parent need to be identical (not integer vs numeric)
+  tokens$token_id = as.numeric(tokens$token_id)   
+  tokens$parent = as.numeric(tokens$parent)
+  
 
   if (new_index) {
     is_own_parent = tokens$parent == tokens$token_id

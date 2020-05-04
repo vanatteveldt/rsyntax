@@ -60,7 +60,7 @@ inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpac
 #' tokens = spacy_conjunctions(tokens)
 #' plot_tree(tokens)
 climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=T, only_new='relation', max_iter=200) {
-  target = NULL; new_parent = NULL
+  target = NULL; new_parent = NULL; branch_parent = NULL
   i = 1
   out = list()
   
@@ -122,6 +122,8 @@ climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=
 
 
 resolve_siblings <- function(tokens, no_fill=NULL) {
+  .SIBLING = target_copy = NULL
+  
   ftok = data.table::data.table(doc_id=tokens$doc_id, 
                                 sentence=tokens$sentence, 
                                 floor_token_id=floor(tokens$token_id), 

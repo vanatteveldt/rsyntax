@@ -147,12 +147,14 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   
   if (pdf_viewer) {
     viewer = getOption('viewer')
-    viewer(pdf_file)
+    if (!is.null(viewer))
+      viewer(pdf_file)
+    else
+      utils::browseURL(pdf_file)
   }
   if (viewer_mode) {
     png_in_viewer(png_file)
   }
-  corpustools:::preprocess_tokens
   invisible(tokens)
 }
 
@@ -490,5 +492,8 @@ png_in_viewer <- function(png_file) {
                   </div></body></html>', png)
   writeLines(html , tf)
   v = getOption('viewer')  
-  v(tf)
+  if (!is.null(v))
+    v(tf)
+  else
+    utils::browseURL(tf)
 }

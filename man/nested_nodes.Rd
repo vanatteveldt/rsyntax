@@ -9,22 +9,58 @@
 \alias{fill}
 \title{Search for parents or children in tquery}
 \usage{
-children(..., g_id = NULL, label = NA, req = T, depth = 1,
-  connected = F, fill = T, block = F, max_window = c(Inf, Inf),
-  min_window = c(0, 0))
+children(
+  ...,
+  g_id = NULL,
+  label = NA,
+  req = T,
+  depth = 1,
+  connected = F,
+  fill = T,
+  block = F,
+  max_window = c(Inf, Inf),
+  min_window = c(0, 0)
+)
 
-not_children(..., g_id = NULL, depth = 1, connected = F,
-  max_window = c(Inf, Inf), min_window = c(0, 0))
+not_children(
+  ...,
+  g_id = NULL,
+  depth = 1,
+  connected = F,
+  max_window = c(Inf, Inf),
+  min_window = c(0, 0)
+)
 
-parents(..., g_id = NULL, label = NA, req = T, depth = 1,
-  connected = F, fill = T, block = F, max_window = c(Inf, Inf),
-  min_window = c(0, 0))
+parents(
+  ...,
+  g_id = NULL,
+  label = NA,
+  req = T,
+  depth = 1,
+  connected = F,
+  fill = T,
+  block = F,
+  max_window = c(Inf, Inf),
+  min_window = c(0, 0)
+)
 
-not_parents(..., g_id = NULL, depth = 1, connected = F,
-  max_window = c(Inf, Inf), min_window = c(0, 0))
+not_parents(
+  ...,
+  g_id = NULL,
+  depth = 1,
+  connected = F,
+  max_window = c(Inf, Inf),
+  min_window = c(0, 0)
+)
 
-fill(..., g_id = NULL, depth = Inf, connected = F,
-  max_window = c(Inf, Inf), min_window = c(0, 0))
+fill(
+  ...,
+  g_id = NULL,
+  depth = Inf,
+  connected = F,
+  max_window = c(Inf, Inf),
+  min_window = c(0, 0)
+)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -76,7 +112,7 @@ Enables searching for parents or children, either direct (depth = 1) or until a 
 Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
 The label argument is used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 
-the not_children and not_parents functions will make the matched children/parents a NOT condition.
+the not_children and not_parents functions will make the matched children/parents a NOT condition. 
 
 The fill() function is used to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
 and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be

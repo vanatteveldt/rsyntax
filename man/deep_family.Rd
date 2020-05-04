@@ -4,9 +4,19 @@
 \alias{deep_family}
 \title{Get the parents or children of a set of ids}
 \usage{
-deep_family(tokens, id, level, depth, minimal = F, block = NULL,
-  replace = F, show_level = F, only_new = F, lookup = NULL,
-  g_id = NULL)
+deep_family(
+  tokens,
+  id,
+  level,
+  depth,
+  minimal = F,
+  block = NULL,
+  replace = F,
+  show_level = F,
+  only_new = F,
+  lookup = NULL,
+  g_id = NULL
+)
 }
 \arguments{
 \item{tokens}{The tokenIndex}

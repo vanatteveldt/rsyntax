@@ -4,10 +4,20 @@
 \alias{add_span_quotes}
 \title{Add span quotes to a source-quote annotations}
 \usage{
-add_span_quotes(tokens, text_col, quote_col = "quotes",
-  source_val = "source", quote_val = "quote", tqueries = NULL,
-  par_col = NULL, space_col = NULL, lag_sentences = 1,
-  add_quote_symbols = NULL, quote_subset = NULL, copy = T)
+add_span_quotes(
+  tokens,
+  text_col,
+  quote_col = "quotes",
+  source_val = "source",
+  quote_val = "quote",
+  tqueries = NULL,
+  par_col = NULL,
+  space_col = NULL,
+  lag_sentences = 1,
+  add_quote_symbols = NULL,
+  quote_subset = NULL,
+  copy = T
+)
 }
 \arguments{
 \item{tokens}{A tokenIndex with rsyntax annotations for 'sources' and 'quotes'}

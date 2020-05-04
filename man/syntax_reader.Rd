@@ -4,9 +4,18 @@
 \alias{syntax_reader}
 \title{Create a full text browser with highlighted rsyntax annotations}
 \usage{
-syntax_reader(tokens, annotation, value = NULL, value2 = NULL,
-  meta = NULL, token_col = "token", filename = NULL, view = T,
-  random_seed = NA, ...)
+syntax_reader(
+  tokens,
+  annotation,
+  value = NULL,
+  value2 = NULL,
+  meta = NULL,
+  token_col = "token",
+  filename = NULL,
+  view = T,
+  random_seed = NA,
+  ...
+)
 }
 \arguments{
 \item{tokens}{A tokenIndex}

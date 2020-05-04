@@ -12,6 +12,7 @@ melt_nodes_list <- function(nodes, fill_only_first=T) {
   
   #browser()
   
+  
   cols = setdiff(colnames(nodes), c('doc_id','sentence','.ID'))
   cols = setdiff(cols, grep('\\_LEVEL$', cols, value=T))
   level = paste0(cols, '_LEVEL')

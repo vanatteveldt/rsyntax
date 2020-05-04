@@ -4,8 +4,16 @@
 \alias{copy_nodes}
 \title{Copy nodes}
 \usage{
-copy_nodes(.tokens, node, new, subset = NULL, keep_relation = T,
-  copy_fill = F, subset_fill = NULL, only_new = NULL)
+copy_nodes(
+  .tokens,
+  node,
+  new,
+  subset = NULL,
+  keep_relation = T,
+  copy_fill = F,
+  subset_fill = NULL,
+  only_new = NULL
+)
 }
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}

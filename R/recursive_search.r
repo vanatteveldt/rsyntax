@@ -11,6 +11,11 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
   .DROP = NULL
   out_req = list()
   out_not_req = list()
+  
+  ## make sure that NOT queries are performed last
+  is_NOT = sapply(ql, function(x) x$NOT)
+  ql = c(ql[!is_NOT], ql[is_NOT])
+  
   for (i in seq_along(ql)) {
     q = ql[[i]]
     #if (only_req && !q$req) next   ## only look for required nodes. unrequired nodes are added afterwards with add_unrequired()
@@ -20,15 +25,21 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
       q$label = paste('.DROP', i) ## if label is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
     } 
     
-    selection = rec_selection(tokens, ids, q, block, fill)
     
-
+    if (q$NOT)
+      selection = rec_selection(tokens, ids, q, NULL, fill)
+    else
+      selection = rec_selection(tokens, ids, q, block, fill)
+  
     if (q$NOT) {
       if (nrow(selection) > 0) {
         selection = data.table::fsetdiff(data.table::data.table(ids[,1],ids[,2], .MATCH_ID=ids[[3]]), selection[,c('doc_id','sentence','.MATCH_ID')])
       } else selection = data.table::data.table(ids[,1], ids[,2], .MATCH_ID=ids[[3]])
-      selection[,.DROP := NA]
+      #selection[,.DROP := NA]
+      #print(selection)
     }
+    
+    
     
     if (q$req) {
       if (nrow(selection) == 0) return(selection)
@@ -56,6 +67,7 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
   #  parcol = paste0(q$label, '_PARENT') 
   #  out[, (parcol) := .MATCH_ID]
   #}
+  #print(out)
   out
 }
 

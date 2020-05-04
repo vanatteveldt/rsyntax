@@ -4,18 +4,31 @@
 \alias{isolate_branch}
 \title{Isolate a branch in a dependency tree}
 \usage{
-isolate_branch(tokens, ..., copy_parent = T)
+isolate_branch(tokens, ..., copy_parent = T, copy_parent_fill = T)
 }
 \arguments{
-\item{tokens}{}
+\item{tokens}{A tokenindex}
 
 \item{...}{lookup arguments to find the node to split. For example, isolate_branch(tokens, relation='relcl') 
 isolates branches of which the top node (the new root) has the relation "relcl".}
 
 \item{copy_parent}{If TRUE (default) copy the parent of the branch and include it in the isolated branch}
+
+\item{copy_parent_fill}{If TRUE, also copy the parents fill nodes}
+}
+\value{
+the tokenindex
 }
 \description{
 cuts of a branch at the nodes that match the lookup arguents (...).
 A "branch_parent" column is added to the tokenindex, that indicates for the new roots
 which node the parent was.
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+tokens = as_tokenindex(tokens)
+
+plot_tree(tokens)
+tokens2 = isolate_branch(tokens, relation = 'relcl', copy_parent = TRUE)
+plot_tree(tokens2)
 }

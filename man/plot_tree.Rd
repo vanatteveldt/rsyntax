@@ -4,13 +4,28 @@
 \alias{plot_tree}
 \title{Create an igraph tree from a sentence}
 \usage{
-plot_tree(tokens, ..., sentence_i = 1, doc_id = NULL,
-  sentence = NULL, annotation = NULL, only_annotation = F,
-  pdf_file = NULL, allign_text = T, ignore_rel = NULL,
-  all_lower = F, all_abbrev = NULL, textsize = 1, spacing = 1,
-  use_color = T, max_curve = 0.3,
-  palette = grDevices::terrain.colors, pdf_viewer = F,
-  viewer_mode = T, viewer_size = c(100, 100))
+plot_tree(
+  tokens,
+  ...,
+  sentence_i = 1,
+  doc_id = NULL,
+  sentence = NULL,
+  annotation = NULL,
+  only_annotation = F,
+  pdf_file = NULL,
+  allign_text = T,
+  ignore_rel = NULL,
+  all_lower = F,
+  all_abbrev = NULL,
+  textsize = 1,
+  spacing = 1,
+  use_color = T,
+  max_curve = 0.3,
+  palette = grDevices::terrain.colors,
+  pdf_viewer = F,
+  viewer_mode = T,
+  viewer_size = c(100, 100)
+)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}

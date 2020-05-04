@@ -4,8 +4,14 @@
 \alias{remove_nodes}
 \title{Remove nodes}
 \usage{
-remove_nodes(.tokens, node, rm_subset = NULL, with_fill = T,
-  rm_subset_fill = NULL, keep_shared = F)
+remove_nodes(
+  .tokens,
+  node,
+  rm_subset = NULL,
+  with_fill = T,
+  rm_subset_fill = NULL,
+  keep_shared = F
+)
 }
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}

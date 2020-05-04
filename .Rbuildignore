@@ -1,3 +1,6 @@
+^Querying\_dependency\_trees\.pdf$
+
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^Querying\_dependency\_trees\.pdf$
+^README\.Rmd$
+^README-.*\.png$

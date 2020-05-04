@@ -4,8 +4,14 @@
 \alias{inherit}
 \title{Have nodes with a certain relation inherit the position of their parent}
 \usage{
-inherit(.tokens, relation, take_fill = fill(), give_fill = fill(),
-  unpack = T, only_new = "relation")
+inherit(
+  .tokens,
+  relation,
+  take_fill = fill(),
+  give_fill = fill(),
+  unpack = T,
+  only_new = "relation"
+)
 }
 \arguments{
 \item{.tokens}{A tokenIndex}

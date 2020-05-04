@@ -4,9 +4,18 @@
 \alias{token_family}
 \title{Get the parents or children of a set of ids}
 \usage{
-token_family(tokens, ids, level = "children", depth = Inf,
-  minimal = F, block = NULL, replace = F, show_level = F,
-  lookup = NULL, g_id = NULL)
+token_family(
+  tokens,
+  ids,
+  level = "children",
+  depth = Inf,
+  minimal = F,
+  block = NULL,
+  replace = F,
+  show_level = F,
+  lookup = NULL,
+  g_id = NULL
+)
 }
 \arguments{
 \item{tokens}{The tokenIndex}

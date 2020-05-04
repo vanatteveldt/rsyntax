@@ -18,6 +18,8 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
   if (is.null(nodes)) return(NULL)  
   if (nrow(nodes) == 0) return(NULL)
 
+  
+  
   if (root_dist) nodes = get_root_dist(tokens, nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
   
@@ -31,6 +33,8 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
 find_nested <- function(tokens, nodes, tquery, block, fill) {
   .ID = NULL; .MATCH_ID = NULL
   nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill)
+  
+  
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
   data.table::setcolorder(nodes, c('.ID', setdiff(colnames(nodes), '.ID')))
@@ -49,7 +53,7 @@ find_nested <- function(tokens, nodes, tquery, block, fill) {
 
 add_fill <- function(tokens, nodes, tquery, block, level=1) {
   is_fill = sapply(tquery$nested, methods::is, 'tQueryFill')
-  
+
   if (any(!is_fill)) {
     for (tq in tquery$nested[!is_fill]) {
       nodes = add_fill(tokens, nodes, tq, block, level+1)
@@ -64,6 +68,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     ids = subset(nodes, select = c('doc_id','sentence',match_id))
     ids = unique(stats::na.omit(ids))
     add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
+    
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))
       
@@ -99,6 +104,7 @@ create_unique_key <- function(nodes, name){
 
 
 get_root_dist <- function(tokens, nodes) {
+  .ROOT_DIST = NULL
   
   tf = token_family(tokens, unique(data.table(doc_id=nodes$doc_id, sentence=nodes$sentence, token_id=nodes$.ID)), 
                     depth=Inf, level='parents', minimal=T, show_level=T, replace=T)

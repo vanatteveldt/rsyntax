@@ -4,8 +4,16 @@
 \alias{climb_tree}
 \title{Have a node adopt its parent's position}
 \usage{
-climb_tree(.tokens, tq, unpack = T, isolate = T, take_fill = T,
-  give_fill = T, only_new = "relation", max_iter = 200)
+climb_tree(
+  .tokens,
+  tq,
+  unpack = T,
+  isolate = T,
+  take_fill = T,
+  give_fill = T,
+  only_new = "relation",
+  max_iter = 200
+)
 }
 \arguments{
 \item{.tokens}{A tokenIndex}

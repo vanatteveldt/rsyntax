@@ -4,8 +4,14 @@
 \alias{inspect_family}
 \title{Given a query, find all possible parents/children for a given node}
 \usage{
-inspect_family(tokens, query, node, family = c("family", "children",
-  "parents"), depth = 1, group_cols = NULL)
+inspect_family(
+  tokens,
+  query,
+  node,
+  family = c("family", "children", "parents"),
+  depth = 1,
+  group_cols = NULL
+)
 }
 \arguments{
 \item{tokens}{A tokenIndex}
