@@ -26,6 +26,20 @@ copy_fill(
 
 \item{only_new}{If TRUE, direct fill children will only be copied to to_node if it does not already have nodes of this relation. This is a good heuristic for dealing with argument drop.}
 }
+\value{
+A tokenIndex with a .nodes attribute
+}
 \description{
 Copy nodes
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text1',]
+
+tq = tquery(label='object', relation='dobj')
+            
+tokens2 = select_nodes(tokens, tq)
+selected_nodes(tokens2)
+
+tokens3 = copy_nodes(tokens2, 'object', 'new_object')
+copy_fill(tokens3, 'object', 'new_object')
 }

@@ -15,9 +15,10 @@
 #' @param overwrite   If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.
 #' @param block_fill  If TRUE (and overwrite is FALSE), the existing fill nodes will also be blocked. In other words, the new annotations will only be added if the 
 #' @param copy        If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional. 
+#' @param verbose     If TRUE, report progress (only usefull if multiple queries are given)
 #' 
 #' @export
-#' @return The tokenIndex with the annotation columns
+#' @return The tokenIndex data.table with the annotation columns added
 #' @examples
 #' ## spacy tokens for: Mary loves John, and Mary was loved by John
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
@@ -28,13 +29,18 @@
 #' active =  tquery(pos = "VERB*", label = "predicate",
 #'                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
 #' 
-#' tokens = annotate(tokens, "clause", pas=passive, act=active)
-#' 
+#' tokens = annotate_tqueries(tokens, "clause", pas=passive, act=active)
 #' tokens
-#' \donttest{
+#' \donttest{ 
 #' plot_tree(tokens, annotation='clause')
 #' }
-annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T) {
+annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T, verbose=F) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   queries = list(...)
   is_tquery = sapply(queries, methods::is, 'tQuery')
   queries = c(queries[is_tquery], unlist(queries[!is_tquery], recursive = F))
@@ -44,11 +50,6 @@ annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block
   if (copy) tokens = data.table::copy(tokens)
   id_column = paste0(column, '_id')    
   fill_column = paste0(column, '_fill')
-  
-  
-  #if (!is.null(bypass) || !is.null(isolate)) {
-  #  tokens = simplify_tree(tokens, bypass=bypass, isolate=isolate, link_children = link_children)
-  #}
   
   if (column %in% colnames(tokens)) {
     if (overwrite) {
@@ -61,7 +62,8 @@ annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block
       block = get_long_ids(block, tokens[i, c('doc_id','sentence','token_id')])
     }
   }
-  nodes = apply_queries(tokens, queries, as_chain=T, block=block, fill=fill)
+  
+  nodes = apply_queries(tokens, queries, as_chain=T, block=block, fill=fill, verbose=verbose)
   
   if (nrow(nodes) == 0) {
     fill_column = paste0(column, '_fill')
@@ -77,18 +79,16 @@ annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block
 #' Annotate a tokenlist based on rsyntaxNodes
 #' 
 #' Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
-#' Two columns will be added.
-#' One column contains the ids for each hit. The other column contains the annotations.
-#' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
+#' Three columns will be added: a unique id for the query match, the labels assigned in the tquery, and a column with the fill level (0 is direct match, 1 is child of match, 2 is grandchild, etc.).
 #' 
 #' Note that you can also directly use \link{annotate}.
 #' 
 #' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param nodes      A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
-#' @param column     The name of the column in which the annotations are added. The unique ids are added as [column]_id
+#' @param nodes   An rsyntaxNodes A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
+#' @param column  The name of the column in which the annotations are added. The unique ids are added as [column]_id, and the fill values are added as [column]_fill.
 #'
 #' @export
-#' @return A data.table with nodes
+#' @return The tokenIndex data.table with the annotation columns added
 #' 
 #' @examples 
 #' ## spacy tokens for: Mary loves John, and Mary was loved by John
@@ -103,6 +103,12 @@ annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block
 #' nodes = apply_queries(tokens, pas=passive, act=active)
 #' annotate_nodes(tokens, nodes, 'clause')
 annotate_nodes <- function(tokens, nodes, column) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   .FILL_LEVEL = NULL
   
   tokens = as_tokenindex(tokens)
@@ -111,16 +117,11 @@ annotate_nodes <- function(tokens, nodes, column) {
   id_column = paste0(column, '_id')
   fill_column = paste0(column, '_fill')
 
-  #if (column %in% colnames(tokens)) tokens[, (column) := NULL]
-  #if (id_column %in% colnames(tokens)) tokens[, (id_column) := NULL]
-  #if (fill_column %in% colnames(tokens)) tokens[, (fill_column) := NULL]
   if (!column %in% colnames(tokens)) tokens[, (column) := factor()]
   if (!id_column %in% colnames(tokens)) tokens[, (id_column) := factor()]
   if (!fill_column %in% colnames(tokens)) tokens[, (fill_column) := double()]
   
   if (nrow(nodes) == 0) {
-    #tokens[,(column) := factor()]
-    #tokens[,(id_column) := numeric()]
     return(tokens)
   }
   
@@ -135,20 +136,7 @@ annotate_nodes <- function(tokens, nodes, column) {
   tokens[i, (id_column) := .NODES$.ID]
   tokens[i, (fill_column) := .NODES$.FILL_LEVEL]
   
-  #data.table::setnames(.NODES, c('.ROLE','.ID'), c(column, id_column))
-  #if (show_fill) {
-  #  data.table::setnames(.NODES, '.FILL_LEVEL', paste0(column, '_fill'))
-  #} else {
-  ##  .NODES[, .FILL_LEVEL := NULL]
-  #}
-  
-  #tokens = merge(tokens, .NODES, by=c('doc_id','sentence','token_id'), all.x=T, allow.cartesian = T)
-  
-  
-  #if (!is.factor(tokens[[column]])) tokens[[column]] = as.factor(tokens[[column]])
-  #if (!is.factor(tokens[[id_column]])) tokens[[id_column]] = as.factor(tokens[[id_column]])
   as_tokenindex(tokens)
- 
 }
 
 
@@ -178,6 +166,12 @@ annotate_nodes <- function(tokens, nodes, column) {
 #' nodes = apply_queries(tokens, pas=passive, act=active)
 #' get_nodes(tokens, nodes)
 get_nodes <- function(tokens, nodes, use=NULL, token_cols=c('token')) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   tokens = as_tokenindex(tokens)
   
   missing_col = setdiff(token_cols, colnames(tokens))
@@ -188,24 +182,10 @@ get_nodes <- function(tokens, nodes, use=NULL, token_cols=c('token')) {
   out = merge(.NODES, tokens, by=c('doc_id','sentence','token_id'))
   subset(out, select = c('doc_id','sentence','token_id','.ID','.ROLE', token_cols))
 }
-  
+
 
 prepare_nodes <- function(tokens, nodes, use=NULL) {
   .ROLE = NULL
-  #.NODES = data.table::copy(nodes)
-  ##if (unique_fill) {
-  ##  print('wtf')
-  #  print(.NODES)
-  #  dup_fill = duplicated(.NODES, by=c('doc_id','sentence','token_id')) & .NODES$.FILL_LEVEL > 0
-  #  .NODES = subset(.NODES, !dup_fill)
-  #}
-  #print(.NODES)
-  
-  #still_dup = anyDuplicated(.NODES, by=c('doc_id','sentence','token_id'))
-  #if (concat_dup && still_dup) {
-  #  .SD=NULL
-  #  .NODES = .NODES[,lapply(.SD, paste, collapse=','), by=eval(c('doc_id','sentence', 'token_id'))]
-  #}
   .NODES = data.table::copy(unique(nodes, by = c('doc_id','sentence','token_id')))
   
   data.table::setkeyv(.NODES, c('doc_id','sentence','token_id'))

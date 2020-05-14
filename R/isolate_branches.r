@@ -23,6 +23,12 @@
 #' plot_tree(tokens2)
 #' }
 isolate_branch <- function(tokens, ..., copy_parent=T, copy_parent_fill=T) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   parent = .ISOLATED = NULL
   
   tokens = data.table::copy(tokens)
@@ -69,9 +75,17 @@ rec_isolate <- function(tokens, tq) {
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
 #' tokens = as_tokenindex(tokens)
 #' 
+#' \donttest{
 #' tokens2 = isolate_branch(tokens, relation = 'relcl', copy_parent = TRUE)
 #' get_branch_id(tokens2)
+#' }
 get_branch_id <- function(tokens) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   branch_id = NULL
   
   tokens[, branch_id := ifelse(is.na(tokens$parent), tokens$token_id, NA)]
@@ -95,32 +109,6 @@ get_branch_id <- function(tokens) {
     safe_count = safe_count + 1
   }
   tokens
-}
-
-split_conjunctions <- function(tokens) {
-  ## ignore most fill nodes for distant conjunctions (>= 3 words)
-  tokens = split_tree(tokens, rel='conj', no_fill=c('acl:relcl', 'relcl', 'conj', 'cop', 'acl', 'dobj', 'advmod','advcl','xcomp','obl','ccomp','aux','det'), min_dist = 3)
-  ## copy most fill nodes for close conjunctions
-  tokens = split_tree(tokens, rel='conj', no_fill=c('acl:relcl', 'relcl', 'conj', 'cop'), max_dist=2)
-  chop(tokens, relation='cc')
-}
-
-split_tree <- function(tokens, rel='conj', no_fill=NULL, min_dist=0, max_dist=Inf) {
-  tq = tquery(label='target', NOT(relation = rel),
-              children(relation = c('compound*', 'flat', 'amod'), label='ignore', req=F),
-              children(NOT(relation=rel), max_window=c(0,Inf), label='ignore2', req=F, connected=T),
-              fill(NOT(relation = no_fill), max_window = c(Inf,Inf), connected=T),
-              children(relation = rel, label='origin', min_window=min_dist, max_window = max_dist,
-                       fill(NOT(relation = no_fill), max_window=c(0,Inf), connected=T)))
-  ## ok, this requires some explanation
-  ## essentially the tquery looks for an 'origin' node with a specific relation, and 
-  ## its parent 'target'. We want the origin to copy the position of the target node,
-  ## and to adopt certain fill nodes from the target, but not all.
-  ## The arguments to limit fill are not sufficient, so we add two children queries (that have priority over fill) for more control
-  ## The first one, with label "ignore", prevents compounds of the target
-  ## The second one, "ignore2", prevents all nodes between the origin and target by taking all nodes untill the relation.
-  
-  tokens = climb_tree(tokens, tq)
 }
 
 print_sentences <- function(tokens, sentence_i=1, token_col='token') {

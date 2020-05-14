@@ -9,6 +9,9 @@ unselect_nodes(.tokens)
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}
 }
+\value{
+A tokenIndex (without a .nodes attribute)
+}
 \description{
 Not strictly required. Only available for elegance and minor memory efficiency
 }
@@ -21,6 +24,5 @@ selected_nodes(tokens)
 
 tokens = unselect_nodes(tokens)
 
-## selected_nodes now gives error due to not having selected nodes
-## selected_nodes(tokens)
+is.null(attr(tokens, '.nodes'))
 }

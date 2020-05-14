@@ -15,6 +15,24 @@ mutate_nodes(.tokens, node, ..., subset = NULL)
 
 \item{subset}{A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.}
 }
+\value{
+A tokenIndex with a .nodes attribute
+}
 \description{
 Mutate nodes
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+
+## use a tquery to label the nodes that you want to manipulate
+tq = tquery(relation = "relcl", label = "relative_clause")
+
+## apply query to select nodes
+tokens2 = select_nodes(tokens, tq) 
+
+## as an example, we make the parent of the relative_clause
+## nodes NA, effectively cutting of the relcl from the tree
+tokens2 = mutate_nodes(tokens2, "relative_clause", parent=NA)
+
+tokens2
 }

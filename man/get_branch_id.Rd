@@ -19,6 +19,8 @@ After splitting trees into branches
 tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
 tokens = as_tokenindex(tokens)
 
+\donttest{
 tokens2 = isolate_branch(tokens, relation = 'relcl', copy_parent = TRUE)
 get_branch_id(tokens2)
+}
 }

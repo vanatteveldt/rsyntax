@@ -24,12 +24,11 @@
 #' tokens2 = mutate_nodes(tokens2, "relative_clause", parent=NA)
 #' 
 #' tokens2
+#' 
 #' \donttest{
 #' plot_tree(tokens2)
-#' }
 #' 
 #' ## this is designed to work nicely with magrittr piping
-#' \donttest{
 #' library(magrittr)
 #' tokens %>%
 #'   select_nodes(tq) %>%
@@ -37,6 +36,12 @@
 #'   plot_tree()
 #' }
 select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sentence=F, .order=1){
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   .ROOT_DIST = NULL
   
   ## fill mode: all, only_first, 
@@ -81,11 +86,25 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
 #'
 #' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
 #'
+#' @return A tokenIndex with a .nodes attribute
 #' @export
+#' @examples
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(relation = "relcl", label = "relative_clause")
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' ## reuses the tq, that is stored in tokens2
+#' ## this makes it easy to make the selection anew after a transformation
+#' tokens2 = reselect_nodes(tokens2)
 reselect_nodes <- function(.tokens) {
   .nodes = selected_nodes(.tokens)
   select_nodes(.tokens, tquery = .nodes$prov$tquery, fill = .nodes$prov$fill, fill_only_first = .nodes$prov$fill_only_first)
 }
+
 
 #' Undo select_nodes
 #'
@@ -93,6 +112,7 @@ reselect_nodes <- function(.tokens) {
 #'
 #' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
 #'
+#' @return A tokenIndex (without a .nodes attribute)
 #' @export
 #' @examples
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
@@ -103,8 +123,7 @@ reselect_nodes <- function(.tokens) {
 #' 
 #' tokens = unselect_nodes(tokens)
 #' 
-#' ## selected_nodes now gives error due to not having selected nodes
-#' ## selected_nodes(tokens)
+#' is.null(attr(tokens, '.nodes'))
 unselect_nodes <- function(.tokens) {
   data.table::setattr(.tokens, '.nodes', NULL)
   .tokens
@@ -116,6 +135,7 @@ unselect_nodes <- function(.tokens) {
 #'
 #' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
 #'
+#' @return A tokenIndex with a .nodes attribute
 #' @export
 #' @examples 
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
@@ -133,6 +153,8 @@ selected_nodes <- function(.tokens) {
   attr(.tokens, '.nodes')
 }
 
+
+
 #' Subset a select_nodes selection 
 #' 
 #' Enables more control in reshape operations
@@ -141,8 +163,27 @@ selected_nodes <- function(.tokens) {
 #' @param subset  A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
 #' @param copy    If TRUE, make a deep copy of .tokens. Use if output does not overwrite .tokens
 #'
+#' @return A tokenIndex with a .nodes attribute
 #' @export
+#' @examples
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(label='verb', children(relation='nsubj'))
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' selected_nodes(tokens2)$nodes
+#' tokens2 = subset_nodes(tokens2, verb$relation == 'ROOT')
+#' selected_nodes(tokens2)$nodes
 subset_nodes <- function(.tokens, subset, copy=T) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   copy=T ## make optional if tested
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -172,8 +213,29 @@ subset_nodes <- function(.tokens, subset, copy=T) {
 #' @param ...     named arguments. The name should be a column in tokens
 #' @param subset  A subset expression (that evaluates to a logical vector). The token column for each labeled node in the tquery can be referred to as label$column.
 #'
+#' @return A tokenIndex with a .nodes attribute
 #' @export
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(relation = "relcl", label = "relative_clause")
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' ## as an example, we make the parent of the relative_clause
+#' ## nodes NA, effectively cutting of the relcl from the tree
+#' tokens2 = mutate_nodes(tokens2, "relative_clause", parent=NA)
+#' 
+#' tokens2
 mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   copy = T ## make optional if tested
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
@@ -219,8 +281,27 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
 #' @param rm_subset_fill   A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to remove only verbs
 #' @param keep_shared      If there is another node that has the same fill nodes, should the fill nodes that are shared also be removed?
 #'
+#' @return A tokenIndex with a .nodes attribute
 #' @export
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text1',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(pos = 'VERB',
+#'             children(label = 'object', relation='dobj'))
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' remove_nodes(tokens2, 'object')
+#' remove_nodes(tokens2, 'object', with_fill=FALSE)
 remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_fill=NULL, keep_shared=F) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
@@ -264,8 +345,26 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
 #' @param rm_subset        A subset expression (that evaluates to a logical vector) to more specifically specify which nodes to remove. The token column for each labeled node in the tquery can be referred to as label$column.
 #' @param keep_shared      If there is another node that has the same fill nodes, should the fill nodes that are shared also be removed?
 #'
+#' @return A tokenIndex with a .nodes attribute
 #' @export
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text1',]
+#' 
+#' ## use a tquery to label the nodes that you want to manipulate
+#' tq = tquery(pos = 'VERB',
+#'             children(label = 'object', relation='dobj'))
+#' 
+#' ## apply query to select nodes
+#' tokens2 = select_nodes(tokens, tq) 
+#' 
+#' remove_fill(tokens2, 'object')
 remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep_shared=F) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   
@@ -321,9 +420,31 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
 #' @param copy_fill        If TRUE, also copy the fill
 #' @param subset_fill      A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to copy only verbs
 #' @param only_new         If TRUE, direct fill children will only be copied to to_node if it does not already have nodes of this relation. This is a good heuristic for dealing with argument drop. 
-#'
+#' 
+#' @return A tokenIndex with a .nodes attribute
 #' @export
+#' @examples
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text1',]
+#' 
+#' tq = tquery(label='object', relation='dobj')
+#'             
+#' tokens2 = select_nodes(tokens, tq)
+#' selected_nodes(tokens2)
+#' 
+#' copy_nodes(tokens2, 'object', 'new_object')
+#' 
+#' tokens3 = copy_nodes(tokens2, 'object', 'new_object', copy_fill=TRUE)
+#' 
+#' \donttest{
+#' plot_tree(tokens3, token, pos)
+#' }
 copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   parent = NULL; relation = NULL
   
   .nodes = selected_nodes(.tokens)  
@@ -374,8 +495,25 @@ copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fi
 #' @param subset_fill      A subset on the fill nodes. Can only directly use token column. For example, use pos == 'VERB' to copy only verbs
 #' @param only_new         If TRUE, direct fill children will only be copied to to_node if it does not already have nodes of this relation. This is a good heuristic for dealing with argument drop. 
 #'
+#' @return    A tokenIndex with a .nodes attribute
 #' @export
+#' @examples
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text1',]
+#' 
+#' tq = tquery(label='object', relation='dobj')
+#'             
+#' tokens2 = select_nodes(tokens, tq)
+#' selected_nodes(tokens2)
+#' 
+#' tokens3 = copy_nodes(tokens2, 'object', 'new_object')
+#' copy_fill(tokens3, 'object', 'new_object')
 copy_fill <- function(.tokens, from_node, to_node, subset=NULL, subset_fill=NULL, only_new=NULL) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   

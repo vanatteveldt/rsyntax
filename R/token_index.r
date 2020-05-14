@@ -16,10 +16,19 @@
 #' @param parent     candidate names for the parent id column. Has to be numeric
 #' @param relation   candidate names for the relation column
 #'
+#' @return   a tokenIndex
 #' @export
+#' @examples
+#' as_tokenindex(tokens_corenlp)
 as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel')) {
-  new_index = !methods::is(tokens, 'tokenIndex')
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
   
+  new_index = !methods::is(tokens, 'tokenIndex')
+    
   ## if we can confirm that this is udpipe input, do not give a warning for missing parents
   is_udpipe = all(c('doc_id','token_id','head_token_id','dep_rel') %in% colnames(tokens))
   warn = !is_udpipe

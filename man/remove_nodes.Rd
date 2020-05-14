@@ -26,6 +26,22 @@ remove_nodes(
 
 \item{keep_shared}{If there is another node that has the same fill nodes, should the fill nodes that are shared also be removed?}
 }
+\value{
+A tokenIndex with a .nodes attribute
+}
 \description{
 Remove nodes
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text1',]
+
+## use a tquery to label the nodes that you want to manipulate
+tq = tquery(pos = 'VERB',
+            children(label = 'object', relation='dobj'))
+
+## apply query to select nodes
+tokens2 = select_nodes(tokens, tq) 
+
+remove_nodes(tokens2, 'object')
+remove_nodes(tokens2, 'object', with_fill=FALSE)
 }

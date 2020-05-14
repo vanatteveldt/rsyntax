@@ -68,7 +68,6 @@ In the second case, we can look for candidates near the beginning of the quote. 
 ## This function is best used after first annotating regular quotes
 ## Here we first apply 3 tqueries for annotating quotes in spacy tokens
 
-## this example is not tested because it takes too long on CRAN
 \donttest{
 
 tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
@@ -94,7 +93,7 @@ according = tquery(label='quote',
    children(relation='nmod:according_to', label='source',
         children(label='verb')))
 
-tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+tokens = annotate_tqueries(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
 tokens
 
 ## now we add the span quotes. If a span quote is found, the algorithm will first
@@ -103,7 +102,7 @@ tokens
 ## the most recent PERSON entity
 
 tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
-tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+tokens = annotate_tqueries(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
 
 
 last_person = tquery(entity = 'PERSON*', label='source')

@@ -4,7 +4,15 @@
 \alias{apply_queries}
 \title{Apply queries created with \link{tquery}}
 \usage{
-apply_queries(tokens, ..., as_chain = F, block = NULL, check = F, fill = T)
+apply_queries(
+  tokens,
+  ...,
+  as_chain = F,
+  block = NULL,
+  check = F,
+  fill = T,
+  verbose = F
+)
 }
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
@@ -19,6 +27,8 @@ Can also be a data.table returned by (a previous) apply_queries, in which case a
 \item{check}{If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.}
 
 \item{fill}{If TRUE (default) the fill nodes are added. Otherwise these are ignored, even if the queries include fill()}
+
+\item{verbose}{If TRUE, report progress (only useful if multiple queries are used)}
 }
 \value{
 A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
@@ -38,7 +48,5 @@ active =  tquery(pos = "VERB*", label = "predicate",
                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
 
 nodes = apply_queries(tokens, pas=passive, act=active)
-
 nodes
-annotate_nodes(tokens, nodes, 'clause')#' @export
 }

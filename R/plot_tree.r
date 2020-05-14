@@ -27,8 +27,26 @@
 #'                    size of the plotting device and enables scrolling. By setting viewer_mode to False, the current plotting device is used.
 #' @param viewer_size A vector of length 2, that multiplies the width (first value) and height (second value) of the viewer_mode PNG 
 #'   
-#' @return an igraph graph
+#' @return  plots a dependency tree. 
 #' @export
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+#' 
+#' \donttest{
+#' plot_tree(tokens, token, pos)
+#' 
+#' ## plot with annotations
+#' direct = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
+#'                 children(label = 'subject', relation = 'nsubj'),
+#'                 children(label = 'object', relation = 'dobj'))
+#' passive = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
+#'                  children(label = 'subject', relation = 'agent'),
+#'                  children(label = 'object', relation = 'nsubjpass'))
+#'                  
+#' tokens %>%
+#'    annotate_tqueries('clause', pas=passive, dir=direct) %>%
+#'    plot_tree(token, pos, annotation='clause')
+#' }
 plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=F, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=F, viewer_mode=T, viewer_size=c(100,100)) {  
   if (pdf_viewer && is.null(pdf_file)) pdf_file = tempfile('plot_tree', fileext = '.pdf')
   if (!is.null(pdf_file)) if (!grepl('\\.pdf$', pdf_file)) stop('pdf_file needs to have extension ".pdf"')
@@ -109,6 +127,8 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
     grDevices::png(png_file, height = height, width=width)
   }
   
+  oldpar = graphics::par(no.readonly = T)
+  on.exit(graphics::par(oldpar))  
   graphics::par(mar=c(0,0,0,0))
   graphics::plot(0, type="n", ann=FALSE, axes=FALSE, xlim=grDevices::extendrange(co[,1]),ylim=grDevices::extendrange(c(-1,1)))
   

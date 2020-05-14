@@ -26,6 +26,9 @@ as_tokenindex(
 
 \item{relation}{candidate names for the relation column}
 }
+\value{
+a tokenIndex
+}
 \description{
 Creates a tokenIndex data.table. 
 Accepts any data.frame given that the required columns (doc_id, sentence, token_id, parent, relation) are present.
@@ -34,4 +37,7 @@ The names of these columns must be one of the values specified in the respective
 The data in the data.frame will not be changed, with three exceptions. First, the columnnames will be changed if the default values are not used.
 Second, if a token has itself as its parent (which in some parsers is used to indicate the root), the parent is set to NA (as used in other parsers) to prevent infinite cycles.
 Third, the data will be sorted by doc_id, sentence, token_id.
+}
+\examples{
+as_tokenindex(tokens_corenlp)
 }

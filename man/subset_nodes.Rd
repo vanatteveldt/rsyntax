@@ -13,6 +13,22 @@ subset_nodes(.tokens, subset, copy = T)
 
 \item{copy}{If TRUE, make a deep copy of .tokens. Use if output does not overwrite .tokens}
 }
+\value{
+A tokenIndex with a .nodes attribute
+}
 \description{
 Enables more control in reshape operations
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+
+## use a tquery to label the nodes that you want to manipulate
+tq = tquery(label='verb', children(relation='nsubj'))
+
+## apply query to select nodes
+tokens2 = select_nodes(tokens, tq) 
+
+selected_nodes(tokens2)$nodes
+tokens2 = subset_nodes(tokens2, verb$relation == 'ROOT')
+selected_nodes(tokens2)$nodes
 }

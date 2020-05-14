@@ -7,6 +7,46 @@ get_children_i <- function(tokens, i) {
   union(i, children)
 }
 
+
+
+#' Set number of threads to be used by rsyntax functions
+#' 
+#' rsyntax relies heavily on the data.table package, which supports multithreading. 
+#' By default, the number of threads set by data.table are used, as you can see with \code{\link[data.table]{getDTthreads}}.
+#' Here you can set the number of threads for rsyntax functions, without affecting the data.table settings.
+#'
+#' @param threads The number of threads to use. Cannot be higher than number of threads used by data.table, which you can change with \code{\link[data.table]{setDTthreads}}. If left empty (NULL), all data.table threads are used
+#'
+#' @return Does not return a value. Sets the global 'rsyntax_threads' option.
+#' @export
+#'
+#' @examples
+#' current_threads = rsyntax_threads()
+#' 
+#' set_rsyntax_threads(2)
+#' 
+#' ## undo change (necessary for CRAN checks)
+#' set_rsyntax_threads(current_threads)
+set_rsyntax_threads <- function(threads=NULL) {
+  options(rsyntax_threads = min(threads, data.table::getDTthreads()))
+}
+
+#' Get the number of threads to be used by rsyntax functions
+#' 
+#' rsyntax relies heavily on the data.table package, which supports multithreading. 
+#' By default, the number of threads set by data.table are used, as you can see with \code{\link[data.table]{getDTthreads}}.
+#' With \code{\link{set_rsyntax_threads}} you can set the number of threads for rsyntax functions, without affecting the data.table settings.
+#'
+#' @return the setting for the number of threads used by rsyntax
+#' @export
+#'
+#' @examples
+#' rsyntax_threads()
+rsyntax_threads <- function() {
+  go = options('rsyntax_threads')
+  if (is.null(go$rsyntax_threads)) data.table::getDTthreads() else min(go$rsyntax_threads, data.table::getDTthreads())
+}
+
 bquote_s <- function(expr, where=parent.frame()) {
   ## bquote, but for an expression that is already substituted
   unquote <- function(e) if (is.pairlist(e)) 
@@ -29,27 +69,5 @@ rm_nodes <- function(nodes, ids) {
   }
   nodes
 }
-
-#' Construct a list of source/subject/object triples from a tokens list with clauses and quotes
-#'
-#' @param tokens a data frame with clause_id, clause_role, quote_id and quote_role columns
-#' @param concept_column the name of the column in tokens that contains identified 'concepts'
-#'
-#' @return a data frame with clause_id and source, subject, object columns indicating concepts found in those positions
-#' @export
-construct_triples <- function(tokens, concept_column="concept") {
-  sources = tokens[!is.na(tokens$quote_role) & tokens$quote_role == "source" & !is.na(tokens[[concept_column]]), c(concept_column, "quote_id")]
-  sources = unique(merge(sources, tokens[!is.na(tokens$clause_id), c("clause_id", "quote_id")]))[c("clause_id", concept_column)]
-  colnames(sources)[2] = "source"
-  
-  subjects = unique(tokens[!is.na(tokens$clause_id) & !is.na(tokens[[concept_column]]) & tokens$clause_role == "subject", c("clause_id", concept_column)])
-  colnames(subjects)[2] = "subject"
-  objects = unique(tokens[!is.na(tokens$clause_id) & !is.na(tokens[[concept_column]]) & tokens$clause_role == "predicate", c("clause_id", concept_column)])
-  colnames(objects)[2] = "object"
-  
-  merge(sources, merge(subjects, objects, all=T), all=T)
-}
-
-
 
 

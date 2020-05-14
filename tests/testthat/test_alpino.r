@@ -170,8 +170,6 @@ test_that("extracting clauses works", {
   
   clauses = get_clauses(tokens)
   
-  #View(annotate_nodes(tokens,clauses,'clause'))
-  
   # subject and subject -> verb -> object
   clauses = get_clauses(tokens[tokens$sentence == 1,])
   annotate_nodes(tokens[tokens$sentence == 1,], clauses, column='test')
@@ -206,7 +204,7 @@ test_that("extracting clauses works", {
   
   #tokens_dutchclauses %>%
   #  as_tokenindex() %>%
-  #  annotate('clauses', alpino_clause_queries()) %>%
+  #  annotate_tqueries('clauses', alpino_clause_queries()) %>%
   #  syntax_reader(annotation='clauses', value='subject')
   
 })

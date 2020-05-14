@@ -70,10 +70,29 @@ size of the plotting device and enables scrolling. By setting viewer_mode to Fal
 \item{viewer_size}{A vector of length 2, that multiplies the width (first value) and height (second value) of the viewer_mode PNG}
 }
 \value{
-an igraph graph
+plots a dependency tree.
 }
 \description{
 Create an igraph tree from a token_index (\link{as_tokenindex}) or a data.frame that can be coerced to a tokenindex.
 
 By default, all columns in the data are included as labels. This can be changes by using the ... argument.
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
+
+\donttest{
+plot_tree(tokens, token, pos)
+
+## plot with annotations
+direct = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
+                children(label = 'subject', relation = 'nsubj'),
+                children(label = 'object', relation = 'dobj'))
+passive = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
+                 children(label = 'subject', relation = 'agent'),
+                 children(label = 'object', relation = 'nsubjpass'))
+                 
+tokens \%>\%
+   annotate_tqueries('clause', pas=passive, dir=direct) \%>\%
+   plot_tree(token, pos, annotation='clause')
+}
 }

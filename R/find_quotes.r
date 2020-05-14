@@ -36,7 +36,6 @@
 #' ## This function is best used after first annotating regular quotes
 #' ## Here we first apply 3 tqueries for annotating quotes in spacy tokens
 #' 
-#' ## this example is not tested because it takes too long on CRAN
 #' \donttest{
 #' 
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
@@ -63,7 +62,7 @@
 #'    children(relation='nmod:according_to', label='source',
 #'         children(label='verb')))
 #'
-#' tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+#' tokens = annotate_tqueries(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
 #' tokens
 #'
 #' ## now we add the span quotes. If a span quote is found, the algorithm will first
@@ -72,7 +71,7 @@
 #' ## the most recent PERSON entity
 #' 
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text6',]
-#' tokens = rsyntax::annotate(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
+#' tokens = annotate_tqueries(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
 #' 
 #' 
 #' last_person = tquery(entity = 'PERSON*', label='source')
@@ -85,6 +84,12 @@
 #' syntax_reader(tokens, annotation = 'quote', value = 'source')
 #' }
 add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, add_quote_symbols=NULL, quote_subset=NULL, copy=T) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   if (!quote_col %in% colnames(tokens)) stop('quote_col is not a column in tokens') 
   if (copy) tokens = data.table::copy(tokens)
   
@@ -104,6 +109,7 @@ add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='so
   #tokens = add_extended_source(tokens, is_quote, quotes, quote_col, quote_val) ## adds by reference
   if (!is.null(tqueries))
     tokens = add_new_source(tokens, is_quote, quotes, quote_col, source_val, quote_val, tqueries, lag_sentences) ## adds by reference
+
   tokens[]
 }
 
@@ -156,10 +162,12 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
   if (nrow(candidates) == 0) return(tokens)
   
   no_source$start_sentence = no_source$sentence
-  
+
   for (i in 0:lag_sentences) {
     no_source$sentence = no_source$start_sentence - i
     if (!any(no_source$sentence >= 0)) break
+    
+    
     sent = merge(no_source, candidates, by=c('doc_id','sentence'), allow.cartesian=T)
     select_ids = unique(sent, by=c('.QUOTE'))$.ID
     
@@ -171,6 +179,7 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
     
     no_source = no_source[!no_source$.QUOTE %in% sent$.QUOTE,]
   }
+
   
   tokens
 }
@@ -211,16 +220,18 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   
   ## merge
   sources = rbind(sources,matched_source[!is.na(matched_source$doc_id)])
-  #sources$new_id = paste0('.spanquote#', sources$.QUOTE)
   sources$new_id = as.character(sources$.ID)
   
   ## add
   replace_col = as.character(tokens[sources$i,][[quote_col]])
   replace_id_col = as.character(tokens[sources$i,][[quote_id_col]])
   
-  already_used = !is.na(replace_id_col) & !(replace_id_col == sources$new_id)
-  replace_col = ifelse(already_used, paste(replace_col, sources$label, sep=','), sources$label)
-  replace_id_col = ifelse(already_used, paste(replace_id_col, sources$new_id, sep=','), sources$new_id)
+  ## In case that a new quote is found within an existing quote:  
+  ## old solution was to nest it by concatenating quote_id and quote, but that doesn't fit into current rsyntax design anymore (nested ids are a bad id)
+  ## Now we just use the most specific quote.
+  #already_used = !is.na(replace_id_col) & !(replace_id_col == sources$new_id)
+  #replace_col = ifelse(already_used, paste(replace_col, sources$label, sep=','), sources$label)
+  #replace_id_col = ifelse(already_used, paste(replace_id_col, sources$new_id, sep=','), sources$new_id)
   
   levels(tokens[[quote_col]]) = union(levels(tokens[[quote_col]]), unique(replace_col))
   levels(tokens[[quote_id_col]]) = union(levels(tokens[[quote_id_col]]), unique(replace_id_col))

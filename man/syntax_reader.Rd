@@ -54,9 +54,9 @@ passive = tquery(pos = "VERB*", label = "predicate",
 active =  tquery(pos = "VERB*", label = "predicate",
                 children(relation = c("nsubj", "nsubjpass"), label = "subject"))
 
-tokens = annotate(tokens, 'clause', pas=passive, act=active)
 
 \donttest{
+tokens = annotate_tqueries(tokens, 'clause', pas=passive, act=active)
 syntax_reader(tokens, annotation = 'clause', value = 'subject')
 }
 }

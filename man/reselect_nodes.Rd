@@ -9,6 +9,22 @@ reselect_nodes(.tokens)
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}
 }
+\value{
+A tokenIndex with a .nodes attribute
+}
 \description{
 Within a chain of reshape operations, reapply the tquery
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+
+## use a tquery to label the nodes that you want to manipulate
+tq = tquery(relation = "relcl", label = "relative_clause")
+
+## apply query to select nodes
+tokens2 = select_nodes(tokens, tq) 
+
+## reuses the tq, that is stored in tokens2
+## this makes it easy to make the selection anew after a transformation
+tokens2 = reselect_nodes(tokens2)
 }

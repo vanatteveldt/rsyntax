@@ -7,6 +7,7 @@
 #'                 Can also be a data.table returned by (a previous) apply_queries, in which case all ids are blocked. 
 #' @param check    If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
 #' @param fill     If TRUE (default) the fill nodes are added. Otherwise these are ignored, even if the queries include fill()
+#' @param verbose  If TRUE, report progress (only useful if multiple queries are used)
 #'
 #' @export
 #' @return        A data.table in which each row is a node for which all conditions are satisfied, and each column is one of the linked nodes 
@@ -23,10 +24,14 @@
 #'                  children(relation = c("nsubj", "nsubjpass"), label = "subject"))
 #'
 #' nodes = apply_queries(tokens, pas=passive, act=active)
-#' 
 #' nodes
-#' annotate_nodes(tokens, nodes, 'clause')#' @export
-apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T) {
+apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T, verbose=F) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   tokens = as_tokenindex(tokens)
   r = list(...)
   
@@ -35,9 +40,11 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T) 
   
   out = vector('list', length(r))
   
+  if (verbose) message('Applying queries:')
   for (i in 1:length(r)){
     if (!methods::is(r[[i]], 'tQuery')) next
     .TQUERY_NAME = names(r)[i]
+    if (verbose) cat(paste0('\t', .TQUERY_NAME, '\n'))
     if (is.null(.TQUERY_NAME)) .TQUERY_NAME = ''
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', NA, as.character(.TQUERY_NAME))
@@ -51,9 +58,13 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T) 
   }
   
   
+  if (fill && verbose) message('Adding fill nodes:')
   for (i in 1:length(r)) {
     if (is.null(out[[i]])) next
-    if (fill) out[[i]] = add_fill(tokens, out[[i]], r[[i]], block=block)
+    if (fill) {
+      if (verbose) cat(paste0('\t', names(r)[i], '\n'))
+      out[[i]] = add_fill(tokens, out[[i]], r[[i]], block=block)
+    }
     out[[i]] = melt_nodes_list(out[[i]])
   }
   

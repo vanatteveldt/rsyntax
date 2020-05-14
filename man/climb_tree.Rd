@@ -35,7 +35,7 @@ for sentences with many (nested) conjunctions. It could be the case that in unfo
 an infinite loop is reached, which is why we use a max_iter argument that breaks the loop and sends a warning if the max is reached.}
 }
 \value{
-A tokenIndex
+The reshaped tokenIndex
 }
 \description{
 given a tquery that identfies a node labeled "origin", that has a parent labeled "target", 

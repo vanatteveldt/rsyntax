@@ -105,18 +105,6 @@ cast_tokens_text <- function(tokens, text, by, id, collapse_id=F, rm.na=F){
 }
 
 
-
-#expand_nodes <- function(tokens, column) {
-#  id_column = paste(column, 'id', sep='_')
-#  id = stringi::stri_split(tokens[[id_column]], fixed=',')
-#  group = stringi::stri_split(tokens[[column]], fixed = ',')
-#  len = sapply(id, length)
-#  tokens = tokens[rep(1:nrow(tokens),len),]
-#  tokens[[column]] = unlist(group)
-#  tokens[[id_column]] = unlist(id)
-#  tokens
-#}
-
 get_token_group <- function(tokens, column, group, rows, group_values, mode) {
   #if (any(grepl(',', levels(tokens[[column]])))) {
   #  tokens = expand_nodes(tokens, column)

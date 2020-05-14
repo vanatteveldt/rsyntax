@@ -9,18 +9,16 @@ annotate_nodes(tokens, nodes, column)
 \arguments{
 \item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
 
-\item{nodes}{A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.}
+\item{nodes}{An rsyntaxNodes A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.}
 
-\item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id}
+\item{column}{The name of the column in which the annotations are added. The unique ids are added as [column]_id, and the fill values are added as [column]_fill.}
 }
 \value{
-A data.table with nodes
+The tokenIndex data.table with the annotation columns added
 }
 \description{
 Use rsyntaxNodes, as created with \link{tquery} and \link{apply_queries}, to annotate a tokenlist.
-Two columns will be added.
-One column contains the ids for each hit. The other column contains the annotations.
-Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
+Three columns will be added: a unique id for the query match, the labels assigned in the tquery, and a column with the fill level (0 is direct match, 1 is child of match, 2 is grandchild, etc.).
 }
 \details{
 Note that you can also directly use \link{annotate}.

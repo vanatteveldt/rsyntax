@@ -82,11 +82,11 @@ If NA, the column is not returned.}
 \item{req}{Can be set to false to not make a node 'required'. This can be used to include optional nodes in queries. For instance, in a query for finding subject - verb - object triples, 
 make the object optional.}
 
-\item{depth}{A positive integer, determining how deep parents/children are sought. The default, 1, 
+\item{depth}{A positive integer, determining how deep parents/children are sought. 1 
 means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
 All parents/children must meet the filtering conditions (... or g_id)}
 
-\item{connected}{controlls behaviour if depth > 1 and filters are used. If FALSE (default) all parents/children to the given depth are retrieved, and then filtered. 
+\item{connected}{controlls behaviour if depth > 1 and filters are used. If FALSE, all parents/children to the given depth are retrieved, and then filtered. 
 This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
 If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved.}
 

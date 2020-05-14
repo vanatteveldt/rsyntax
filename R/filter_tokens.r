@@ -1,7 +1,6 @@
 
 filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, use_index=T) {
   ## we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
-  
   .G_ID = unique(.G_ID)
   .G_PARENT = unique(.G_PARENT)
   

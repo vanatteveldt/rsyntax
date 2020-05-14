@@ -1,25 +1,50 @@
-## generic_reshape.r contains generic functions for mangling the parse tree
-## applied_reshape.r uses these functions to do usefull stuff.
-
-#' Have nodes with a certain relation inherit the position of their parent
+#' Split conjunctions in spacy tokens 
 #'
-#' This is in particular usefull for removing conjunctions
+#' The specific problem of splitting conjunctions is rather complicated because it requires recursion (for conjunctions in conjunctions) and needs to somehow deal with argument drop. 
+#' In the sentence: "Bob ate bread and cheese", we cannot simply split the sentence into "Bob ate bread" and "cheese". We need to copy the implicit arguments to get "Bob ate bread" and "Bob ate cheese".
+#' 
+#' Note that this function is mainly provided for demonstration purposes.
+#' The goal of the rsyntax package is to provide the tools to query and reshape dependency trees, and (at least for now) we want to keep applications such as this function separated.
+#' This specific implementation is also not perfect, and for complex sentences other forms of text simplification would ideally be performed first (e.g., isolating relative clauses).
 #'
-#' @param .tokens A tokenIndex
-#' @param relation A character string specifying the relation
-#' @param take_fill If TRUE, give the node that will inherit the parent position a copy of the parent children (but only if it does not already have children with this relation; see only_new)
-#' @param give_fill If TRUE, copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)
-#' @param unpack If TRUE, create separate branches for the parent and the node that inherits the parent position
-#' @param only_new A character vector giving one or multiple column names that need to be unique for take_fill and give_fill
-inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpack=T, only_new='relation') {
-  tq = tquery(label='target', NOT(relation = relation),
-              take_fill,
-              children(relation = relation, label='origin',
-                       give_fill))
+#' @param tokens     a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=T)
+#'
+#' @return  the tokenIndex with conjunctions split into separate isolated branches.
+#' @export
+#'
+#' @examples
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
+#' 
+#' \donttest{
+#' tokens %>%
+#'    spacy_split_conjunctions() %>%
+#'    plot_tree()
+#'  }
+spacy_split_conjunctions <- function(tokens) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
   
-  .tokens = climb_tree(.tokens, tq, unpack=unpack, take_fill=T, give_fill=T, only_new=only_new)
-  unselect_nodes(.tokens)
-  .tokens
+  
+  tokens = as_tokenindex(tokens)
+  tokens = split_tree(tokens, rel='conj', 
+                            no_fill=c('acl:relcl','acl','appos','relcl', 'cop', 
+                                      'advmod','advcl','xcomp','obl','ccomp','aux','det'), 
+                            min_dist = 3)
+  tokens = split_tree(tokens, rel='conj', no_fill=c('acl:relcl','relcl', 'conj', 'cop'))
+  tokens = chop(tokens, relation = 'cc')
+  tokens
+}
+
+split_tree <- function(tokens, rel='conj', no_fill=NULL, min_dist=0, max_dist=Inf, compound = c('compound*','flat')) {
+  tq = tquery(label='target', NOT(relation = rel),
+              children(relation = compound, label='ignore', req=F),
+              fill(NOT(relation = no_fill), max_window = c(Inf,0), connected=T),
+              children(relation = rel, label='origin', min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
+                       fill(NOT(relation = no_fill), max_window=c(0,Inf), connected=T)))
+  tokens = climb_tree(tokens, tq)
 }
 
 #' Have a node adopt its parent's position
@@ -40,7 +65,7 @@ inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpac
 #'                    for sentences with many (nested) conjunctions. It could be the case that in unforseen cases or with certain parsers
 #'                    an infinite loop is reached, which is why we use a max_iter argument that breaks the loop and sends a warning if the max is reached.
 #'
-#' @return  A tokenIndex
+#' @return  The reshaped tokenIndex 
 #' @export
 #' @examples 
 #' 
@@ -56,7 +81,7 @@ inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpac
 #' 
 #' ## spacy tokens for "Bob and John ate bread and drank wine"
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
-#' 
+#'
 #' tokens = spacy_conjunctions(tokens)
 #' 
 #' tokens
@@ -64,6 +89,12 @@ inherit <- function(.tokens, relation, take_fill=fill(), give_fill=fill(), unpac
 #' plot_tree(tokens)
 #' }
 climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=T, only_new='relation', max_iter=200) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   target = NULL; new_parent = NULL; branch_parent = NULL
   i = 1
   out = list()
@@ -187,7 +218,7 @@ one_per_sentence <- function(.tokens) {
 #' @param ... Arguments passed to tquery. For instance, relation = 'punct' cuts off all punctuation dependencies (in universal dependencies)
 #'
 #' @export
-#' @return A tokenIndex
+#' @return A tokenIndex with the rows of the nodes in the selected branches removed
 #' @examples 
 #' 
 #' spacy_conjunctions <- function(tokens) {
@@ -209,6 +240,12 @@ one_per_sentence <- function(.tokens) {
 #' plot_tree(tokens)
 #' }
 chop <- function(.tokens, ...) {
+  if (rsyntax_threads() != data.table::getDTthreads()) {
+    old_threads = data.table::getDTthreads()
+    on.exit(data.table::setDTthreads(old_threads))
+    data.table::setDTthreads(rsyntax_threads())
+  }
+  
   tq = tquery(..., label = 'chop')
   .tokens = select_nodes(.tokens, tq)
   .tokens = remove_nodes(.tokens, 'chop')

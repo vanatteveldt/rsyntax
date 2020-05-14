@@ -11,6 +11,9 @@ selected_nodes(.tokens)
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}
 }
+\value{
+A tokenIndex with a .nodes attribute
+}
 \description{
 If select_nodes() is used, the selected nodes can be extracted with selected_nodes().
 This is mainly for internal use, but it can also be usefull for debugging, and to controll

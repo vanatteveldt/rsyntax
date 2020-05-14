@@ -87,7 +87,6 @@ get_print_data <- function(x, d=c(0,0)) {
   d
 }
 
-
 #' S3 print for tQuery class
 #'
 #' @param x a tQuery

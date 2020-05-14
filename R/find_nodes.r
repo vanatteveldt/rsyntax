@@ -23,6 +23,8 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
   if (root_dist) nodes = get_root_dist(tokens, nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
   
+  
+  
   nodes = create_unique_key(nodes, name)
   if (melt) {
     nodes = melt_nodes_list(nodes)
@@ -59,6 +61,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
       nodes = add_fill(tokens, nodes, tq, block, level+1)
     }
   } 
+  
 
   if (any(is_fill)) {
     if (is.na(tquery$label)) {
@@ -69,9 +72,14 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     ids = unique(stats::na.omit(ids))
     add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
     
+    if (grepl('#', tquery$label)) {
+      label = gsub('#.*', '', tquery$label)
+      label = paste0('^', label, '\\_')
+      colnames(add) = gsub(label, tquery$label, colnames(add))
+    }
+
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))
-      
       nodes = merge(nodes, add, by.x=c('doc_id','sentence',match_id), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=T, allow.cartesian=T)
       dropcols = grep('.DROP.*', colnames(nodes), value=T)
       if (length(dropcols) > 0) nodes[, (dropcols) := NULL]

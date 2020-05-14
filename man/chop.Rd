@@ -12,7 +12,7 @@ chop(.tokens, ...)
 \item{...}{Arguments passed to tquery. For instance, relation = 'punct' cuts off all punctuation dependencies (in universal dependencies)}
 }
 \value{
-A tokenIndex
+A tokenIndex with the rows of the nodes in the selected branches removed
 }
 \description{
 Using the query language for tquery, chop of the branch down from the node that is found

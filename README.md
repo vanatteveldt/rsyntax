@@ -18,16 +18,18 @@ Tutorial
 
 For a detailed explanation please see [this working
 paper](https://github.com/vanatteveldt/rsyntax/blob/master/Querying_dependency_trees.pdf).
+For a quick and dirty demo, keep on reading.
 
-As a quick demonstration, you can run the following code. First, we’ll
-need to parse some data. In the working paper we use the spacyr package
-(for the spaCy parser), but this requires running Python. Another option
-that does run in native R is the udpipe package (for the UDPipe parser).
-The following code automatically downloads the English model and applies
-it to parse the given text.
+First, we’ll need to parse some data. In the working paper we use the
+spacyr package (for the spaCy parser), but this requires running Python.
+Another option that does run in native R is the udpipe package (for the
+UDPipe parser). The following code automatically downloads the English
+model and applies it to parse the given text.
 
     library(udpipe)
-    tokens = udpipe(c('Mary Jane loves John Smith, and Mary is loved by John'), 'english')
+    tokens = udpipe('Mary Jane loves John Smith, and Mary is loved by John', 'english')
+    #> Downloading udpipe model from https://raw.githubusercontent.com/jwijffels/udpipe.models.ud.2.4/master/inst/udpipe-ud-2.4-190531/english-ewt-ud-2.4-190531.udpipe to /home/kasper/Dropbox/rsyntax/english-ewt-ud-2.4-190531.udpipe
+    #> Visit https://github.com/jwijffels/udpipe.models.ud.2.4 for model license details
 
 rsyntax requires the tokens to be in a certain format. The
 as\_tokenindex() function converts a data.frame to this format. For
@@ -94,7 +96,7 @@ With the annotate function, we can use this tquery to add these labels
 to the token data. Here we say that we use the column name “clause” for
 these labels.
 
-    tokens = annotate(tokens, 'clause', direct)
+    tokens = annotate_tqueries(tokens, 'clause', direct)
 
     tokens[,c('doc_id','sentence','token','clause','clause_fill')]
     #>     doc_id sentence token  clause clause_fill
@@ -145,10 +147,10 @@ argument, which means that we’ll overwrite the previous “clause” column.
 (By default, annotate would not overwrite previous results, which
 enables another way of piping queries that we won’t discuss here.)
 
-    tokens = annotate(tokens, 'clause', 
-                      dir = direct, 
-                      pas = passive, 
-                      overwrite = T)
+    tokens = annotate_tqueries(tokens, 'clause', 
+                               dir = direct, 
+                               pas = passive, 
+                               overwrite = T)
 
     tokens[,c('doc_id','sentence','token','clause', 'clause_id')]
     #>     doc_id sentence token  clause     clause_id
@@ -176,19 +178,21 @@ queries together.
 Finally, you can also visualize annotations with plot\_tree.
 
     plot_tree(tokens, token, lemma, upos, annotation='clause')
-    #> Document: doc1
-    #> Sentence: 1
 
-The rsyntax package also supports more advanced features for writing and
-piping queries. Furthermore, since language can get quite complicated
-(gotta love concatenations, relative clauses and recursion), rsyntax
-also provides functions for transforming and cutting up dependency
-trees. How to best use this is still something we’re experimenting with,
-and more details are provided in the working paper.
+Where to go from here
+=====================
+
+If the quick and dirty tutorial piqued you interest, we recommend
+reading the working paper for more advanced features and some background
+on what we ourselves use this package for. For instance, the rsyntax
+package also supports more advanced features for writing and piping
+queries. Furthermore, since language can get quite complicated (gotta
+love concatenations, relative clauses and recursion), rsyntax also
+provides functions for transforming and cutting up dependency trees. How
+to best use this is still something we’re experimenting with.
 
 Aside from the rsyntax package we will (soon?) create a github
 repository for an rsyntax cookbook, to share the queries and
-transformation that we use in our research. If you are interested in
+transformation that we use in our own research. If you are interested in
 using rsyntax and have any questions, concerns or ideas, please do
-contact us. It turns out language is hard, and this is an ongoing
-project to help us deal with that fact.
+contact us.

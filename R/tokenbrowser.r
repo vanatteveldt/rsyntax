@@ -24,9 +24,9 @@
 #' active =  tquery(pos = "VERB*", label = "predicate",
 #'                 children(relation = c("nsubj", "nsubjpass"), label = "subject"))
 #' 
-#' tokens = annotate(tokens, 'clause', pas=passive, act=active)
 #' 
 #' \donttest{
+#' tokens = annotate_tqueries(tokens, 'clause', pas=passive, act=active)
 #' syntax_reader(tokens, annotation = 'clause', value = 'subject')
 #' }
 syntax_reader <- function(tokens, annotation, value=NULL, value2=NULL, meta=NULL, token_col='token', filename=NULL, view=T, random_seed=NA, ...){
