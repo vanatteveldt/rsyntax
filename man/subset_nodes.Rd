@@ -4,7 +4,7 @@
 \alias{subset_nodes}
 \title{Subset a select_nodes selection}
 \usage{
-subset_nodes(.tokens, subset, copy = T)
+subset_nodes(.tokens, subset, copy = TRUE)
 }
 \arguments{
 \item{.tokens}{A tokenIndex in which nodes are selected with \link{select_nodes}.}

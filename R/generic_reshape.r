@@ -35,7 +35,7 @@
 #'   mutate_nodes("relative_clause", parent=NA) %>%
 #'   plot_tree()
 #' }
-select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sentence=F, .order=1){
+select_nodes <- function(tokens, tquery, fill=TRUE, fill_only_first=TRUE, .one_per_sentence=FALSE, .order=1){
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -46,13 +46,13 @@ select_nodes <- function(tokens, tquery, fill=T, fill_only_first=T, .one_per_sen
   
   ## fill mode: all, only_first, 
   tokens = as_tokenindex(tokens)
-  nodes = find_nodes(tokens, tquery, fill = F, melt = F, root_dist = .one_per_sentence)
+  nodes = find_nodes(tokens, tquery, fill = FALSE, melt = FALSE, root_dist = .one_per_sentence)
   
   if (!is.null(nodes)) {
     if (.one_per_sentence) {
       if (!.order %in% c(-1,1)) stop('.order has to be 1 or -1')
       nodes = data.table::setorderv(nodes, '.ROOT_DIST', order = .order)
-      nodes = nodes[!duplicated(nodes, by=c('doc_id','sentence'), fromLast = F),]
+      nodes = nodes[!duplicated(nodes, by=c('doc_id','sentence'), fromLast = FALSE),]
       nodes[,.ROOT_DIST := NULL]
     }
     if (fill) {
@@ -177,14 +177,14 @@ selected_nodes <- function(.tokens) {
 #' selected_nodes(tokens2)$nodes
 #' tokens2 = subset_nodes(tokens2, verb$relation == 'ROOT')
 #' selected_nodes(tokens2)$nodes
-subset_nodes <- function(.tokens, subset, copy=T) {
+subset_nodes <- function(.tokens, subset, copy=TRUE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
     data.table::setDTthreads(rsyntax_threads())
   }
   
-  copy=T ## make optional if tested
+  copy=TRUE ## make optional if tested
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   if (copy) .tokens = data.table::copy(.tokens)
@@ -236,7 +236,7 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
     data.table::setDTthreads(rsyntax_threads())
   }
   
-  copy = T ## make optional if tested
+  copy = TRUE ## make optional if tested
   .nodes = selected_nodes(.tokens)
   if (nrow(.nodes$nodes) == 0) return(.tokens)
   if (!is.character(node)) stop('"node" argument has to be a character value')
@@ -295,7 +295,7 @@ mutate_nodes <- function(.tokens, node, ..., subset=NULL) {
 #' 
 #' remove_nodes(tokens2, 'object')
 #' remove_nodes(tokens2, 'object', with_fill=FALSE)
-remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_fill=NULL, keep_shared=F) {
+remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=TRUE, rm_subset_fill=NULL, keep_shared=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -311,7 +311,7 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
   rm_subset = if (rm_subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, rm_subset)
   if (!is.null(rm_subset)) {
     if (!any(rm_subset)) return(.tokens) ## if there are no nodes that meet the rm_subset condition, nothing is removed
-  } else rm_subset = rep(T, nrow(.nodes$nodes))
+  } else rm_subset = rep(TRUE, nrow(.nodes$nodes))
   
   ## remove fill first because nodes are used to find fill nodes
   if (with_fill) {
@@ -322,14 +322,14 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
     .nodes = selected_nodes(.tokens)
   }
   
-  drop_ids = .nodes$nodes[rm_subset, c('doc_id','sentence',node), with=F]
+  drop_ids = .nodes$nodes[rm_subset, c('doc_id','sentence',node), with=FALSE]
   drop_ids = stats::na.omit(drop_ids)
   if (nrow(drop_ids) > 0) {
     data.table::setnames(drop_ids, old=node, new='token_id')
     .tokens = .tokens[!drop_ids, on=c('doc_id','sentence','token_id')]
     .nodes$nodes[[node]] = ifelse(rm_subset, NA, .nodes$nodes[[node]])
   }
-  .tokens = fix_missing_parents(.tokens, warn = F)  ## (function in token_index.r)
+  .tokens = fix_missing_parents(.tokens, warn = FALSE)  ## (function in token_index.r)
   
   data.table::setattr(.tokens, '.nodes', value = .nodes)
   .tokens[]
@@ -358,7 +358,7 @@ remove_nodes <- function(.tokens, node, rm_subset=NULL, with_fill=T, rm_subset_f
 #' tokens2 = select_nodes(tokens, tq) 
 #' 
 #' remove_fill(tokens2, 'object')
-remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep_shared=F) {
+remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep_shared=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -380,7 +380,7 @@ remove_fill <- function(.tokens, node, rm_subset_fill=NULL, rm_subset=NULL, keep
   do_remove_fill(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared)
 }
 
-do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared=F) {
+do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm_subset, keep_shared=FALSE) {
   ## here node must already be a character, and rm_subset and rm_subset_fill must already be logical vectors (or NULL)
   node_ids = .nodes$nodes$.ID
 
@@ -392,7 +392,7 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
   if (!is.null(rm_subset)) {
     if (!any(rm_subset)) return(.nodes) ## if there are no nodes that meet the rm_subset condition, nothing is removed
     node_ids = unique(stats::na.omit(node_ids[rm_subset]))
-    fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0, allow.cartesian=T]
+    fill_nodes = fill_nodes[list(node_ids), on='.ID', nomatch=0, allow.cartesian=TRUE]
   }
   if (nrow(fill_nodes) == 0) return(.tokens)
   
@@ -404,7 +404,7 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
   } 
   
   .tokens = .tokens[!fill_nodes, on=c('doc_id','sentence','token_id')]
-  .tokens = fix_missing_parents(.tokens, warn=F)  ## (function in token_index.r)
+  .tokens = fix_missing_parents(.tokens, warn=FALSE)  ## (function in token_index.r)
   
   data.table::setattr(.tokens, '.nodes', value = .nodes)
   .tokens[]
@@ -438,7 +438,7 @@ do_remove_fill <- function(.tokens, .nodes, fill_nodes, node, rm_subset_fill, rm
 #' \donttest{
 #' plot_tree(tokens3, token, pos)
 #' }
-copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fill=F, subset_fill=NULL, only_new=NULL) {
+copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=TRUE, copy_fill=FALSE, subset_fill=NULL, only_new=NULL) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -456,9 +456,9 @@ copy_nodes <- function(.tokens, node, new, subset=NULL, keep_relation=T, copy_fi
   
   if (!is_deparsed_call(subset)) subset = deparse(substitute(subset)) 
   subset = if (subset == 'NULL') NULL else .nodes_eval(.tokens, .nodes, subset)
-  if (is.null(subset)) subset = rep(T, nrow(.nodes$nodes))
+  if (is.null(subset)) subset = rep(TRUE, nrow(.nodes$nodes))
   
-  node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=F]
+  node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=FALSE]
   node_ids = add_sub_id(.tokens, node_ids[subset])$token_id ## beware of the subset being used here
   .nodes$nodes[[new]] = double(nrow(.nodes$nodes))
   .nodes$nodes[subset, (new) := node_ids]
@@ -547,14 +547,14 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
   
   if (!is.null(only_new)) {
     only_new = 'relation' ## could be any column, but think only this makes sense
-    first_children_parents = .nodes$nodes[,c('doc_id','sentence',to_node,'.ID'), with=F]
+    first_children_parents = .nodes$nodes[,c('doc_id','sentence',to_node,'.ID'), with=FALSE]
     first_children = rbind(
       merge(.tokens, first_children_parents, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence',to_node)),
       merge(.tokens, first_children_parents, by.x=c('doc_id','sentence','parent'), by.y=c('doc_id','sentence',to_node))
     )
     first_children$.FILL_LEVEL = 1
     if (any(!only_new %in% colnames(first_children))) stop('some values in only_new are not valid token columns')
-    remove_fill = first_children[,c('.FILL_LEVEL','.ID',only_new),with=F]
+    remove_fill = first_children[,c('.FILL_LEVEL','.ID',only_new),with=FALSE]
     fill_nodes = fill_nodes[!remove_fill, on=c('.FILL_LEVEL','.ID',only_new)]
   }
   if (nrow(fill_nodes) == 0) return(.tokens)
@@ -578,7 +578,7 @@ do_copy_fill <- function(.tokens, .nodes, fill_nodes, from_node, to_node, subset
   parent_index[, .I := 1:nrow(parent_index)]
   
   match_id = fill_nodes[,c('doc_id','sentence','token_id','.ID','.NEW_ID')]
-  parent_index = merge(parent_index, match_id, by.x=c('doc_id','sentence','parent','.ID'), by.y=c('doc_id','sentence','token_id','.ID'), allow.cartesian=T)
+  parent_index = merge(parent_index, match_id, by.x=c('doc_id','sentence','parent','.ID'), by.y=c('doc_id','sentence','token_id','.ID'), allow.cartesian=TRUE)
   .NEW_PARENT = rep(NA, nrow(fill_nodes))
   parent_index = stats::na.omit(parent_index)
   .NEW_PARENT[parent_index$.I] = parent_index$.NEW_ID
@@ -607,7 +607,7 @@ remove_isolate_fill <- function(fill_nodes) {
   iso = fill_nodes[is.na(parent),] ## removes isolates, which can result from subsetting or using only_new
   fill_nodes = fill_nodes[!is.na(parent),]
   while (nrow(iso) > 0) {
-    iso_i = fill_nodes[list(iso$doc_id, iso$sentence, iso$token_id), on=c('doc_id','sentence','parent'), nomatch=0, which=T]
+    iso_i = fill_nodes[list(iso$doc_id, iso$sentence, iso$token_id), on=c('doc_id','sentence','parent'), nomatch=0, which=TRUE]
     if (length(iso_i) > 0) {
       iso = fill_nodes[iso_i,]
       fill_nodes = fill_nodes[!iso_i,]
@@ -619,21 +619,21 @@ remove_isolate_fill <- function(fill_nodes) {
 is_deparsed_call <- function(x) {
   ## for use in functions to pass on deparsed calls, in particular for subset arguments
   ## determine whether x is a deparsed call (call as a string)
-  tryCatch(is.character(eval(x)), error = function(e) F, finally = T)
+  tryCatch(is.character(eval(x)), error = function(e) FALSE, finally = TRUE)
 }
 
 
 
 add_to_tokens <- function(.tokens, new_tokens) {
   if (!identical(colnames(.tokens), colnames(new_tokens))) new_tokens = subset(new_tokens, select = colnames(.tokens))
-  .tokens = unique(rbindlist(list(.tokens, new_tokens), use.names = T, fill=T))
+  .tokens = unique(rbindlist(list(.tokens, new_tokens), use.names = TRUE, fill=TRUE))
   .tokens = as_tokenindex(.tokens)
   .tokens
 }
 
 add_to_fill <- function(.nodes, new_fill) {
   if (!identical(colnames(.nodes$fill), colnames(new_fill))) new_fill = subset(new_fill, select = colnames(.nodes$fill))
-  .nodes$fill = unique(rbindlist(list(.nodes$fill, new_fill), use.names = T, fill=T))
+  .nodes$fill = unique(rbindlist(list(.nodes$fill, new_fill), use.names = TRUE, fill=TRUE))
   data.table::setindexv(.nodes$fill, '.ROLE')
   .nodes
 }
@@ -646,7 +646,7 @@ add_to_fill <- function(.nodes, new_fill) {
 }
 
 get_node_vars <- function(.tokens, .nodes, node) {
-  node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=F]
+  node_ids = .nodes$nodes[,c('doc_id','sentence',node),with=FALSE]
   data.table::setnames(node_ids, old=node, new='token_id')
   node_vars = .tokens[node_ids, on=c('doc_id','sentence','token_id')]
   #unique(node_vars, by=c('doc_id','sentence','token_id'))
@@ -661,9 +661,9 @@ get_linked_node_vars <- function(.tokens, .nodes) {
 }
 
 get_node_position <- function(.tokens, .nodes, node) {
-  node_ids = .nodes$nodes[,c('doc_id','sentence',node), with=F]
+  node_ids = .nodes$nodes[,c('doc_id','sentence',node), with=FALSE]
   data.table::setnames(node_ids, old=node, new='token_id')
-  .tokens[node_ids,on=c('doc_id','sentence','token_id'),which=T]
+  .tokens[node_ids,on=c('doc_id','sentence','token_id'),which=TRUE]
 }
 
 get_fill_nodes <- function(.tokens, .nodes, node) {
@@ -692,14 +692,14 @@ add_sub_id <- function(.tokens, ids) {
   data.table::setkeyv(ids, c('doc_id','sentence','token_id'))
   
   #matched = rep(1, nrow(ids)) ## ids should initially exists
-  #exists = rep(T, nrow(ids))
-  ids[, .EXISTS := T]
+  #exists = rep(TRUE, nrow(ids))
+  ids[, .EXISTS := TRUE]
   while (any(ids$.EXISTS)) {
     ids[ids$.EXISTS, token_id := increment_sub_id(ids$token_id[ids$.EXISTS])]
-    e = .tokens[unique(ids[ids$.EXISTS]), on=c('doc_id','sentence','token_id'), which=F, nomatch=0]
+    e = .tokens[unique(ids[ids$.EXISTS]), on=c('doc_id','sentence','token_id'), which=FALSE, nomatch=0]
     if (nrow(e) == 0) break
-    ids[, .EXISTS := F]
-    ids[e, on=c('doc_id','sentence','token_id'), .EXISTS := T]
+    ids[, .EXISTS := FALSE]
+    ids[e, on=c('doc_id','sentence','token_id'), .EXISTS := TRUE]
   }
   
   dup = duplicated(ids, by = c('doc_id','sentence','token_id'))
@@ -708,7 +708,7 @@ add_sub_id <- function(.tokens, ids) {
     dup = duplicated(ids, by = c('doc_id','sentence','token_id'))
   }
   
-  e = .tokens[unique(ids), on=c('doc_id','sentence','token_id'), which=F, nomatch=0]
+  e = .tokens[unique(ids), on=c('doc_id','sentence','token_id'), which=FALSE, nomatch=0]
   if (nrow(e) > 0) {
     ids[, .EXISTS := NULL]
     #stop('en nog een keer!!')
@@ -717,6 +717,7 @@ add_sub_id <- function(.tokens, ids) {
   
   ids
 }
+
 
 
 

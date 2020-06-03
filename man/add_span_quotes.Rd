@@ -16,7 +16,7 @@ add_span_quotes(
   lag_sentences = 1,
   add_quote_symbols = NULL,
   quote_subset = NULL,
-  copy = T
+  copy = TRUE
 )
 }
 \arguments{

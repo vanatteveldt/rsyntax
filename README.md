@@ -37,6 +37,11 @@ popular parsers in R (spacyr and udpipe) the correct column name
 specifications are known, so the following is sufficient.
 
     library(rsyntax)
+    #> rsyntax uses the data.table package, but limits the number of threads used:
+    #>  - data.table currently uses 4 threads
+    #>  - rsyntax uses 2 threads
+    #> 
+    #> You can use set_rsyntax_threads() to use all data.table threads, or set a specific number
     tokens = as_tokenindex(tokens)
 
 To query a dependency tree, it is important to have a good understanding
@@ -135,22 +140,23 @@ piped together.
 
 For example, let’s add the following query for a passive sentence.
 
-    passive = tquery(label = 'verb', upos = 'VERB', fill=F,
+    passive = tquery(label = 'verb', upos = 'VERB', fill=FALSE,
                      children(label = 'subject', relation = 'obl'),
                      children(label = 'object', relation = 'nsubj:pass'))
 
 Now we can add both tqueries to the annotate function. For convenience,
 we can also specify labels for the queries by passing them as named
 arguments. Here we label the direct query “dir” and the passive query
-“pas”. Also, and very importantly, note that we add the `overwrite = T`
-argument, which means that we’ll overwrite the previous “clause” column.
-(By default, annotate would not overwrite previous results, which
-enables another way of piping queries that we won’t discuss here.)
+“pas”. Also, and very importantly, note that we add the
+`overwrite = TRUE` argument, which means that we’ll overwrite the
+previous “clause” column. (By default, annotate would not overwrite
+previous results, which enables another way of piping queries that we
+won’t discuss here.)
 
     tokens = annotate_tqueries(tokens, 'clause', 
                                dir = direct, 
                                pas = passive, 
-                               overwrite = T)
+                               overwrite = TRUE)
 
     tokens[,c('doc_id','sentence','token','clause', 'clause_id')]
     #>     doc_id sentence token  clause     clause_id

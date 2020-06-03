@@ -9,7 +9,7 @@ remove_fill(
   node,
   rm_subset_fill = NULL,
   rm_subset = NULL,
-  keep_shared = F
+  keep_shared = FALSE
 )
 }
 \arguments{

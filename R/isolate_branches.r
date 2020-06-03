@@ -22,7 +22,7 @@
 #' \donttest{
 #' plot_tree(tokens2)
 #' }
-isolate_branch <- function(tokens, ..., copy_parent=T, copy_parent_fill=T) {
+isolate_branch <- function(tokens, ..., copy_parent=TRUE, copy_parent_fill=TRUE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -42,8 +42,8 @@ isolate_branch <- function(tokens, ..., copy_parent=T, copy_parent_fill=T) {
   }
   
   ## if we do copy the parent, we need to do it recursively from root to bottom 
-  tokens[, .ISOLATED := F]
-  tq = tquery(label='parent', .ISOLATED=F,
+  tokens[, .ISOLATED := FALSE]
+  tq = tquery(label='parent', .ISOLATED=FALSE,
                       children(..., label='branch'))
   
   
@@ -54,11 +54,11 @@ isolate_branch <- function(tokens, ..., copy_parent=T, copy_parent_fill=T) {
 rec_isolate <- function(tokens, tq) {
   parent_copy = parent = NULL
   
-  tokens = select_nodes(tokens, tq, fill_only_first=T, .one_per_sentence = T)
+  tokens = select_nodes(tokens, tq, fill_only_first=TRUE, .one_per_sentence = TRUE)
   if (nrow(selected_nodes(tokens)$nodes) == 0) return(tokens)
-  tokens = copy_nodes(tokens, 'parent', 'parent_copy', copy_fill=T)
+  tokens = copy_nodes(tokens, 'parent', 'parent_copy', copy_fill=TRUE)
   tokens = mutate_nodes(tokens, 'branch', parent = parent_copy$token_id)
-  tokens = mutate_nodes(tokens, 'parent_copy', parent = NA, relation = 'ROOT', branch_parent=parent$parent, .ISOLATED=T)
+  tokens = mutate_nodes(tokens, 'parent_copy', parent = NA, relation = 'ROOT', branch_parent=parent$parent, .ISOLATED=TRUE)
   rec_isolate(tokens, tq)
 }
 
@@ -98,7 +98,7 @@ get_branch_id <- function(tokens) {
     data.table::setnames(parents, 'token_id','parent')
     parents = merge(parents, tokens[,c('doc_id','sentence','token_id','parent')], by=c('doc_id','sentence','parent'))
     if (nrow(parents) == 0) break
-    i = tokens[parents, on=c('doc_id','sentence','token_id'), which=T]
+    i = tokens[parents, on=c('doc_id','sentence','token_id'), which=TRUE]
     tokens[i, branch_id := parents$branch_id]
     
     if (safe_count == 200) {
@@ -119,7 +119,7 @@ print_sentences <- function(tokens, sentence_i=1, token_col='token') {
   sents = get_branch_id(tokens[sentences[1,], on=c('doc_id','sentence')])
   
   bp = sents[!is.na(sents$branch_parent),c('doc_id','sentence','branch_parent','token_id')]
-  bp = merge(bp, sents[,c('doc_id','sentence','token_id','branch_id')], by.x=c('doc_id','sentence','branch_parent'), by.y=c('doc_id','sentence','token_id'), all.x=T)
+  bp = merge(bp, sents[,c('doc_id','sentence','token_id','branch_id')], by.x=c('doc_id','sentence','branch_parent'), by.y=c('doc_id','sentence','token_id'), all.x=TRUE)
   sents[bp, branch_parent_id := bp$branch_id, on=c('doc_id','sentence','token_id')]
   
   get_bp <- function(x) if (any(!is.na(x))) first(stats::na.omit(x)) else numeric()

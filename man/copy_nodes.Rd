@@ -9,8 +9,8 @@ copy_nodes(
   node,
   new,
   subset = NULL,
-  keep_relation = T,
-  copy_fill = F,
+  keep_relation = TRUE,
+  copy_fill = FALSE,
   subset_fill = NULL,
   only_new = NULL
 )

@@ -13,11 +13,11 @@ children(
   ...,
   g_id = NULL,
   label = NA,
-  req = T,
+  req = TRUE,
   depth = 1,
-  connected = F,
-  fill = T,
-  block = F,
+  connected = FALSE,
+  fill = TRUE,
+  block = FALSE,
   max_window = c(Inf, Inf),
   min_window = c(0, 0)
 )
@@ -26,7 +26,7 @@ not_children(
   ...,
   g_id = NULL,
   depth = 1,
-  connected = F,
+  connected = FALSE,
   max_window = c(Inf, Inf),
   min_window = c(0, 0)
 )
@@ -35,11 +35,11 @@ parents(
   ...,
   g_id = NULL,
   label = NA,
-  req = T,
+  req = TRUE,
   depth = 1,
-  connected = F,
-  fill = T,
-  block = F,
+  connected = FALSE,
+  fill = TRUE,
+  block = FALSE,
   max_window = c(Inf, Inf),
   min_window = c(0, 0)
 )
@@ -48,7 +48,7 @@ not_parents(
   ...,
   g_id = NULL,
   depth = 1,
-  connected = F,
+  connected = FALSE,
   max_window = c(Inf, Inf),
   min_window = c(0, 0)
 )
@@ -57,7 +57,7 @@ fill(
   ...,
   g_id = NULL,
   depth = Inf,
-  connected = F,
+  connected = FALSE,
   max_window = c(Inf, Inf),
   min_window = c(0, 0)
 )

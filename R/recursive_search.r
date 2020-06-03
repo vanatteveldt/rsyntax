@@ -1,13 +1,13 @@
 
 
-#' Recursive search tokens
-#'
-#' @param tokens   The tokenIndex
-#' @param ids      A data.table with global ids (doc_id,sentence,token_id). 
-#' @param ql       a list of queriers (possibly the list nested in another query, or containing nested queries)
-#' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
-#' @param fill     Include or exclude fill nodes
-rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
+# Recursive search tokens
+#
+# tokens   The tokenIndex
+# ids      A data.table with global ids (doc_id,sentence,token_id). 
+# ql       a list of queriers (possibly the list nested in another query, or containing nested queries)
+# block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
+# fill     Include or exclude fill nodes
+rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE) {
   .DROP = NULL
   out_req = list()
   out_not_req = list()
@@ -74,14 +74,14 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=T) {
 rec_selection <- function(tokens, ids, q, block, fill) {
   selection = select_tokens(tokens, ids=ids, q=q, block=block)
   if (length(q$nested) > 0 & length(selection) > 0) {
-    nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$label),with=F], ql=q$nested, block=block, fill=fill) 
+    nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$label),with=FALSE], ql=q$nested, block=block, fill=fill) 
     ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the label column)
     is_req = any(sapply(q$nested, function(x) x$req))
     if (nrow(nested) > 0) {
       if (is_req) {
-        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T) 
+        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE) 
       } else {
-        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all.x=T) 
+        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE) 
       }
     } else {
       if (is_req) selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), sentence=numeric(), .DROP = numeric())
@@ -96,7 +96,7 @@ merge_req <- function(req) {
   out = data.table::data.table()
   if (any(sapply(req, nrow) == 0)) return(out)
   for (dt in req) {
-    out = if (nrow(out) == 0) dt else merge(out, dt, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T)
+    out = if (nrow(out) == 0) dt else merge(out, dt, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE)
   }
   out
 }
@@ -105,7 +105,7 @@ merge_req <- function(req) {
 merge_not_req <- function(not_req) {
   out = data.table::data.table()
   for (dt in not_req) {
-    out = if (nrow(out) == 0) dt else merge(out, dt, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all=T)
+    out = if (nrow(out) == 0) dt else merge(out, dt, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all=TRUE)
   }
   out
 }
@@ -116,26 +116,26 @@ merge_req_and_not_req <- function(req, not_req) {
   if (nrow(out) > 0) {
     out_not_req = merge_not_req(not_req)
     if (nrow(out_not_req) > 0) {
-      out = merge(out, out_not_req, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=T, all.x=T)
+      out = merge(out, out_not_req, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE)
     }
   }
   out
 }
 
-#' Select which tokens to add
-#' 
-#' Given ids, look for their parents/children (specified in query q) and filter on criteria (specified in query q)
-#'
-#' @param tokens   The tokenIndex
-#' @param ids      A data.table with global ids (doc_id,sentence,token_id). 
-#' @param q        a query (possibly nested in another query, or containing nested queries)
-#' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
+# Select which tokens to add
+# 
+# Given ids, look for their parents/children (specified in query q) and filter on criteria (specified in query q)
+#
+# tokens   The tokenIndex
+# ids      A data.table with global ids (doc_id,sentence,token_id). 
+# q        a query (possibly nested in another query, or containing nested queries)
+# block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
 select_tokens <- function(tokens, ids, q, block=NULL) {
   .MATCH_ID = NULL ## bindings for data.table
   
   selection = select_token_family(tokens, ids, q, block)
   
-  if (!grepl('_FILL', q$label, fixed=T)) {
+  if (!grepl('_FILL', q$label, fixed=TRUE)) {
     selection = subset(selection, select=c('.MATCH_ID', 'doc_id','sentence','token_id'))
     data.table::setnames(selection, 'token_id', q$label)
   } else {
@@ -159,28 +159,28 @@ select_tokens <- function(tokens, ids, q, block=NULL) {
 
 select_token_family <- function(tokens, ids, q, block) {
   if (q$connected) {
-    selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=T, show_level = T, lookup=q$lookup, g_id=q$g_id)
+    selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=TRUE, show_level = TRUE, lookup=q$lookup, g_id=q$g_id)
   } else {
-    selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=T, show_level = T)
+    selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=TRUE, show_level = TRUE)
     if (!data.table::haskey(selection)) data.table::setkeyv(selection, c('doc_id','sentence','token_id'))
     selection = filter_tokens(selection, q$lookup, .G_ID = q$g_id)
   }
   selection
 }
 
-#' Get the parents or children of a set of ids
-#'
-#' @param tokens   The tokenIndex
-#' @param ids      A data.table with global ids (doc_id,sentence,token_id). 
-#' @param level    either 'children' or 'parents'
-#' @param depth    How deep to search. eg. children -> grandchildren -> grandgrand etc.
-#' @param minimal  If TRUE, only return doc_id, sentence, token_id and parent
-#' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
-#' @param replace  If TRUE, re-use nodes in deep_family() 
-#' @param show_level If TRUE, add a column showing the level (depth in tree) of a node.
-#' @param lookup   filter tokens by lookup values. Will be applied at each level (if depth > 1) 
-#' @param g_id     filter tokens by id. See lookup
-token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, block=NULL, replace=F, show_level=F, lookup=NULL, g_id=NULL) {
+# Get the parents or children of a set of ids
+#
+# tokens   The tokenIndex
+# ids      A data.table with global ids (doc_id,sentence,token_id). 
+# level    either 'children' or 'parents'
+# depth    How deep to search. eg. children -> grandchildren -> grandgrand etc.
+# minimal  If TRUE, only return doc_id, sentence, token_id and parent
+# block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
+# replace  If TRUE, re-use nodes in deep_family() 
+# show_level If TRUE, add a column showing the level (depth in tree) of a node.
+# lookup   filter tokens by lookup values. Will be applied at each level (if depth > 1) 
+# g_id     filter tokens by id. See lookup
+token_family <- function(tokens, ids, level='children', depth=Inf, minimal=FALSE, block=NULL, replace=FALSE, show_level=FALSE, lookup=NULL, g_id=NULL) {
   .MATCH_ID = NULL
   
   if (!replace) block = get_long_ids(ids, block)
@@ -188,7 +188,7 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
   if ('.MATCH_ID' %in% colnames(tokens)) tokens[, .MATCH_ID := NULL]
   
   if (level == 'children') {
-    id = tokens[list(ids[[1]], ids[[2]], ids[[3]]), on=c('doc_id','sentence','parent'), nomatch=0, allow.cartesian=T]
+    id = tokens[list(ids[[1]], ids[[2]], ids[[3]]), on=c('doc_id','sentence','parent'), nomatch=0, allow.cartesian=TRUE]
     id = filter_tokens(id, .BLOCK=block, lookup=lookup, .G_ID = g_id)
     if (minimal) id = subset(id, select = c('doc_id','sentence','token_id','parent'))
     data.table::set(id, j = '.MATCH_ID', value = id[['parent']])
@@ -202,7 +202,7 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
     id = filter_tokens(id, .G_ID = g_id, lookup=lookup)
     
     if (minimal) id = subset(id, select = c('doc_id','sentence','token_id','parent'))
-    id = merge(id, .NODE, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','parent'), allow.cartesian=T)
+    id = merge(id, .NODE, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','parent'), allow.cartesian=TRUE)
   }
   if (depth > 1) id = deep_family(tokens, id, level, depth, minimal=minimal, block=block, replace=replace, show_level=show_level, lookup=lookup, g_id=g_id) 
   if (depth <= 1 && show_level) id = cbind(.FILL_LEVEL=as.double(rep(1,nrow(id))), id)
@@ -210,20 +210,20 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=F, bl
   id
 }
 
-#' Get the parents or children of a set of ids
-#'
-#' @param tokens   The tokenIndex
-#' @param id       rows in the tokenIndex to use as the ID (for whom to get the family)
-#' @param level    either 'children' or 'parents'
-#' @param depth    How deep to search. eg. children -> grandchildren -> grandgrand etc.
-#' @param minimal  If TRUE, only return doc_id, sentence, token_id and parent
-#' @param block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
-#' @param replace  If TRUE, re-use nodes 
-#' @param show_level If TRUE, return a column with the level at which the node was found (e.g., as a parent, grantparent, etc.)
-#' @param only_new If TRUE, only return new found family. Otherwise, the id input is included as well.
-#' @param lookup   Optional lookup filter
-#' @param g_id     Optional filter with specific global token ids
-deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace=F, show_level=F, only_new=F, lookup=NULL, g_id=NULL) {
+# Get the parents or children of a set of ids
+#
+# tokens   The tokenIndex
+# id       rows in the tokenIndex to use as the ID (for whom to get the family)
+# level    either 'children' or 'parents'
+# depth    How deep to search. eg. children -> grandchildren -> grandgrand etc.
+# minimal  If TRUE, only return doc_id, sentence, token_id and parent
+# block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
+# replace  If TRUE, re-use nodes 
+# show_level If TRUE, return a column with the level at which the node was found (e.g., as a parent, grantparent, etc.)
+# only_new If TRUE, only return new found family. Otherwise, the id input is included as well.
+# lookup   Optional lookup filter
+# g_id     Optional filter with specific global token ids
+deep_family <- function(tokens, id, level, depth, minimal=FALSE, block=NULL, replace=FALSE, show_level=FALSE, only_new=FALSE, lookup=NULL, g_id=NULL) {
   id_list = vector('list', 10) ## 10 is just for reserving (more than sufficient) items. R will automatically add more if needed (don't think this actually requires reallocation).
   id_list[[1]] = id
   i = 2
@@ -242,20 +242,20 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
     }
     ilc = rbind(ilc, subset(.NODE, select = c('doc_id','sentence','token_id','.MATCH_ID')))
     
-    if (!replace) block = get_long_ids(block, .NODE[,c('doc_id','sentence','token_id'), with=F])
+    if (!replace) block = get_long_ids(block, .NODE[,c('doc_id','sentence','token_id'), with=FALSE])
     #print(.NODE)
     #.NODE = subset(.NODE, .NODE$token_id %in% unique(.NODE$parent)) ## prevent infinite loops
     
     if (level == 'children') {
       id = filter_tokens(tokens, .G_PARENT = .NODE[,c('doc_id','sentence','token_id')], .BLOCK=block, lookup=lookup, .G_ID=g_id)
-      id = merge(id, subset(.NODE, select = c('doc_id','sentence','token_id','.MATCH_ID')), by.x=c('doc_id','sentence','parent'), by.y=c('doc_id','sentence','token_id'), allow.cartesian=T)
+      id = merge(id, subset(.NODE, select = c('doc_id','sentence','token_id','.MATCH_ID')), by.x=c('doc_id','sentence','parent'), by.y=c('doc_id','sentence','token_id'), allow.cartesian=TRUE)
       id_list[[i]] = if (minimal) subset(id, select = c('doc_id','sentence','token_id','parent','.MATCH_ID')) else id
     }
     
     if (level == 'parents') {
       id = filter_tokens(tokens, .G_ID = .NODE[,c('doc_id','sentence','parent')], .BLOCK=block)
       id = filter_tokens(id, .G_ID = g_id, lookup=lookup)
-      id = merge(id, subset(.NODE, select = c('doc_id','sentence','parent', '.MATCH_ID')), by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','parent'), allow.cartesian=T)
+      id = merge(id, subset(.NODE, select = c('doc_id','sentence','parent', '.MATCH_ID')), by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','parent'), allow.cartesian=TRUE)
       id_list[[i]] = if (minimal) subset(id, select = c('doc_id','sentence','token_id','parent','.MATCH_ID')) else id
    }
     
@@ -267,10 +267,10 @@ deep_family <- function(tokens, id, level, depth, minimal=F, block=NULL, replace
   if (only_new) id_list[[1]] = NULL
   if (show_level) {
     id_list = id_list[!sapply(id_list, is.null)]   ## in older version of data.table R breaks (badly) if idcol is used in rbindlist with NULL values in list
-    out = data.table::rbindlist(id_list, use.names = T, idcol = '.FILL_LEVEL')
+    out = data.table::rbindlist(id_list, use.names = TRUE, idcol = '.FILL_LEVEL')
     out$.FILL_LEVEL = as.double(out$.FILL_LEVEL)
     return(out)
   } else {
-    return(data.table::rbindlist(id_list, use.names = T))
+    return(data.table::rbindlist(id_list, use.names = TRUE))
   }
 }

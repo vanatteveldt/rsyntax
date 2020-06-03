@@ -7,9 +7,9 @@
 select_nodes(
   tokens,
   tquery,
-  fill = T,
-  fill_only_first = T,
-  .one_per_sentence = F,
+  fill = TRUE,
+  fill_only_first = TRUE,
+  .one_per_sentence = FALSE,
   .order = 1
 )
 }

@@ -40,7 +40,7 @@ test_that("reshape nodes works", {
   expect_true(sum(test$token == 'is') == 1) ## "is" should not be copied
   
   test = select_nodes(tokens, tq) %>%
-    copy_nodes('parent', 'new_child', copy_fill = T)
+    copy_nodes('parent', 'new_child', copy_fill = TRUE)
   expect_equal(test$token_id[9], 5.1)
   expect_equal(test$parent[9], 2.1)
   
@@ -49,7 +49,7 @@ test_that("reshape nodes works", {
   expect_true(nrow(test) == 1)
   
   test = select_nodes(tokens, tq) %>%
-    remove_nodes('parent', with_fill = F)
+    remove_nodes('parent', with_fill = FALSE)
   expect_true(nrow(test) == 5)
   expect_true(sum(is.na(test$parent)) == 3) ## top layer fill of 'parent' now become roots
   

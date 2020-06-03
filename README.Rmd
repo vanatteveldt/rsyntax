@@ -20,14 +20,14 @@ Installation
 
 You can install from CRAN:
 
-```{r, eval=F}
+```{r, eval=FALSE}
 install.packages('rsyntax')
 ```
 
 Or install the development version from github:
 directly from github:
 
-```{r, eval=F}
+```{r, eval=FALSE}
 library(devtools)
 install_github("vanatteveldt/rsyntax")
 ```
@@ -53,7 +53,7 @@ tokens = as_tokenindex(tokens)
 
 To query a dependency tree, it is important to have a good understanding of what these trees look like, and how this tree data is represented in a data.frame format. To facilitate this understanding, the plot_tree function visualizes the dependency tree, together with a given selection of columns from the data (see working paper for why this is possible for most types of dependency trees). We don't show the visualization in this readme, because rsyntax creates a PDF that's shown in the viewer panel, and at this moment I'm too lazy to figure out how to make this work in the readme markdown.
 
-```{r, eval=F}
+```{r, eval=FALSE}
 plot_tree(tokens, token, lemma, upos)
 ```
 
@@ -63,13 +63,13 @@ The main functionality of rsyntax is that you can query the dependency tree. Whi
 
 Simply put, you can provide lookup values for selecting rows from the data.frame. For example, the following query would find all rows where the upos value is either "VERB" or "PROPN": 
 
-```{r, eval=F}
+```{r, eval=FALSE}
 tquery(upos = "VERB")
 ```
 
 To query the edges of a dependency tree, you can perform another row lookup for the parents or children of the results of this query, by nesting the parents() and children() functions. The following query says: for all tokens (i.e. rows) where upos is "VERB", find the ones that have a child for which the relation column says "nsubj".
 
-```{r, eval=F}
+```{r, eval=FALSE}
 tquery(upos = 'VERB', 
        children(relation = 'nsubj'))
 ```
@@ -108,18 +108,18 @@ To find this type of expression more accurately, we therefore need to use multip
 For example, let's add the following query for a passive sentence.
 
 ```{r}
-passive = tquery(label = 'verb', upos = 'VERB', fill=F,
+passive = tquery(label = 'verb', upos = 'VERB', fill=FALSE,
                  children(label = 'subject', relation = 'obl'),
                  children(label = 'object', relation = 'nsubj:pass'))
 ```
 
-Now we can add both tqueries to the annotate function. For convenience, we can also specify labels for the queries by passing them as named arguments. Here we label the direct query "dir" and the passive query "pas". Also, and very importantly, note that we add the `overwrite = T` argument, which means that we'll overwrite the previous "clause" column. (By default, annotate would not overwrite previous results, which enables another way of piping queries that we won't discuss here.)
+Now we can add both tqueries to the annotate function. For convenience, we can also specify labels for the queries by passing them as named arguments. Here we label the direct query "dir" and the passive query "pas". Also, and very importantly, note that we add the `overwrite = TRUE` argument, which means that we'll overwrite the previous "clause" column. (By default, annotate would not overwrite previous results, which enables another way of piping queries that we won't discuss here.)
 
 ```{r}
 tokens = annotate_tqueries(tokens, 'clause', 
                            dir = direct, 
                            pas = passive, 
-                           overwrite = T)
+                           overwrite = TRUE)
 
 tokens[,c('doc_id','sentence','token','clause', 'clause_id')]
 ```
@@ -132,7 +132,7 @@ This way, you can easily pipe multiple queries together.
 
 Finally, you can also visualize annotations with plot_tree.
 
-```{r, eval=F}
+```{r, eval=FALSE}
 plot_tree(tokens, token, lemma, upos, annotation='clause')
 ```
 

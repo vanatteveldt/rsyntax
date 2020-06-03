@@ -20,7 +20,7 @@ corenlp_quote_queries <- function(verbs=ENGLISH_SAY_VERBS, exclude_verbs=NULL) {
   list(direct=direct, nosrc=nosrc, according=according)
 }
 
-corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=T, with_object=F, sub_req=T, ob_req=F) {
+corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, with_subject=TRUE, with_object=FALSE, sub_req=TRUE, ob_req=FALSE) {
   subject_name = if (with_subject) 'subject' else NA
   object_name = if (with_object) 'object' else NA
   
@@ -33,7 +33,7 @@ corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, 
   
   passive = tquery(POS = 'VB*', lemma = verbs, NOT(lemma = exclude_verbs), label='predicate',
                    children(relation = 'auxpass'),
-                   children(relation = 'nmod:agent', label=subject_name, req=F),
+                   children(relation = 'nmod:agent', label=subject_name, req=FALSE),
                    children(relation = 'nsubjpass', label=object_name, req=ob_req)) 
   
   copula_direct = tquery(POS = 'VB*', lemma = verbs, NOT(lemma = exclude_verbs),
@@ -53,12 +53,12 @@ corenlp_clause_queries <- function(verbs=NULL, exclude_verbs=ENGLISH_SAY_VERBS, 
 
 get_quotes <- function(tokens, block=NULL) {
   queries = corenlp_quote_queries()
-  apply_queries(tokens, queries, as_chain=T, block = block, check = F)
+  apply_queries(tokens, queries, as_chain=TRUE, block = block, check = FALSE)
 }
 
 get_clauses <- function(tokens, block=NULL){
-  queries = corenlp_clause_queries(with_object = T)
-  apply_queries(tokens, queries, as_chain=T, block = block, check = F)
+  queries = corenlp_clause_queries(with_object = TRUE)
+  apply_queries(tokens, queries, as_chain=TRUE, block = block, check = FALSE)
 }
 
 .check <- function(tokens, nodes, ...) {

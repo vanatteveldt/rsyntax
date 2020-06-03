@@ -1,8 +1,8 @@
 get_children_i <- function(tokens, i) {
   tokens = as_tokenindex(tokens)
-  select = tokens[i,c('doc_id','sentence','token_id'), with=F]
+  select = tokens[i,c('doc_id','sentence','token_id'), with=FALSE]
   data.table::setnames(select, c('doc_id','sentence','parent'))
-  children = tokens[select, on=c('doc_id','sentence','parent'), nomatch=0, which=T]
+  children = tokens[select, on=c('doc_id','sentence','parent'), nomatch=0, which=TRUE]
   if (length(children) > 0) children = union(children, get_children_i(tokens, children)) 
   union(i, children)
 }
@@ -61,7 +61,7 @@ bquote_s <- function(expr, where=parent.frame()) {
 
 rm_nodes <- function(nodes, ids) {
   if (ncol(nodes) > 1) {
-    drop = rep(T, nrow(nodes))
+    drop = rep(TRUE, nrow(nodes))
     for (j in 2:ncol(nodes)) {
       drop = drop & nodes[[j]] %in% ids
     }

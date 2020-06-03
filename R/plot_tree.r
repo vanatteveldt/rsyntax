@@ -47,7 +47,7 @@
 #'    annotate_tqueries('clause', pas=passive, dir=direct) %>%
 #'    plot_tree(token, pos, annotation='clause')
 #' }
-plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=F, pdf_file=NULL, allign_text=T, ignore_rel=NULL, all_lower=F, all_abbrev=NULL, textsize=1, spacing=1, use_color=T, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=F, viewer_mode=T, viewer_size=c(100,100)) {  
+plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=FALSE, pdf_file=NULL, allign_text=TRUE, ignore_rel=NULL, all_lower=FALSE, all_abbrev=NULL, textsize=1, spacing=1, use_color=TRUE, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=FALSE, viewer_mode=TRUE, viewer_size=c(100,100)) {  
   if (pdf_viewer && is.null(pdf_file)) pdf_file = tempfile('plot_tree', fileext = '.pdf')
   if (!is.null(pdf_file)) if (!grepl('\\.pdf$', pdf_file)) stop('pdf_file needs to have extension ".pdf"')
   if (!is.null(pdf_file)) viewer_mode = FALSE
@@ -68,9 +68,9 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   nodes = split_adjacent(nodes)
   
   sentmes = sprintf('Document: %s\nSentence: %s', unique(nodes$doc_id), unique(nodes$sentence))
-  annotations = gsub('\\_.*', '', grep('\\_fill', colnames(nodes), value=T))
+  annotations = gsub('\\_.*', '', grep('\\_fill', colnames(nodes), value=TRUE))
   text_cols = get_text_cols(tokens, nodes, tidyselect::quos(...), annotations)
-  edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=F]
+  edges = nodes[!is.na(nodes[['parent']]), c('parent', 'token_id', 'relation'), with=FALSE]
   edges = edges[edges$parent %in% nodes$token_id,]
   
   text = NULL
@@ -85,13 +85,13 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
     nodes$label = tolower(nodes$label)
   }
   
-  g = igraph::graph.data.frame(edges, vertices=nodes, directed = T)
+  g = igraph::graph.data.frame(edges, vertices=nodes, directed = TRUE)
   igraph::V(g)$id = as.numeric(igraph::V(g)$name)
   
   ## order nodes, split by roots
   comps = igraph::decompose(g)
   if (length(comps) > 1) {
-    reorder_list = sapply(comps, function(x) sort(igraph::V(x)$id), simplify = F)
+    reorder_list = sapply(comps, function(x) sort(igraph::V(x)$id), simplify = FALSE)
     reorder = unlist(reorder_list)
     g = igraph::permute(g, match(as.numeric(igraph::V(g)$id), as.numeric(reorder)))
     reorder_i = match(as.numeric(reorder), as.numeric(nodes$token_id))
@@ -127,7 +127,7 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
     grDevices::png(png_file, height = height, width=width)
   }
   
-  oldpar = graphics::par(no.readonly = T)
+  oldpar = graphics::par(no.readonly = TRUE)
   on.exit(graphics::par(oldpar))  
   graphics::par(mar=c(0,0,0,0))
   graphics::plot(0, type="n", ann=FALSE, axes=FALSE, xlim=grDevices::extendrange(co[,1]),ylim=grDevices::extendrange(c(-1,1)))
@@ -161,7 +161,7 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   graphics::text(co[,1], texty-(0.1*cex), labels=text, col = col, cex=cex, adj=c(0.5,1))
   add_annotation(co, annotation, nodes, cex)
   message(sentmes)
-  drop = if (is.null(ignore_rel)) rep(F, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
+  drop = if (is.null(ignore_rel)) rep(FALSE, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
   if (allign_text && length(text_cols) > 0) graphics::segments(co[,1], min(co[,2]), co[,1], co[,2]-0.05, lwd = ifelse(drop, NA, 0.5), lty=2, col='grey')
   if (!is.null(pdf_file) || !is.null(viewer_mode)) grDevices::dev.off()
   
@@ -189,7 +189,7 @@ get_text_cols <- function(tokens, nodes, l, annotations) {
     }
   } else {
     cols = setdiff(colnames(tokens), c('doc_id','sentence','token_id','parent','relation'))
-    ann_cols = unlist(sapply(annotations, paste0, c('','_id','_fill'), simplify=F))
+    ann_cols = unlist(sapply(annotations, paste0, c('','_id','_fill'), simplify=FALSE))
     cols = setdiff(cols, ann_cols)
     for (col in cols) {
       text_cols[[col]] = nodes[[col]]   
@@ -287,17 +287,17 @@ set_graph_attr <- function(g, e, cex, ignore_rel, palette, use_color) {
   igraph::V(g)$frame.color = 'white'
   igraph::V(g)$label.font=2
   
-  drop = if (is.null(ignore_rel)) rep(F, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
+  drop = if (is.null(ignore_rel)) rep(FALSE, igraph::vcount(g)) else igraph::V(g)$relation %in% ignore_rel
   igraph::V(g)$size[drop] = 0
   igraph::V(g)$size2[drop] = 0
   igraph::V(g)$label[drop] = ''
   
   if ('.REL_LEVEL' %in% igraph::vertex_attr_names(g)) {
     hl = !is.na(igraph::V(g)$.REL_LEVEL)
-  } else hl = rep(F, igraph::vcount(g))
+  } else hl = rep(FALSE, igraph::vcount(g))
   if ('.IS_SPLIT' %in% igraph::vertex_attr_names(g)) {
     is_split = igraph::V(g)$.IS_SPLIT
-  } else is_split = rep(F, igraph::vcount(g))
+  } else is_split = rep(FALSE, igraph::vcount(g))
   
   if (use_color) {
     igraph::V(g)$color = festival(igraph::V(g)$label, palette)
@@ -355,7 +355,7 @@ find_roots <- function(g) {
 }
 
 split_adjacent <- function(nodes) {
-  nodes$.IS_SPLIT = F
+  nodes$.IS_SPLIT = FALSE
   is_dup = duplicated(data.table(token_id=round(nodes$token_id), parent=nodes$parent))
   is_dup = is_dup &! is.na(nodes$parent)
   if (any(is_dup)) {
@@ -429,39 +429,39 @@ add_annotation <- function(co, annotation, nodes, cex) {
       id_done = !nodes[[ann_id]][id_start] == nodes[[ann_id]][i]
       if (is.na(role_done)) {
         if (role_start == i) {
-          role_done = F
+          role_done = FALSE
           role_start = i
-        } else role_done = T
+        } else role_done = TRUE
       }
       if (is.na(id_done)) {
         if (id_start == i) {
-          id_done = F
+          id_done = FALSE
           id_start = i
-        } else id_done = T
+        } else id_done = TRUE
       }
       if (role_done || id_done) {
         value = nodes[[annotation]][role_start]
-        if (!is.na(value)) draw_box(co, role_start, i-1, label=value, is_outer = F, vdist, cex=cex)
+        if (!is.na(value)) draw_box(co, role_start, i-1, label=value, is_outer = FALSE, vdist, cex=cex)
         role_start = i
       }
       if (id_done) {      
         value = nodes[[ann_id]][id_start]
-        if (!is.na(value)) draw_box(co, id_start, i-1, label=value, is_outer=T, vdist, cex=cex)
+        if (!is.na(value)) draw_box(co, id_start, i-1, label=value, is_outer=TRUE, vdist, cex=cex)
         id_start = i
       }
     }
     if (role_start <= i) {
       value = nodes[[annotation]][role_start]
-      if (!is.na(value)) draw_box(co, role_start, nrow(nodes), label=value, is_outer=F, vdist, cex=cex)
+      if (!is.na(value)) draw_box(co, role_start, nrow(nodes), label=value, is_outer=FALSE, vdist, cex=cex)
     }
     if (id_start <= i) {
       value = nodes[[ann_id]][id_start]
-      if (!is.na(value)) draw_box(co, id_start, nrow(nodes), label=value, is_outer=T, vdist, cex=cex)
+      if (!is.na(value)) draw_box(co, id_start, nrow(nodes), label=value, is_outer=TRUE, vdist, cex=cex)
     }
   }
 }
 
-draw_box <- function(co, start, end, vdist, label, is_outer=F, hexp=1, vexp=1, cex=1,  ...) {
+draw_box <- function(co, start, end, vdist, label, is_outer=FALSE, hexp=1, vexp=1, cex=1,  ...) {
   vexp = if (is_outer) 1.2 else 1
   hexp = if (is_outer) 1 else 0.95
   ldist = if (start == 1) abs(co[2,1] - co[1,1]) else co[start,1] - co[start-1,1] 

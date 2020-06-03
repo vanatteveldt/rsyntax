@@ -7,11 +7,11 @@
 apply_queries(
   tokens,
   ...,
-  as_chain = F,
+  as_chain = FALSE,
   block = NULL,
-  check = F,
-  fill = T,
-  verbose = F
+  check = FALSE,
+  fill = TRUE,
+  verbose = FALSE
 )
 }
 \arguments{

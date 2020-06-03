@@ -36,7 +36,7 @@
 #' tokens
 #' plot_tree(tokens, annotation='clause')
 #' }
-annotate <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T, verbose=F) {
+annotate <- function(tokens, column, ..., block=NULL, fill=TRUE, overwrite=FALSE, block_fill=FALSE, copy=TRUE, verbose=FALSE) {
   .Deprecated('annotate_tqueries')
   annotate_tqueries(tokens=tokens, column=column, ..., block=block, fill=fill, overwrite=overwrite, block_fill=block_fill, copy=copy, verbose=verbose)
 }

@@ -7,7 +7,7 @@
 #' The goal of the rsyntax package is to provide the tools to query and reshape dependency trees, and (at least for now) we want to keep applications such as this function separated.
 #' This specific implementation is also not perfect, and for complex sentences other forms of text simplification would ideally be performed first (e.g., isolating relative clauses).
 #'
-#' @param tokens     a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=T)
+#' @param tokens     a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)
 #'
 #' @return  the tokenIndex with conjunctions split into separate isolated branches.
 #' @export
@@ -40,10 +40,10 @@ spacy_split_conjunctions <- function(tokens) {
 
 split_tree <- function(tokens, rel='conj', no_fill=NULL, min_dist=0, max_dist=Inf, compound = c('compound*','flat')) {
   tq = tquery(label='target', NOT(relation = rel),
-              children(relation = compound, label='ignore', req=F),
-              fill(NOT(relation = no_fill), max_window = c(Inf,0), connected=T),
+              children(relation = compound, label='ignore', req=FALSE),
+              fill(NOT(relation = no_fill), max_window = c(Inf,0), connected=TRUE),
               children(relation = rel, label='origin', min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
-                       fill(NOT(relation = no_fill), max_window=c(0,Inf), connected=T)))
+                       fill(NOT(relation = no_fill), max_window=c(0,Inf), connected=TRUE)))
   tokens = climb_tree(tokens, tq)
 }
 
@@ -88,7 +88,7 @@ split_tree <- function(tokens, rel='conj', no_fill=NULL, min_dist=0, max_dist=In
 #' \donttest{
 #' plot_tree(tokens)
 #' }
-climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=T, only_new='relation', max_iter=200) {
+climb_tree <- function(.tokens, tq, unpack=TRUE, isolate=TRUE, take_fill=TRUE, give_fill=TRUE, only_new='relation', max_iter=200) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -99,7 +99,7 @@ climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=
   i = 1
   out = list()
   
-  .tokens = select_nodes(.tokens, tq, fill_only_first = F, .one_per_sentence=T)
+  .tokens = select_nodes(.tokens, tq, fill_only_first = FALSE, .one_per_sentence=TRUE)
   last_nodes = selected_nodes(.tokens)
   
   if (nrow(last_nodes$nodes) == 0) return(.tokens)
@@ -121,9 +121,9 @@ climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=
     if (unpack) {
       tq2 = tquery(label = 'child', g_id = last_nodes$nodes[,c('doc_id','sentence','origin')],
                    parents(label = 'parent'))
-      .tokens = select_nodes(.tokens, tq2, fill_only_first = F) 
+      .tokens = select_nodes(.tokens, tq2, fill_only_first = FALSE) 
       ## copy the parent 
-      .tokens = copy_nodes(.tokens, 'parent', 'new_parent', copy_fill = F)
+      .tokens = copy_nodes(.tokens, 'parent', 'new_parent', copy_fill = FALSE)
       ## point the duplicate children towards new  copy
       .tokens = mutate_nodes(.tokens, 'child', parent=new_parent$token_id)
       ## and add the parent fill for which relation is not already in copy
@@ -131,7 +131,7 @@ climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=
       if (isolate) .tokens = resolve_siblings(.tokens)
     }
     
-    .tokens = select_nodes(.tokens, tq, fill_only_first = F, .one_per_sentence=T) 
+    .tokens = select_nodes(.tokens, tq, fill_only_first = FALSE, .one_per_sentence=TRUE) 
     last_nodes = selected_nodes(.tokens)
     
     if (nrow(last_nodes$nodes) == 0) {
@@ -152,7 +152,7 @@ climb_tree <- function(.tokens, tq, unpack=T, isolate=T, take_fill=T, give_fill=
     
   }
   #.tokens
-  as_tokenindex(rbindlist(out, fill = T))
+  as_tokenindex(rbindlist(out, fill = TRUE))
 }
 
 
@@ -170,15 +170,15 @@ resolve_siblings <- function(tokens, no_fill=NULL) {
   sib = tokens[dupl, c('doc_id','sentence','token_id')]
   
   dupl_tok = ftok[ftok[dupl,], on=c('doc_id','sentence','floor_token_id')]
-  tokens[,.SIBLING := F]
-  tokens[dupl_tok, .SIBLING := T, on=c('doc_id','sentence','token_id')]
+  tokens[,.SIBLING := FALSE]
+  tokens[dupl_tok, .SIBLING := TRUE, on=c('doc_id','sentence','token_id')]
   
   tq = tquery(label='target',
-              fill(NOT(relation=no_fill), .SIBLING=F, connected=T),
+              fill(NOT(relation=no_fill), .SIBLING=FALSE, connected=TRUE),
               children(label='origin', g_id=sib[,c('doc_id','sentence','token_id')]))
   
   tokens = select_nodes(tokens, tq)
-  tokens = copy_nodes(tokens, 'target', new = 'target_copy', copy_fill = T)
+  tokens = copy_nodes(tokens, 'target', new = 'target_copy', copy_fill = TRUE)
   tokens = mutate_nodes(tokens, 'origin', parent = target_copy$token_id)
   
   ## repeat until no siblings remain

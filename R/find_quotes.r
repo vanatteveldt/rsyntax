@@ -83,7 +83,7 @@
 #' ## view as full text
 #' syntax_reader(tokens, annotation = 'quote', value = 'source')
 #' }
-add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, add_quote_symbols=NULL, quote_subset=NULL, copy=T) {
+add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, add_quote_symbols=NULL, quote_subset=NULL, copy=TRUE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -168,7 +168,7 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
     if (!any(no_source$sentence >= 0)) break
     
     
-    sent = merge(no_source, candidates, by=c('doc_id','sentence'), allow.cartesian=T)
+    sent = merge(no_source, candidates, by=c('doc_id','sentence'), allow.cartesian=TRUE)
     select_ids = unique(sent, by=c('.QUOTE'))$.ID
     
     sent = sent[list(unique(select_ids)), on='.ID']
@@ -211,7 +211,7 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   quote_id_col = paste0(quote_col,'_id')
   
   sources$label = as.character(sources$.ROLE)
-  sources$i = tokens[list(sources$doc_id, sources$sentence, sources$candidate_id), on=c('doc_id','sentence','token_id'),which=T]
+  sources$i = tokens[list(sources$doc_id, sources$sentence, sources$candidate_id), on=c('doc_id','sentence','token_id'),which=TRUE]
   
   ## prepare quotes
   matched_source = sources[match(is_quote, sources$.QUOTE)]
@@ -249,12 +249,12 @@ get_quote_positions <- function(tokens, text_col, is_quote_regex, par_col=NULL, 
   
   is_quote = grepl(is_quote_regex, tokens[[text_col]])
   if (!is.null(quote_subset)) is_quote = is_quote & quote_subset
-  is_quote[c(F,is_quote[-length(is_quote)])] = F ## to ignore double quotes after reshaping
+  is_quote[c(FALSE,is_quote[-length(is_quote)])] = FALSE ## to ignore double quotes after reshaping
   
   par_quotes = split(is_quote, par)
   par_quotes = lapply(par_quotes, get_spans)
   
-  add_count = cumsum(sapply(par_quotes, function(x) max(c(x,0), na.rm=T)))
+  add_count = cumsum(sapply(par_quotes, function(x) max(c(x,0), na.rm=TRUE)))
   add_count = data.table::shift(add_count, 1, fill = 0)
   par_quotes = lapply(1:length(par_quotes), function(i) par_quotes[[i]] + add_count[i])
   out = as.integer(unlist(par_quotes))
@@ -276,10 +276,10 @@ get_spans <- function(quotes) {
 
 get_paragraph <- function(tokens, text_col, par_col, space_col) {
   if (is.null(par_col)) {
-    is_break = grepl('\n', tokens[[text_col]], fixed=T) 
-    if (!is.null(space_col)) is_break = is_break | grepl('\n', tokens[[space_col]], fixed=T)
-    is_new = !is_break & c(F, is_break[-length(is_break)])
-    is_new[!duplicated(tokens$doc_id)] = T
+    is_break = grepl('\n', tokens[[text_col]], fixed=TRUE) 
+    if (!is.null(space_col)) is_break = is_break | grepl('\n', tokens[[space_col]], fixed=TRUE)
+    is_new = !is_break & c(FALSE, is_break[-length(is_break)])
+    is_new[!duplicated(tokens$doc_id)] = TRUE
     par = cumsum(is_new)
   } else par = tokens[[par_col]]
   par

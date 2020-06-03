@@ -7,7 +7,7 @@
 spacy_split_conjunctions(tokens)
 }
 \arguments{
-\item{tokens}{a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=T)}
+\item{tokens}{a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)}
 }
 \value{
 the tokenIndex with conjunctions split into separate isolated branches.

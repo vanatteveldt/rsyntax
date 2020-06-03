@@ -21,26 +21,26 @@ recprint <- function(x, pd, level=1, connector=pipe_tr(), pipe_level=c(), max_ch
     if (!is.na(x$label))
       cat('  ', x$label, rep(' ', pd[2] - nchar(x$label)), '  ', sep='') else cat('  ', rep(' ', pd[2]), '  ', sep='')
 
-    first = T    
+    first = TRUE    
     if ('NOT' %in% names(x) && x$NOT) {
       if (!first) cat(', ') else cat(' ')
       cat('NOT=T')
-      first = F
+      first = FALSE
     }
     if ('req' %in% names(x) && !x$req) {
       if (!first) cat(', ') else cat(' ')
       cat('req=F')
-      first = F
+      first = FALSE
     }  
     #if (!x$select == 'NULL') {
     #  if (!first) cat(', ') else cat(' ')
     #  cat('select=', abbrev_str(x$select, max_char))
-    #  first = F
+    #  first = FALSE
     #}  
     if ('depth' %in% names(x) && x$depth > 1) {
       if (!first) cat(', ') else cat(' ')
       cat('depth=', x$depth, sep='')
-      first = F
+      first = FALSE
     }  
     
     l = x$lookup
@@ -64,23 +64,23 @@ rec_lookup_print <- function(l, first, max_char, op = 'AND', level=1) {
   for (i in seq_along(l)) {
     if (is.null(l[[i]])) next
     if (methods::is(l[[i]], 'tokenLookup')) {
-      rec_lookup_print(l[[i]]$lookup, first=T, max_char, l[[i]]$boolean, level=level+1)
+      rec_lookup_print(l[[i]]$lookup, first=TRUE, max_char, l[[i]]$boolean, level=level+1)
       if (!first) cat(', ') else cat(' ')
-      first = F
+      first = FALSE
       next
     }
     n = names(l)[[i]]
     v = if (class(l[[n]]) %in% c('factor','character')) paste0(l[[n]]) else l[[n]]
     if (length(v) > 1) v = paste0('(', abbrev_str(paste(v, collapse=','), max_char), ')')
     if (!first) cat(', ') else if (level==1) cat(' ')
-    first = F
+    first = FALSE
     cat(n, '=', v, sep='')
   }
   if (op %in% c('OR','NOT')) cat(')')
 }
 
 get_print_data <- function(x, d=c(0,0)) {
-  d[2] = max(d[2], nchar(x$label), na.rm = T)
+  d[2] = max(d[2], nchar(x$label), na.rm = TRUE)
   for (i in seq_along(x$nested)) {
     d = get_print_data(x$nested[[i]], c(d[1]+1, d[2]))
   }

@@ -8,9 +8,9 @@ remove_nodes(
   .tokens,
   node,
   rm_subset = NULL,
-  with_fill = T,
+  with_fill = TRUE,
   rm_subset_fill = NULL,
-  keep_shared = F
+  keep_shared = FALSE
 )
 }
 \arguments{

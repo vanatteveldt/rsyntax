@@ -25,7 +25,7 @@
 #'
 #' nodes = apply_queries(tokens, pas=passive, act=active)
 #' nodes
-apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T, verbose=F) {
+apply_queries <- function(tokens, ..., as_chain=FALSE, block=NULL, check=FALSE, fill=TRUE, verbose=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -36,7 +36,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T, 
   r = list(...)
   
   is_tquery = sapply(r, methods::is, 'tQuery')
-  r = c(r[is_tquery], unlist(r[!is_tquery], recursive = F))
+  r = c(r[is_tquery], unlist(r[!is_tquery], recursive = FALSE))
   
   out = vector('list', length(r))
   
@@ -49,7 +49,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T, 
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', NA, as.character(.TQUERY_NAME))
     
-    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, fill=F, melt = F)
+    nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, fill=FALSE, melt = FALSE)
    
     if (!is.null(nodes)) {
       if (as_chain) block = get_long_ids(block, nodes)
@@ -69,7 +69,7 @@ apply_queries <- function(tokens, ..., as_chain=F, block=NULL, check=F, fill=T, 
   }
   
 
-  nodes = data.table::rbindlist(out, fill=T)
+  nodes = data.table::rbindlist(out, fill=TRUE)
   #if (chain && !chain_fill && '.FILL_LEVEL' %in% colnames(d)) {
   #  data.table::setorder(d, '.FILL_LEVEL') 
   #  d = 

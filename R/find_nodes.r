@@ -1,4 +1,4 @@
-find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T, melt=T, root_dist=F) {
+find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill=TRUE, melt=TRUE, root_dist=FALSE) {
   .MATCH_ID = NULL; .DROP = NULL; .ID = NULL ## declare data.table bindings
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
@@ -10,7 +10,7 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=T, name=NA, fill=T,
   
   any_req_nested = any(sapply(tquery$nested, function(x) x$req))
   if (any_req_nested) {
-    nodes = find_nested(tokens, nodes, tquery, block, fill=F)
+    nodes = find_nested(tokens, nodes, tquery, block, fill=FALSE)
   } else {
     data.table::setnames(nodes, old = 'token_id', new='.ID')
     if (!is.na(tquery$label)) nodes[,(tquery$label) := .ID]
@@ -47,7 +47,7 @@ find_nested <- function(tokens, nodes, tquery, block, fill) {
     data.table::setnames(nodes, '.MATCH_ID', tquery$label)
   }
   
-  dropcols = grep('.DROP.*', colnames(nodes), value=T)
+  dropcols = grep('.DROP.*', colnames(nodes), value=TRUE)
   if (length(dropcols) > 0) nodes[, (dropcols) := NULL]
   
   unique(nodes)
@@ -70,7 +70,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     if (!match_id %in% colnames(nodes)) return(nodes)
     ids = subset(nodes, select = c('doc_id','sentence',match_id))
     ids = unique(stats::na.omit(ids))
-    add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=T)
+    add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=TRUE)
     
     if (grepl('#', tquery$label)) {
       label = gsub('#.*', '', tquery$label)
@@ -80,8 +80,8 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
 
     if (nrow(add) > 0) {
       setkeyv(nodes, c('doc_id','sentence',match_id))
-      nodes = merge(nodes, add, by.x=c('doc_id','sentence',match_id), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=T, allow.cartesian=T)
-      dropcols = grep('.DROP.*', colnames(nodes), value=T)
+      nodes = merge(nodes, add, by.x=c('doc_id','sentence',match_id), by.y=c('doc_id','sentence','.MATCH_ID'), all.x=TRUE, allow.cartesian=TRUE)
+      dropcols = grep('.DROP.*', colnames(nodes), value=TRUE)
       if (length(dropcols) > 0) nodes[, (dropcols) := NULL]
     }
   }
@@ -115,12 +115,12 @@ get_root_dist <- function(tokens, nodes) {
   .ROOT_DIST = NULL
   
   tf = token_family(tokens, unique(data.table(doc_id=nodes$doc_id, sentence=nodes$sentence, token_id=nodes$.ID)), 
-                    depth=Inf, level='parents', minimal=T, show_level=T, replace=T)
+                    depth=Inf, level='parents', minimal=TRUE, show_level=TRUE, replace=TRUE)
   tf = data.table::setorderv(tf, cols = '.FILL_LEVEL', order = -1)
   tf = unique(tf, by=c('doc_id','sentence','.MATCH_ID'))
   data.table::setnames(tf, c('.FILL_LEVEL', '.MATCH_ID'), c('.ROOT_DIST', '.ID'))
   tf = subset(tf, select=c('doc_id','sentence','.ID','.ROOT_DIST'))
-  nodes = merge(nodes, tf, by = c('doc_id','sentence','.ID'), all.x=T)
+  nodes = merge(nodes, tf, by = c('doc_id','sentence','.ID'), all.x=TRUE)
   #nodes = nodes[list(tf$doc_id, tf$sentence, tf$.MATCH_ID), .ROOT_DIST := tf$.FILL_LEVEL, on=c('doc_id','sentence','.ID')]
   nodes[is.na(nodes$.ROOT_DIST), .ROOT_DIST := 0]
   nodes

@@ -12,7 +12,7 @@ syntax_reader(
   meta = NULL,
   token_col = "token",
   filename = NULL,
-  view = T,
+  view = TRUE,
   random_seed = NA,
   ...
 )

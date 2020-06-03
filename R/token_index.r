@@ -67,14 +67,14 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
     else {
       ## create a counter that increments for every new sentence within a document 
       tokens$sentence = tokens$sentence != data.table::shift(tokens$sentence, 1, fill=NA) 
-      tokens$sentence[1] = T
+      tokens$sentence[1] = TRUE
       tokens[, sentence := cumsum(sentence), by='doc_id']
     }
   }
 
   if (new_index) {
     is_own_parent = tokens$parent == tokens$token_id
-    is_own_parent[is.na(is_own_parent)] = F
+    is_own_parent[is.na(is_own_parent)] = FALSE
     if (any(is_own_parent)) tokens$parent[is_own_parent] = NA
     levels(tokens$relation) = union(levels(tokens$relation), 'ROOT')
     tokens$relation[is.na(tokens$parent)] = 'ROOT'
@@ -94,7 +94,7 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
   tokens[]
 }
 
-fix_missing_parents <- function(tokens, warn=T) {
+fix_missing_parents <- function(tokens, warn=TRUE) {
   parent = NULL; relation = NULL
   parent_ids = stats::na.omit(unique(tokens[,c('doc_id','sentence','parent')]))
   data.table::setnames(parent_ids, old='parent', new='token_id')
@@ -103,7 +103,7 @@ fix_missing_parents <- function(tokens, warn=T) {
   
   if (nrow(missing_parents) > 0) {
     data.table::setnames(missing_parents, old='token_id', new='parent')
-    i = tokens[missing_parents, on=c('doc_id','sentence','parent'), which=T]
+    i = tokens[missing_parents, on=c('doc_id','sentence','parent'), which=TRUE]
     tokens[i, parent := NA]
     tokens[i, relation := "ROOT"]
   }

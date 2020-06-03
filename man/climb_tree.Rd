@@ -7,10 +7,10 @@
 climb_tree(
   .tokens,
   tq,
-  unpack = T,
-  isolate = T,
-  take_fill = T,
-  give_fill = T,
+  unpack = TRUE,
+  isolate = TRUE,
+  take_fill = TRUE,
+  give_fill = TRUE,
   only_new = "relation",
   max_iter = 200
 )

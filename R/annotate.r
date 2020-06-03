@@ -34,7 +34,7 @@
 #' \donttest{ 
 #' plot_tree(tokens, annotation='clause')
 #' }
-annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=T, overwrite=F, block_fill=F, copy=T, verbose=F) {
+annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwrite=FALSE, block_fill=FALSE, copy=TRUE, verbose=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -43,7 +43,7 @@ annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=T, overwrite
   
   queries = list(...)
   is_tquery = sapply(queries, methods::is, 'tQuery')
-  queries = c(queries[is_tquery], unlist(queries[!is_tquery], recursive = F))
+  queries = c(queries[is_tquery], unlist(queries[!is_tquery], recursive = FALSE))
   
   
   tokens = as_tokenindex(tokens)
@@ -63,7 +63,7 @@ annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=T, overwrite
     }
   }
   
-  nodes = apply_queries(tokens, queries, as_chain=T, block=block, fill=fill, verbose=verbose)
+  nodes = apply_queries(tokens, queries, as_chain=TRUE, block=block, fill=fill, verbose=verbose)
   
   if (nrow(nodes) == 0) {
     fill_column = paste0(column, '_fill')
@@ -126,7 +126,7 @@ annotate_nodes <- function(tokens, nodes, column) {
   }
   
   .NODES = prepare_nodes(tokens, nodes) 
-  i = tokens[.NODES, on=c('doc_id','sentence','token_id'), which=T]
+  i = tokens[.NODES, on=c('doc_id','sentence','token_id'), which=TRUE]
   
   do_replace = .NODES[i, .FILL_LEVEL] < tokens[i, get(fill_column)]
   replace_row = which(do_replace | is.na(do_replace))

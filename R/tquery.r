@@ -53,7 +53,7 @@
 #'                          children(label = 'quote', p_rel = .QUOTE_RELS))
 #' quotes_direct 
 #' @export
-tquery <- function(..., g_id=NULL, label=NA, fill=T, block=F) {
+tquery <- function(..., g_id=NULL, label=NA, fill=TRUE, block=FALSE) {
   #select = deparse(bquote_s(substitute(select), where = parent.frame()))
   
   l = list(...)
@@ -180,12 +180,12 @@ NULL
 
 #' @rdname nested_nodes
 #' @export
-children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, max_window=c(Inf,Inf), min_window=c(0,0)) {
+children <- function(..., g_id=NULL, label=NA, req=TRUE, depth=1, connected=FALSE, fill=TRUE, block=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
   if (length(min_window) == 1) min_window = c(min_window,min_window)
   if (length(max_window) == 1) max_window = c(max_window,max_window)
   
-  NOT = F
-  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  NOT = FALSE
+  if (NOT && !req) stop('cannot combine NOT=TRUE and req=FALSE')
   validate_label_name(label)
   
   l = list(...)
@@ -217,9 +217,9 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=F, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=FALSE, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=F, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=FALSE, max_window=max_window, min_window=min_window)
   }
   
   
@@ -230,14 +230,14 @@ children <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill
 
 #' @rdname nested_nodes
 #' @export
-not_children <- function(..., g_id=NULL, depth=1, connected=F, max_window=c(Inf,Inf), min_window=c(0,0)) {
+not_children <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
   if (length(min_window) == 1) min_window = c(min_window,min_window)
   if (length(max_window) == 1) max_window = c(max_window,max_window)
   
   label=NA
-  req = T
-  NOT = T
-  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  req = TRUE
+  NOT = TRUE
+  if (NOT && !req) stop('cannot combine NOT=TRUE and req=FALSE')
   
   l = list(...)
   if (length(l) > 0) {
@@ -256,12 +256,12 @@ not_children <- function(..., g_id=NULL, depth=1, connected=F, max_window=c(Inf,
 
 #' @rdname nested_nodes
 #' @export
-parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=T, block=F, max_window=c(Inf,Inf), min_window=c(0,0)) {
+parents <- function(..., g_id=NULL, label=NA, req=TRUE, depth=1, connected=FALSE, fill=TRUE, block=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
   if (length(min_window) == 1) min_window = c(min_window,min_window)
   if (length(max_window) == 1) max_window = c(max_window,max_window)
   
-  NOT = F
-  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  NOT = FALSE
+  if (NOT && !req) stop('cannot combine NOT=TRUE and req=FALSE')
   validate_label_name(label)
   
   
@@ -307,13 +307,13 @@ parents <- function(..., g_id=NULL, label=NA, req=T, depth=1, connected=F, fill=
 
 #' @rdname nested_nodes
 #' @export
-not_parents <- function(..., g_id=NULL, depth=1, connected=F, max_window=c(Inf,Inf), min_window=c(0,0)) {
+not_parents <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
   if (length(min_window) == 1) min_window = c(min_window,min_window)
   if (length(max_window) == 1) max_window = c(max_window,max_window)
   label=NA
-  req = T
-  NOT = T
-  if (NOT && !req) stop('cannot combine NOT=T and req=F')
+  req = TRUE
+  NOT = TRUE
+  if (NOT && !req) stop('cannot combine NOT=TRUE and req=FALSE')
   
   l = list(...)
   if (length(l) > 0) {
@@ -331,7 +331,7 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=F, max_window=c(Inf,I
 
 #' @rdname nested_nodes
 #' @export
-fill <- function(..., g_id=NULL, depth=Inf, connected=F, max_window=c(Inf,Inf), min_window=c(0,0)) {
+fill <- function(..., g_id=NULL, depth=Inf, connected=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
   if (length(min_window) == 1) min_window = c(min_window,min_window)
   if (length(max_window) == 1) max_window = c(max_window,max_window)
   #select = deparse(bquote_s(substitute(select)))
@@ -339,9 +339,9 @@ fill <- function(..., g_id=NULL, depth=Inf, connected=F, max_window=c(Inf,Inf), 
   if (length(l) > 0) {
     is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
     if (any(is_nested)) stop('Cannot use nested queries (children(), parents(), etc.) in fill()')
-    q = list(g_id=g_id, label='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=F, NOT=F, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=FALSE, NOT=FALSE, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label='fill', lookup =NULL, nested=NULL, level = 'children', req=F, NOT=F, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label='fill', lookup =NULL, nested=NULL, level = 'children', req=FALSE, NOT=FALSE, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   }
   
   class(q) = c('tQueryFill', class(q))

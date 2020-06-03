@@ -1,15 +1,15 @@
 
-filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, use_index=T) {
+filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BLOCK=NULL, use_index=TRUE) {
   ## we need the ridiculous .UPPERCASE because if the name happens to be a column in data.table it messes up (it will use its own column for the binary search)
   .G_ID = unique(.G_ID)
   .G_PARENT = unique(.G_PARENT)
   
   i = NULL
   null_intersect <- function(x, y) if (is.null(x)) y else intersect(x,y) 
-  if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]], .G_ID[[3]]), on=c('doc_id','sentence','token_id'), which=T])
-  if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]], .G_PARENT[[3]]), on=c('doc_id','sentence','parent'), which=T])
+  if (!is.null(.G_ID)) i = null_intersect(i, tokens[list(.G_ID[[1]], .G_ID[[2]], .G_ID[[3]]), on=c('doc_id','sentence','token_id'), which=TRUE])
+  if (!is.null(.G_PARENT)) i = null_intersect(i, tokens[list(.G_PARENT[[1]], .G_PARENT[[2]], .G_PARENT[[3]]), on=c('doc_id','sentence','parent'), which=TRUE])
   .BLOCK = get_long_ids(.BLOCK)
-  if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]], .BLOCK[[3]]), on=c('doc_id','sentence','token_id'), which=T])
+  if (!is.null(.BLOCK)) i = null_intersect(i, tokens[!list(.BLOCK[[1]], .BLOCK[[2]], .BLOCK[[3]]), on=c('doc_id','sentence','token_id'), which=TRUE])
   if (!is.null(i)) {
     i = stats::na.omit(i)
     tokens = tokens[as.numeric(i),]  
@@ -26,7 +26,7 @@ filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BL
 }
 
 
-lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
+lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=TRUE) {
   i = NULL
   for (lookup_i in seq_along(lookup)) {
     .N = names(lookup)[lookup_i]
@@ -45,7 +45,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
                          ignore_case = grepl('__N?R?F?I', .N), 
                          regex = grepl('__N?I?F?R', .N),
                          fixed = grepl('__N?R?I?F', .N))
-      result = tokens[list(.V), on=(.COLNAME), which=T, nomatch=0, allow.cartesian=T]
+      result = tokens[list(.V), on=(.COLNAME), which=TRUE, nomatch=0, allow.cartesian=TRUE]
     }
     if (is.null(i)) {
       if (boolean == 'NOT') result = if (length(result) > 0) (1:nrow(tokens))[-result] else 1:nrow(tokens)
@@ -59,12 +59,12 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=T) {
   i
 }
 
-get_full_terms <- function(x, terms, batchsize=25, ignore_case=T) {
+get_full_terms <- function(x, terms, batchsize=25, ignore_case=TRUE) {
   terms = if (methods::is(terms, 'factor')) levels(terms) else unique(terms)
   if (length(x) > 1) { ## if there are multiple terms, make batches of terms and turn each batch into a single regex
     x = split(as.character(x), ceiling(seq_along(x)/batchsize))
     x = sapply(x, stringi::stri_paste, collapse='|')
-    out = rep(F, length(x))
+    out = rep(FALSE, length(x))
     for(xbatch in x){
       out = out | grepl(xbatch, terms, ignore.case=ignore_case)
     }
@@ -80,7 +80,7 @@ search_term_regex <- function(patterns) {
   paste0('\\b',patterns,'\\b')                              # set word boundaries
 }
 
-prepare_terms <- function(x, terms, ignore_case=T, regex=F, fixed=F) {
+prepare_terms <- function(x, terms, ignore_case=TRUE, regex=FALSE, fixed=FALSE) {
   if (ignore_case && fixed) warning('ignore_case (__I) is not used, because fixed (__F) is also used')
   if (regex && fixed) warning('regex (__R) is not used, because fixed (__F) is also used')
   if (fixed) return(x)
@@ -90,11 +90,11 @@ prepare_terms <- function(x, terms, ignore_case=T, regex=F, fixed=F) {
   } else {
     if (ignore_case) {
       x = search_term_regex(x)
-      return(get_full_terms(x, terms, ignore_case = T)) 
+      return(get_full_terms(x, terms, ignore_case = TRUE)) 
     } else {
       has_wildcard = grepl('[*?]', x)
       if (!any(has_wildcard)) return(x)
-      x_full = get_full_terms(search_term_regex(x[has_wildcard]), terms, ignore_case=F)
+      x_full = get_full_terms(search_term_regex(x[has_wildcard]), terms, ignore_case=FALSE)
       x = c(x[!has_wildcard], x_full)
       return(unique(x))
     }

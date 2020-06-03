@@ -4,7 +4,7 @@
 \alias{isolate_branch}
 \title{Isolate a branch in a dependency tree}
 \usage{
-isolate_branch(tokens, ..., copy_parent = T, copy_parent_fill = T)
+isolate_branch(tokens, ..., copy_parent = TRUE, copy_parent_fill = TRUE)
 }
 \arguments{
 \item{tokens}{A tokenindex}

@@ -4,7 +4,7 @@
 \alias{get_long_ids}
 \title{Get ids in various forms to extract token_ids}
 \usage{
-get_long_ids(..., select = NULL, with_fill = F)
+get_long_ids(..., select = NULL, with_fill = FALSE)
 }
 \arguments{
 \item{...}{Either a data.table with the columns doc_id, sentence and token_id, or the output of \link{apply_queries}}

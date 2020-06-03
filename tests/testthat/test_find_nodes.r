@@ -6,7 +6,7 @@ test_that("find_nodes works", {
   
   #dat = find_nodes(tokens, label='id', lemma = 'dat')
   dat = find_nodes(tokens, 
-                    tquery(label='id',lemma='dat', fill=F))
+                    tquery(label='id',lemma='dat', fill=FALSE))
   
   
   
@@ -15,28 +15,28 @@ test_that("find_nodes works", {
   expect_equal(dat$token_id, 45)
   
   vcs = find_nodes(tokens, 
-                    tquery(label='parent', relation='vc', fill=F))
+                    tquery(label='parent', relation='vc', fill=FALSE))
   expect_equal(nrow(vcs), 3)
   expect_equal(sort(vcs$token_id), c(7,45,54))
 
   body = find_nodes(tokens, 
-                     tquery(label='id', relation="vc", fill=F,
-                            children(label='id', relation='body', fill=F)))
+                     tquery(label='id', relation="vc", fill=FALSE,
+                            children(label='id', relation='body', fill=FALSE)))
   expect_equal(nrow(body), 2)
 
   # can we get_children with children?
   children = find_nodes(tokens, 
-                         tquery(children(label='child', relation="body", fill=F,
-                                         children(label='grandchild', relation='vc', fill=F))))
+                         tquery(children(label='child', relation="body", fill=FALSE,
+                                         children(label='grandchild', relation='vc', fill=FALSE))))
   expect_equal(nrow(children), 2)
   
   nodes = find_nodes(tokens, 
-                      tquery(label='test', relation='su', fill=F,
-                             children(label='child', fill=F)))
+                      tquery(label='test', relation='su', fill=FALSE,
+                             children(label='child', fill=FALSE)))
 
   # get parents
   parents = find_nodes(tokens, 
-                        tquery(relation="vc", parents(label='parent', POS = 'verb', fill=F)))
+                        tquery(relation="vc", parents(label='parent', POS = 'verb', fill=FALSE)))
 
   
   expect_equal(nrow(parents), 3)
@@ -44,11 +44,11 @@ test_that("find_nodes works", {
   
   # get parents, grandparents, children and grandchildren
   family = find_nodes(tokens, 
-                       tquery(relation='vc', fill=F,
-                              parents(label='parent', fill=F,
-                                      parents(label='grandparent', fill=F)),
-                              children(label='child', relation='obj1', fill=F,
-                                       children(label='grandchild', relation='mod', fill=F))))
+                       tquery(relation='vc', fill=FALSE,
+                              parents(label='parent', fill=FALSE,
+                                      parents(label='grandparent', fill=FALSE)),
+                              children(label='child', relation='obj1', fill=FALSE,
+                                       children(label='grandchild', relation='mod', fill=FALSE))))
   
   expect_equal(nrow(family), 4)
   expect_equal(family$token_id, c(53,45,51,50))
@@ -58,11 +58,11 @@ test_that("find_nodes works", {
   nodes1 = find_nodes(test_req, 
                        tquery(POS = 'VB*', label='verb',
                               children(relation = 'nsubj', label='subject'),
-                              children(relation = 'dobj', label='object', req=F)))
+                              children(relation = 'dobj', label='object', req=FALSE)))
   nodes = find_nodes(test_req, 
                        tquery(POS = 'VB*', label='verb',
                               children(relation = 'nsubj', label='subject'),
-                              children(relation = 'dobj', label='object', req=T)))
+                              children(relation = 'dobj', label='object', req=TRUE)))
   nodes3 = find_nodes(test_req, 
                        tquery(POS = 'VB*', label='verb',
                               children(relation = 'nsubj', label='subject')))
@@ -72,5 +72,5 @@ test_that("find_nodes works", {
   find_nodes(test_req, 
               tquery(POS = 'VB*', label='verb',
                      children(relation = 'nsubj', label='subject'),
-                     children(relation = 'dobj', label='object', req=F)))
+                     children(relation = 'dobj', label='object', req=FALSE)))
 })

@@ -92,12 +92,12 @@ alpino_clause_queries <- function(verbs=NULL, exclude_verbs=DUTCH_SAY_VERBS) {
 
 get_quotes <- function(tokens, block=NULL) {
   queries = alpino_quote_queries()
-  apply_queries(tokens, queries, as_chain=T, block = block, check = F)
+  apply_queries(tokens, queries, as_chain=TRUE, block = block, check = FALSE)
 }
 
 get_clauses <- function(tokens, block=NULL){
   queries = alpino_clause_queries()
-  apply_queries(tokens, queries, as_chain=T, block = block, check = F)
+  apply_queries(tokens, queries, as_chain=TRUE, block = block, check = FALSE)
 }
 
 .check <- function(tokens, nodes, ...) {
@@ -114,7 +114,7 @@ get_clauses <- function(tokens, block=NULL){
 test_that("extracting sources works", {
   tokens = as_tokenindex(tokens_dutchquotes)
   library(testthat)
-  #plot_tree(tokens, sentence_i=7, token, allign_text = T)
+  #plot_tree(tokens, sentence_i=7, token, allign_text = TRUE)
   
   # 1 : Rutte stelt : " Een stem is verloren " . 
   quotes = get_quotes(tokens[tokens$sentence == 1,])

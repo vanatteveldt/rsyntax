@@ -9,11 +9,11 @@ annotate(
   column,
   ...,
   block = NULL,
-  fill = T,
-  overwrite = F,
-  block_fill = F,
-  copy = T,
-  verbose = F
+  fill = TRUE,
+  overwrite = FALSE,
+  block_fill = FALSE,
+  copy = TRUE,
+  verbose = FALSE
 )
 }
 \arguments{

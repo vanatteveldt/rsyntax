@@ -1,20 +1,20 @@
-melt_nodes_list <- function(nodes, fill_only_first=T) {
+melt_nodes_list <- function(nodes, fill_only_first=TRUE) {
   .ROLE = NULL; token_id = NULL; .FILL_LEVEL = NULL
   ## the nodes created in find_nodes have a weird structure, which is only usefull for efficiently merging data.tables
   ## here we melt the nodes to a more convenient format
   
-  for (.RM in grep('^BLOCK', colnames(nodes), value=T)) 
+  for (.RM in grep('^BLOCK', colnames(nodes), value=TRUE)) 
     nodes[, (.RM) := NULL]
   
   if (nrow(nodes) == 0 || ncol(nodes) <= 3) return(data.table::data.table())
   nodes_list = list()
-  fill_cols = grep('_FILL', colnames(nodes), fixed=T, value=T)
+  fill_cols = grep('_FILL', colnames(nodes), fixed=TRUE, value=TRUE)
   
   #browser()
   
   
   cols = setdiff(colnames(nodes), c('doc_id','sentence','.ID'))
-  cols = setdiff(cols, grep('\\_LEVEL$', cols, value=T))
+  cols = setdiff(cols, grep('\\_LEVEL$', cols, value=TRUE))
   level = paste0(cols, '_LEVEL')
   
   missing = setdiff(c(level), colnames(nodes))
@@ -23,7 +23,7 @@ melt_nodes_list <- function(nodes, fill_only_first=T) {
   nodes = melt(nodes, id.vars=c('doc_id','sentence','.ID'), 
                       measure.vars=list(cols,level), 
                       value.name=c('token_id','.FILL_LEVEL'),
-                      variable.name='.ROLE', variable.factor=T)
+                      variable.name='.ROLE', variable.factor=TRUE)
   nodes[, .ROLE := factor(.ROLE, labels=cols)]
   nodes = subset(nodes, !is.na(token_id))
   
@@ -51,7 +51,7 @@ melt_nodes_list <- function(nodes, fill_only_first=T) {
 #'
 #' @return A data.table with the columns doc_id, sentence and token_id
 #' @export
-get_long_ids <- function(..., select=NULL, with_fill=F) {
+get_long_ids <- function(..., select=NULL, with_fill=FALSE) {
   l = list(...)
   
   len = length(l)
@@ -69,18 +69,18 @@ get_long_ids <- function(..., select=NULL, with_fill=F) {
         }
         
         if (with_fill) {
-          ignore_vars = grep('\\FILL\\_LEVEL', colnames(d), value=T)  ## exclude only level vars from measure vars
+          ignore_vars = grep('\\FILL\\_LEVEL', colnames(d), value=TRUE)  ## exclude only level vars from measure vars
         } else {
-          ignore_vars = grep('\\_FILL', colnames(d), value=T)   ## also exclude fill vars from measure vars
+          ignore_vars = grep('\\_FILL', colnames(d), value=TRUE)   ## also exclude fill vars from measure vars
         }
-        ignore_vars = union(ignore_vars, grep('\\_PARENT', colnames(d), value=T))
+        ignore_vars = union(ignore_vars, grep('\\_PARENT', colnames(d), value=TRUE))
 
         d = melt(d, id.vars = c('doc_id', 'sentence'), 
                     measure.vars=setdiff(colnames(d), c('doc_id','sentence','.ID',ignore_vars)),
                     variable.name = '.VARIABLE', value.name='token_id')
       } else {
         if (!with_fill && '.FILL_LEVEL' %in% colnames(d)) 
-          d = d[d$.FILL_LEVEL == 0,,drop=F]
+          d = d[d$.FILL_LEVEL == 0,,drop=FALSE]
       } 
       if (!'token_id' %in% colnames(d)) next
       out[[i]] = d[,c('doc_id','sentence','token_id')]
