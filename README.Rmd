@@ -56,7 +56,7 @@ tokens = as_tokenindex(tokens)
 
 To query a dependency tree, it is important to have a good understanding of what these trees look like, and how this tree data is represented in a data.frame format. To facilitate this understanding, the plot_tree function visualizes the dependency tree, together with a given selection of columns from the data (see working paper for why this is possible for most types of dependency trees). 
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, message=F}
 plot_tree(tokens, token, lemma, upos)
 ```
 
@@ -66,7 +66,7 @@ x = plot_tree(tokens, token, lemma, upos, pdf_file = 'man/figures/README-tree-1.
 
 <object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
     <embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">
-        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">Download PDF</a>.</p>
+        <p>If browser does not show PDF, you can view it : <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">here</a>.</p>
     </embed>
 </object>
 
@@ -200,11 +200,15 @@ This can also be visualized with the `plot_tree` function.
 plot_tree(tokens, token, lemma, upos, annotation='clause')
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=F}
 x = plot_tree(tokens, token, lemma, upos, annotation='clause', pdf_file = 'man/figures/README-tree-2.pdf')
 ```
 
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf"><img src="https://raw.githubusercontent.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" width="630" height="252"/></a>  
+<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
+    <embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">
+        <p>(If browser does not show PDF, you can view it : <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">here</a>.)</p>
+    </embed>
+</object>
 
 
 ### Using chaining in a smart way

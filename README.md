@@ -70,9 +70,8 @@ plot_tree(tokens, token, lemma, upos)
 
 <p>
 
-This browser does not support PDFs. Please download the PDF to view it:
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">Download
-PDF</a>.
+If browser does not show PDF, you can view it :
+<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">here</a>.
 
 </p>
 
@@ -298,16 +297,27 @@ This time, the sentence has two annotations. In the clause\_id column
 you can also see that the first one was found with the direct (dir)
 tquery, and the second one with the passive (pas) tquery.
 
-This can also be visualized with the `plot_tree` function.
+This can also be visualized with the `plot_tree`
+function.
 
 ``` r
 plot_tree(tokens, token, lemma, upos, annotation='clause')
 ```
 
-    #> Document: doc1
-    #> Sentence: 1
+<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
 
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf"><img src="https://raw.githubusercontent.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" width="630" height="252"/></a>
+<embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">
+
+<p>
+
+(If browser does not show PDF, you can view it :
+<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">here</a>.)
+
+</p>
+
+</embed>
+
+</object>
 
 ### Using chaining in a smart way
 
