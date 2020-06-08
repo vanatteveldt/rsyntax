@@ -133,9 +133,9 @@ fill_mwe = fill(relation = c('flat','fixed','compount'),
 
 Next to giving the lookup values for the relation column, we specify that `connected = TRUE`. 
 This determines how lookup values are applied for longer branches of children (children -> grandchildren -> etc.).
-If connected is TRUE, than whenever a token does not satisfy the lookup values, the tquery will stop looking in this branch.
+If connected is TRUE, then whenever a token does not satisfy the lookup values, the tquery will stop looking in this branch.
 So, in our current example, if the direct child is not a MWE, the grandchild will not be filled even if it is a MWE.
-For multiword expressions this makes sense, because if multiword expressions are not directly connected in the tree, they are part of different expressions.
+For multiword expressions this makes sense, because if tokens with 'flat', 'fixed' or 'compound' relations are not directly connected, they are part of different multiword expressions.
 
 For reference, if connected is FALSE (which is the default), fill will get all the children, grandchildren, etc., and then filter them based on the lookup values.
 
