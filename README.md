@@ -55,14 +55,12 @@ of what these trees look like, and how this tree data is represented in
 a data.frame format. To facilitate this understanding, the plot\_tree
 function visualizes the dependency tree, together with a given selection
 of columns from the data (see working paper for why this is possible for
-most types of dependency trees).
+most types of dependency
+trees).
 
 ``` r
 plot_tree(tokens, token, lemma, upos)
 ```
-
-    #> Document: doc1
-    #> Sentence: 1
 
 <object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
 
@@ -70,7 +68,7 @@ plot_tree(tokens, token, lemma, upos)
 
 <p>
 
-If browser does not show PDF, you can view it :
+If browser does not show PDF, you can view it
 <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">here</a>.
 
 </p>
@@ -310,7 +308,7 @@ plot_tree(tokens, token, lemma, upos, annotation='clause')
 
 <p>
 
-(If browser does not show PDF, you can view it :
+(If browser does not show PDF, you can view it
 <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">here</a>.)
 
 </p>
