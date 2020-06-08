@@ -64,7 +64,7 @@ plot_tree(tokens, token, lemma, upos)
 
 <object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
 
-<embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">
+<embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf">
 
 <p>
 
