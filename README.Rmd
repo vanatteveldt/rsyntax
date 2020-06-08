@@ -1,16 +1,18 @@
 ---
-output:
-  md_document:
-  variant: markdown_github
+output: github_document
 ---
-  
-```{r, echo = FALSE}
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "README-"
+  fig.path = "man/figures/README-",
+  out.width = "100%"
 )
 ```
+
 
 R functions for working with syntactic structure coded as token lists
 (e.g. CONLL format)
@@ -54,9 +56,16 @@ tokens = as_tokenindex(tokens)
 
 To query a dependency tree, it is important to have a good understanding of what these trees look like, and how this tree data is represented in a data.frame format. To facilitate this understanding, the plot_tree function visualizes the dependency tree, together with a given selection of columns from the data (see working paper for why this is possible for most types of dependency trees). We don't show the visualization in this readme, because rsyntax creates a PDF that's shown in the viewer panel, and at this moment I'm too lazy to figure out how to make this work in the readme markdown.
 
+
 ```{r, eval=FALSE}
 plot_tree(tokens, token, lemma, upos)
 ```
+
+```{r, echo=FALSE}
+x = plot_tree(tokens, token, lemma, upos, pdf_file = 'man/figures/README-tree-1.pdf')
+```
+
+<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf"><img src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" width="630" height="252"/></a>  
 
 Note that this function only prints one sentence a time, so if the sentence is not specified it uses the first sentence in the data.
 
@@ -103,30 +112,40 @@ tokens[,c('doc_id','sentence','token','clause','clause_fill')]
 
 In the output we see that "Mary Jane" is labeled as subject, "loves" is labeled as verb, but also that ALL the rest is labeled as object, including ", and Mary is loved by John". 
 The reason for this is that by default, rsyntax will label all children of a matched token with the same label.
-We call this behavior "fill", and while it is weird in this case, the default is to use fill because in many cases this is convenient (e.g. for labeling both Mary and Jane).
-You can use the `fill = FALSE` argument to disable fill (as shown in a following example), and it is also possible to nest the `fill()` function to have more control over what nodes to fill.
+We call this behavior the "fill" heuristic.
 In the clause_fill column you also see at what level a token was matched. The value 0 means the match itself, 1 means a direct child, etc.
-
+The default setting to fill all children is weird in this example, but in the next section we show how this behavior can be customized.
 
 ### Using the fill heuristic
 
-In our example sentence, we could turn off fill so only John is matched as the object, but a better solution would be to control what specific nodes to fill by nesting the `fill()`.
-For example, we might want to say that for the subject and object we only want to 'fill' the nodes that form a multiword expression. In Universal Dependencies this is indicated with the 'flat', 'fixed' and 'compound' relations (see MWE in the (Universal Dependencies Relations table)[https://universaldependencies.org/u/dep/]).
-Furthermore, we want to specify that these nodes should be directly connected to each other. 
-So, for a subject, it can be nsubj -> compound -> compound, but not nsubj -> relcl -> obj -> compound.
-The fill function would then look as follows:
+In our example sentence, we could turn off fill (with the `fill = F` argument) so only John is matched as the object, but a better solution would be to control what specific nodes to fill by nesting the `fill()` function.
+For example, we can say that for the subject and object we only want to 'fill' the tokens that form a multiword expression (MWE). In Universal Dependencies this is indicated with the 'flat', 'fixed' and 'compound' relations (see the (Universal Dependencies Relations table)[https://universaldependencies.org/u/dep/]).
+Here we use the fill function to specify that we only want to fill tokens where the relation has one of these values. 
+Note that specifying lookup values in `fill()` works in the same way as in the `children()` function.
 
 ```{r}
 fill_mwe = fill(relation = c('flat','fixed','compount'), 
                 connected=T)
 ```
 
-We can then nest this function in the tquery for whatever node you want to set these fill settings for, similar to how you would nest the `children` function.
+Next to giving the lookup values for the relation column, we specify that `connected = TRUE`. 
+This determines how lookup values are applied for longer branches of children (children -> grandchildren -> etc.).
+If connected is TRUE, than whenever a token does not satisfy the lookup values, the tquery will stop looking in this branch.
+So, in our current example, if the direct child is not a MWE, the grandchild will not be filled even if it is a MWE.
+For multiword expressions this makes sense, because if multiword expressions are not directly connected in the tree, they are part of different expressions.
+
+For reference, if connected is FALSE (which is the default), fill will get all the children, grandchildren, etc., and then filter them based on the lookup values.
+
+To use the `fill()` function in a tquery, we simply pass it to one (or multiple) of the labeled nodes, similar to how you would pass the `children` function.
+Here we use the `fill_mwe` as specified above for both the subject and object nodes.
+Also, we set `fill = F` for the 'verb' node, as an example of how to disable fill for a specific node.
 
 ```{r}
-direct = tquery(label = 'verb', upos = 'VERB', 
-                children(label = 'subject', relation = 'nsubj', fill_mwe),
-                children(label = 'object', relation = 'obj', fill_mwe))
+direct = tquery(label = 'verb', upos = 'VERB', fill=F,
+                children(label = 'subject', relation = 'nsubj', 
+                         fill_mwe),
+                children(label = 'object', relation = 'obj', 
+                         fill_mwe))
 ```
 
 Note that it would also have been possible to directly type this fill() function within the tquery, instead of first assigning it to `fill_mwe`. 
@@ -144,7 +163,7 @@ tokens[,c('doc_id','sentence','token','clause','clause_fill')]
 
 ### Chaining multiple tqueries
 
-Our `direct` tquery does not capture "Mary is loved", in which the relation is expressed in a passive form. 
+Our `direct` tquery does not capture "Mary is loved by John", in which the relation is expressed in a passive form. 
 More generally speaking, there are different ways in which people express certain semantic relations in language, so to capture all (or at least most) of them you will have to combine multiple tqueries.
 How many queries you'll need depends on what you want to do, but in our experience only a few queries are needed to get good performance on tasks such as quote and clause extraction.
 
@@ -178,6 +197,13 @@ This can also be visualized with the `plot_tree` function.
 plot_tree(tokens, token, lemma, upos, annotation='clause')
 ```
 
+```{r, echo=FALSE}
+x = plot_tree(tokens, token, lemma, upos, annotation='clause', pdf_file = 'man/figures/README-tree-2.pdf')
+```
+
+<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf"><img src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" width="630" height="252"/></a>  
+
+
 ### Using chaining in a smart way
 
 In the current example, there are no nodes that match both queries, but this will often be the case. 
@@ -207,4 +233,3 @@ How to best use this is still something we're experimenting with.
 
 Aside from the rsyntax package we will (soon?) create a github repository for an rsyntax cookbook, to share the queries and transformation that we use in our own research. 
 If you are interested in using rsyntax and have any questions, concerns or ideas, please do contact us.
-
