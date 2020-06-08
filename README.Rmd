@@ -64,7 +64,7 @@ plot_tree(tokens, token, lemma, upos)
 x = plot_tree(tokens, token, lemma, upos, pdf_file = 'man/figures/README-tree-1.pdf')
 ```
 
-<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
+<object data="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
     <embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf">
         <p>If browser does not show PDF, you can view it <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">here</a>.</p>
     </embed>
@@ -204,8 +204,8 @@ plot_tree(tokens, token, lemma, upos, annotation='clause')
 x = plot_tree(tokens, token, lemma, upos, annotation='clause', pdf_file = 'man/figures/README-tree-2.pdf')
 ```
 
-<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
-    <embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">
+<object data="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
+    <embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-2.pdf">
         <p>(If browser does not show PDF, you can view it <a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">here</a>.)</p>
     </embed>
 </object>

@@ -62,7 +62,7 @@ trees).
 plot_tree(tokens, token, lemma, upos)
 ```
 
-<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
+<object data="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
 
 <embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf">
 
@@ -302,9 +302,9 @@ function.
 plot_tree(tokens, token, lemma, upos, annotation='clause')
 ```
 
-<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
+<object data="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
 
-<embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">
+<embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-2.pdf">
 
 <p>
 
