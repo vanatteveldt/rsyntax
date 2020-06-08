@@ -55,10 +55,7 @@ of what these trees look like, and how this tree data is represented in
 a data.frame format. To facilitate this understanding, the plot\_tree
 function visualizes the dependency tree, together with a given selection
 of columns from the data (see working paper for why this is possible for
-most types of dependency trees). We don’t show the visualization in this
-readme, because rsyntax creates a PDF that’s shown in the viewer panel,
-and at this moment I’m too lazy to figure out how to make this work in
-the readme markdown.
+most types of dependency trees).
 
 ``` r
 plot_tree(tokens, token, lemma, upos)
@@ -67,7 +64,21 @@ plot_tree(tokens, token, lemma, upos)
     #> Document: doc1
     #> Sentence: 1
 
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf"><img src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" width="630" height="252"/></a>
+<object data="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
+
+<embed src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">
+
+<p>
+
+This browser does not support PDFs. Please download the PDF to view it:
+<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">Download
+PDF</a>.
+
+</p>
+
+</embed>
+
+</object>
 
 Note that this function only prints one sentence a time, so if the
 sentence is not specified it uses the first sentence in the data.
@@ -296,7 +307,7 @@ plot_tree(tokens, token, lemma, upos, annotation='clause')
     #> Document: doc1
     #> Sentence: 1
 
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf"><img src="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" width="630" height="252"/></a>
+<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf"><img src="https://raw.githubusercontent.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf" width="630" height="252"/></a>
 
 ### Using chaining in a smart way
 
