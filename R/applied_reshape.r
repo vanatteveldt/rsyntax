@@ -20,32 +20,52 @@
 #'    spacy_split_conjunctions() %>%
 #'    plot_tree()
 #'  }
-spacy_split_conjunctions <- function(tokens) {
+spacy_split_conjunctions <- function(tokens, unpack=T) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
     data.table::setDTthreads(rsyntax_threads())
   }
-  
+
+  ## remove coordinating conjunction (but only if it has a conj nephew, to exclude cases where its transformed to a compound)
+  tokens = chop(tokens, relation = 'cc', parents(children(relation = 'conj')))
   
   tokens = as_tokenindex(tokens)
-  tokens = split_tree(tokens, rel='conj', 
+  tokens = split_UD_conj(tokens, unpack=unpack,
                             no_fill=c('acl:relcl','acl','appos','relcl', 'cop', 
                                       'advmod','advcl','xcomp','obl','ccomp','aux','det'), 
                             min_dist = 3)
-  tokens = split_tree(tokens, rel='conj', no_fill=c('acl:relcl','relcl', 'conj', 'cop'))
-  tokens = chop(tokens, relation = 'cc')
+  tokens = split_UD_conj(tokens, unpack=unpack, no_fill=c('acl:relcl','relcl', 'conj', 'cop'))
+  
   tokens
 }
 
-split_tree <- function(tokens, rel='conj', no_fill=NULL, min_dist=0, max_dist=Inf, compound = c('compound*','flat')) {
-  tq = tquery(label='target', NOT(relation = rel),
-              children(relation = compound, label='ignore', req=FALSE),
+#' Split conjunctions for dependency trees in Universal Dependencies 
+#'
+#' @param tokens     a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)
+#' @param conj_rel   The dependency relation for conjunctions. By default conj 
+#' @param cc_rel     The dependency relation for the coordinating conjunction. By default cc. This will be removed.
+#' @param unpack 
+#' @param no_fill 
+#' @param min_dist 
+#' @param max_dist 
+#' @param compound 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+split_UD_conj <- function(tokens, conj_rel='conj', cc_rel='cc', unpack=T, no_fill=NULL, min_dist=0, max_dist=Inf, compound_rel = c('compound*','flat')) {
+  tq = tquery(label='target', NOT(relation = conj_rel),
+              children(relation = compound_rel, label='ignore', req=FALSE),
               fill(NOT(relation = no_fill), max_window = c(Inf,0), connected=TRUE),
-              children(relation = rel, label='origin', min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
+              children(relation = conj_rel, label='origin', min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
                        fill(NOT(relation = no_fill), max_window=c(0,Inf), connected=TRUE)))
-  tokens = climb_tree(tokens, tq)
+  tokens = climb_tree(tokens, unpack=unpack, tq)
+  if (!is.null(cc_rel)) tokens = chop(tokens, relation = 'cc')
+  tokens
 }
+
 
 #' Have a node adopt its parent's position
 #' 

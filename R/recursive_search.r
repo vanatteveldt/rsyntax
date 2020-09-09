@@ -7,7 +7,8 @@
 # ql       a list of queriers (possibly the list nested in another query, or containing nested queries)
 # block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
 # fill     Include or exclude fill nodes
-rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE) {
+# block_loop should nodes found within the loop be added to block?
+rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
   .DROP = NULL
   out_req = list()
   out_not_req = list()
@@ -39,13 +40,13 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE) {
       #print(selection)
     }
     
-    
-    
     if (q$req) {
       if (nrow(selection) == 0) return(selection)
       out_req[['']] = selection
       if ('.DROP' %in% colnames(selection)) selection[,.DROP := NULL]
-      block = get_long_ids(block, selection)
+      if (block_loop) 
+        block = get_long_ids(block, selection)
+      
     } else {
       out_not_req[['']] = selection
     }
@@ -153,11 +154,11 @@ select_tokens <- function(tokens, ids, q, block=NULL) {
     distfilter = dist <= (-q$min_window[1]) | dist >= q$min_window[2]
     selection = selection[distfilter,]
   }
-  
   selection
 }
 
 select_token_family <- function(tokens, ids, q, block) {
+  #print(tokens)
   if (q$connected) {
     selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=TRUE, show_level = TRUE, lookup=q$lookup, g_id=q$g_id)
   } else {

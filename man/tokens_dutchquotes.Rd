@@ -4,9 +4,7 @@
 \name{tokens_dutchquotes}
 \alias{tokens_dutchquotes}
 \title{Example tokens for Dutch quotes}
-\format{
-data.frame
-}
+\format{data.frame}
 \usage{
 data(tokens_dutchquotes)
 }

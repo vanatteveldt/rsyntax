@@ -482,7 +482,7 @@ draw_box <- function(co, start, end, vdist, label, is_outer=FALSE, hexp=1, vexp=
   }
 }
 
-crop_png <- function(png_file, new_file=tempfile(), margins=c(10,10)) {
+crop_png <- function(png_file, new_file=tempfile(), margins=c(20,20)) {
   m = png::readPNG(png_file)
   
   margin_x = margins[1]

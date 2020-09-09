@@ -4,9 +4,7 @@
 \name{quote_punctuation}
 \alias{quote_punctuation}
 \title{Quote punctuation}
-\format{
-character()
-}
+\format{character()}
 \usage{
 data(quote_punctuation)
 }

@@ -4,9 +4,7 @@
 \name{tokens_spacy}
 \alias{tokens_spacy}
 \title{Example tokens for spacy English}
-\format{
-data.frame
-}
+\format{data.frame}
 \usage{
 data(tokens_spacy)
 }

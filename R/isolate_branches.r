@@ -43,7 +43,7 @@ isolate_branch <- function(tokens, ..., copy_parent=TRUE, copy_parent_fill=TRUE)
   
   ## if we do copy the parent, we need to do it recursively from root to bottom 
   tokens[, .ISOLATED := FALSE]
-  tq = tquery(label='parent', .ISOLATED=FALSE,
+  tq = tquery(label='parent', .ISOLATED=FALSE, fill=copy_parent_fill,
                       children(..., label='branch'))
   
   
@@ -54,9 +54,10 @@ isolate_branch <- function(tokens, ..., copy_parent=TRUE, copy_parent_fill=TRUE)
 rec_isolate <- function(tokens, tq) {
   parent_copy = parent = NULL
   
+  
   tokens = select_nodes(tokens, tq, fill_only_first=TRUE, .one_per_sentence = TRUE)
   if (nrow(selected_nodes(tokens)$nodes) == 0) return(tokens)
-  tokens = copy_nodes(tokens, 'parent', 'parent_copy', copy_fill=TRUE)
+  tokens = copy_nodes(tokens, 'parent', 'parent_copy', only_new = F, copy_fill=TRUE)
   tokens = mutate_nodes(tokens, 'branch', parent = parent_copy$token_id)
   tokens = mutate_nodes(tokens, 'parent_copy', parent = NA, relation = 'ROOT', branch_parent=parent$parent, .ISOLATED=TRUE)
   rec_isolate(tokens, tq)

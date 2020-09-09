@@ -4,7 +4,7 @@
 \alias{spacy_split_conjunctions}
 \title{Split conjunctions in spacy tokens}
 \usage{
-spacy_split_conjunctions(tokens)
+spacy_split_conjunctions(tokens, unpack = T)
 }
 \arguments{
 \item{tokens}{a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)}

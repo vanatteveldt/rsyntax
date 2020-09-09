@@ -69,6 +69,7 @@ select_nodes <- function(tokens, tquery, fill=TRUE, fill_only_first=TRUE, .one_p
       
       is_fill = ids$.FILL_LEVEL > 0
       fill_table = subset(ids, is_fill)
+      #if (nrow(fill_table) == 0) browser()
       data.table::setindexv(fill_table, '.ROLE')
     }
     l = list(nodes=nodes, fill=fill_table, prov = list(tquery=tquery, fill=fill, fill_only_first=fill_only_first))

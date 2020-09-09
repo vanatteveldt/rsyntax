@@ -10,7 +10,7 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   
   any_req_nested = any(sapply(tquery$nested, function(x) x$req))
   if (any_req_nested) {
-    nodes = find_nested(tokens, nodes, tquery, block, fill=FALSE)
+    nodes = find_nested(tokens, nodes, tquery, block, fill=FALSE, block_loop=F)
   } else {
     data.table::setnames(nodes, old = 'token_id', new='.ID')
     if (!is.na(tquery$label)) nodes[,(tquery$label) := .ID]
@@ -18,12 +18,11 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   if (is.null(nodes)) return(NULL)  
   if (nrow(nodes) == 0) return(NULL)
 
-  
+  ### possible solution for removing block within rec_search
+  nodes = get_unique_patterns(nodes)
   
   if (root_dist) nodes = get_root_dist(tokens, nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
-  
-  
   
   nodes = create_unique_key(nodes, name)
   if (melt) {
@@ -32,10 +31,9 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   nodes[]
 }
 
-find_nested <- function(tokens, nodes, tquery, block, fill) {
+find_nested <- function(tokens, nodes, tquery, block, fill, block_loop) {
   .ID = NULL; .MATCH_ID = NULL
-  nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill)
-  
+  nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill, block_loop=block_loop)
   
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
@@ -70,7 +68,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     if (!match_id %in% colnames(nodes)) return(nodes)
     ids = subset(nodes, select = c('doc_id','sentence',match_id))
     ids = unique(stats::na.omit(ids))
-    add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=TRUE)
+    add = rec_find(tokens, ids, tquery$nested[is_fill], block = block, fill=TRUE, block_loop=T)
     
     if (grepl('#', tquery$label)) {
       label = gsub('#.*', '', tquery$label)
@@ -109,6 +107,25 @@ create_unique_key <- function(nodes, name){
   nodes$.ID = key
   return(nodes)
 }
+
+get_unique_patterns <- function(nodes) {
+  ln = nodes
+  ln$i = 1:nrow(ln)
+  ln = data.table::melt(ln, id.vars=c('doc_id','sentence','.ID','i'))
+  ln = ln[!is.na(ln$value),]
+  data.table::setorderv(ln, c('doc_id','sentence','.ID','i'))
+
+  rm_i = unique(ln$i[duplicated(ln[,c('i','value')])])
+  if (length(rm_i > 0)) ln = ln[-ln[list(i=rm_i), on='i', which=T]]
+  
+  ln_m = merge(ln, ln[,c('doc_id','sentence','.ID','value')], by=c('doc_id','sentence','value'), allow.cartesian = T)
+  rm_j = unique(ln_m$i[ln_m$.ID.x != ln_m$.ID.y])
+  
+  if (length(rm_i) > 0 || length(rm_j) > 0)
+    nodes = nodes[-union(rm_i, rm_j),]
+  
+  nodes
+}  
 
 
 get_root_dist <- function(tokens, nodes) {
