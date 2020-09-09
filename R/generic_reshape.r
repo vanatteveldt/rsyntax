@@ -627,14 +627,14 @@ is_deparsed_call <- function(x) {
 
 add_to_tokens <- function(.tokens, new_tokens) {
   if (!identical(colnames(.tokens), colnames(new_tokens))) new_tokens = subset(new_tokens, select = colnames(.tokens))
-  .tokens = unique(rbindlist(list(.tokens, new_tokens), use.names = TRUE, fill=TRUE))
+  .tokens = unique(data.table::rbindlist(list(.tokens, new_tokens), use.names = TRUE, fill=TRUE))
   .tokens = as_tokenindex(.tokens)
   .tokens
 }
 
 add_to_fill <- function(.nodes, new_fill) {
   if (!identical(colnames(.nodes$fill), colnames(new_fill))) new_fill = subset(new_fill, select = colnames(.nodes$fill))
-  .nodes$fill = unique(rbindlist(list(.nodes$fill, new_fill), use.names = TRUE, fill=TRUE))
+  .nodes$fill = unique(data.table::rbindlist(list(.nodes$fill, new_fill), use.names = TRUE, fill=TRUE))
   data.table::setindexv(.nodes$fill, '.ROLE')
   .nodes
 }

@@ -4,7 +4,9 @@
 \name{dutch}
 \alias{dutch}
 \title{Dutch lemma}
-\format{list}
+\format{
+list
+}
 \usage{
 data(dutch)
 }

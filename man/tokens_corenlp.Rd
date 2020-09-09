@@ -4,7 +4,9 @@
 \name{tokens_corenlp}
 \alias{tokens_corenlp}
 \title{Example tokens for coreNLP English}
-\format{data.frame}
+\format{
+data.frame
+}
 \usage{
 data(tokens_corenlp)
 }

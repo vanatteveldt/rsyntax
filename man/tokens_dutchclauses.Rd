@@ -4,7 +4,9 @@
 \name{tokens_dutchclauses}
 \alias{tokens_dutchclauses}
 \title{Example tokens for Dutch clauses}
-\format{data.frame}
+\format{
+data.frame
+}
 \usage{
 data(tokens_dutchclauses)
 }

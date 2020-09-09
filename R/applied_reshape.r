@@ -172,7 +172,7 @@ climb_tree <- function(.tokens, tq, unpack=TRUE, isolate=TRUE, take_fill=TRUE, g
     
   }
   #.tokens
-  as_tokenindex(rbindlist(out, fill = TRUE))
+  as_tokenindex(data.table::rbindlist(out, fill = TRUE))
 }
 
 
