@@ -51,6 +51,6 @@ copy_nodes(tokens2, 'object', 'new_object')
 tokens3 = copy_nodes(tokens2, 'object', 'new_object', copy_fill=TRUE)
 
 \donttest{
-plot_tree(tokens3, token, pos)
+if (interactive()) plot_tree(tokens3, token, pos)
 }
 }

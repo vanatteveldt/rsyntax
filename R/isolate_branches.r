@@ -20,7 +20,7 @@
 #' tokens2 = isolate_branch(tokens, relation = 'relcl', copy_parent = TRUE)
 #' tokens2
 #' \donttest{
-#' plot_tree(tokens2)
+#' if (interactive()) plot_tree(tokens2)
 #' }
 isolate_branch <- function(tokens, ..., copy_parent=TRUE, copy_parent_fill=TRUE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {

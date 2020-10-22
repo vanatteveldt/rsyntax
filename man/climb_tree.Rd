@@ -62,6 +62,6 @@ tokens = spacy_conjunctions(tokens)
 
 tokens
 \donttest{
-plot_tree(tokens)
+if (interactive()) plot_tree(tokens)
 }
 }

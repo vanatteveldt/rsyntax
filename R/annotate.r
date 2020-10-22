@@ -32,7 +32,7 @@
 #' tokens = annotate_tqueries(tokens, "clause", pas=passive, act=active)
 #' tokens
 #' \donttest{ 
-#' plot_tree(tokens, annotation='clause')
+#' if (interactive()) plot_tree(tokens, annotation='clause')
 #' }
 annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwrite=FALSE, block_fill=FALSE, copy=TRUE, verbose=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {

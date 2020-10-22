@@ -31,6 +31,6 @@ tokens = as_tokenindex(tokens)
 tokens2 = isolate_branch(tokens, relation = 'relcl', copy_parent = TRUE)
 tokens2
 \donttest{
-plot_tree(tokens2)
+if (interactive()) plot_tree(tokens2)
 }
 }

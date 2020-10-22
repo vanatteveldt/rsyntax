@@ -60,6 +60,6 @@ active =  tquery(pos = "VERB*", label = "predicate",
 tokens = annotate_tqueries(tokens, "clause", pas=passive, act=active)
 tokens
 \donttest{ 
-plot_tree(tokens, annotation='clause')
+if (interactive()) plot_tree(tokens, annotation='clause')
 }
 }

@@ -81,7 +81,7 @@ By default, all columns in the data are included as labels. This can be changes 
 tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
 
 \donttest{
-plot_tree(tokens, token, pos)
+if (interactive()) plot_tree(tokens, token, pos)
 
 ## plot with annotations
 direct = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
@@ -90,9 +90,11 @@ direct = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
 passive = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
                  children(label = 'subject', relation = 'agent'),
                  children(label = 'object', relation = 'nsubjpass'))
-                 
+ 
+if (interactive()) {                
 tokens \%>\%
    annotate_tqueries('clause', pas=passive, dir=direct) \%>\%
    plot_tree(token, pos, annotation='clause')
+}
 }
 }

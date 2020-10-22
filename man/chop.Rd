@@ -35,6 +35,6 @@ tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
 tokens = spacy_conjunctions(tokens)
 tokens
 \donttest{
-plot_tree(tokens)
+if (interactive()) plot_tree(tokens)
 }
 }

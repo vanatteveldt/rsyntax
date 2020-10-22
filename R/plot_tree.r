@@ -33,7 +33,7 @@
 #' tokens = tokens_spacy[tokens_spacy$doc_id == 'text3',]
 #' 
 #' \donttest{
-#' plot_tree(tokens, token, pos)
+#' if (interactive()) plot_tree(tokens, token, pos)
 #' 
 #' ## plot with annotations
 #' direct = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
@@ -42,10 +42,12 @@
 #' passive = tquery(label = 'verb', pos = 'VERB', fill=FALSE,
 #'                  children(label = 'subject', relation = 'agent'),
 #'                  children(label = 'object', relation = 'nsubjpass'))
-#'                  
+#'  
+#' if (interactive()) {                
 #' tokens %>%
 #'    annotate_tqueries('clause', pas=passive, dir=direct) %>%
 #'    plot_tree(token, pos, annotation='clause')
+#' }
 #' }
 plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=FALSE, pdf_file=NULL, allign_text=TRUE, ignore_rel=NULL, all_lower=FALSE, all_abbrev=NULL, textsize=1, spacing=1, use_color=TRUE, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=FALSE, viewer_mode=TRUE, viewer_size=c(100,100)) {  
   if (pdf_viewer && is.null(pdf_file)) pdf_file = tempfile('plot_tree', fileext = '.pdf')

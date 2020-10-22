@@ -48,7 +48,9 @@ Split conjunctions for dependency trees in Universal Dependencies
 \examples{
 tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
 
+if (interactive()) {
 tokens \%>\%
    split_UD_conj() \%>\%
    plot_tree()
+}
 }

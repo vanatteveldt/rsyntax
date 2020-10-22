@@ -34,7 +34,7 @@
 #' \donttest{ 
 #' tokens = annotate_tqueries(tokens, "clause", pas=passive, act=active)
 #' tokens
-#' plot_tree(tokens, annotation='clause')
+#' if (interactive()) plot_tree(tokens, annotation='clause')
 #' }
 annotate <- function(tokens, column, ..., block=NULL, fill=TRUE, overwrite=FALSE, block_fill=FALSE, copy=TRUE, verbose=FALSE) {
   .Deprecated('annotate_tqueries')
