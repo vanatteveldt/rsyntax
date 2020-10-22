@@ -101,12 +101,13 @@ add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='so
     quote_regex = sprintf('^[%s"]*$', smartquotes())
   }
   is_quote = get_quote_positions(tokens, text_col, is_quote_regex=quote_regex, par_col = par_col, space_col = space_col, quote_subset=quote_subset)
+
   ## if a previously found source occurs in a span quote (all source nodes within the quote), remove it. nested queries are a challenge for another day
   tokens = remove_nested_source(tokens, is_quote, quote_col, source_val)
   quotes = tokens[!is.na(is_quote),]
   quotes$.QUOTE = is_quote[!is.na(is_quote)]
   
-  #tokens = add_extended_source(tokens, is_quote, quotes, quote_col, quote_val) ## adds by reference
+  tokens = add_extended_source(tokens, is_quote, quotes, quote_col, quote_val) ## adds by reference
   if (!is.null(tqueries))
     tokens = add_new_source(tokens, is_quote, quotes, quote_col, source_val, quote_val, tqueries, lag_sentences) ## adds by reference
 
@@ -167,7 +168,6 @@ add_new_source <- function(tokens, is_quote, quotes, quote_col, source_val, quot
     no_source$sentence = no_source$start_sentence - i
     if (!any(no_source$sentence >= 0)) break
     
-    
     sent = merge(no_source, candidates, by=c('doc_id','sentence'), allow.cartesian=TRUE)
     select_ids = unique(sent, by=c('.QUOTE'))$.ID
     
@@ -215,7 +215,7 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   
   ## prepare quotes
   matched_source = sources[match(is_quote, sources$.QUOTE)]
-  matched_source$label = as.character(quote_val)
+  matched_source$label = ifelse(is.na(matched_source$label), NA, as.character(quote_val))
   matched_source$i = 1:nrow(matched_source)
   
   ## merge
@@ -223,8 +223,10 @@ add_selected_sources <- function(tokens, sources, is_quote, quote_col, source_va
   sources$new_id = as.character(sources$.ID)
   
   ## add
-  replace_col = as.character(tokens[sources$i,][[quote_col]])
-  replace_id_col = as.character(tokens[sources$i,][[quote_id_col]])
+  #replace_col = as.character(tokens[sources$i,][[quote_col]])
+  #replace_id_col = as.character(tokens[sources$i,][[quote_id_col]])
+  replace_col = as.character(sources$label)
+  replace_id_col = as.character(sources$new_id)
   
   ## In case that a new quote is found within an existing quote:  
   ## old solution was to nest it by concatenating quote_id and quote, but that doesn't fit into current rsyntax design anymore (nested ids are a bad id)

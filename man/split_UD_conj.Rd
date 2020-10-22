@@ -12,7 +12,9 @@ split_UD_conj(
   no_fill = NULL,
   min_dist = 0,
   max_dist = Inf,
-  compound_rel = c("compound*", "flat")
+  right_fill_dist = T,
+  compound_rel = c("compound*", "flat"),
+  ...
 )
 }
 \arguments{
@@ -22,19 +24,31 @@ split_UD_conj(
 
 \item{cc_rel}{The dependency relation for the coordinating conjunction. By default cc. This will be removed.}
 
-\item{unpack}{}
+\item{unpack}{If TRUE (default), create separate branches for the parent and the node that inherits the parent position}
 
-\item{no_fill}{}
+\item{no_fill}{Optionally, a character vector with relation types that will be excluded from fill}
 
-\item{min_dist}{}
+\item{min_dist}{Optionally, a minimal distance between the conj node and its parent}
 
-\item{max_dist}{}
+\item{max_dist}{Optionally, a maximum distance between the conj node and its parent}
 
-\item{compound}{}
+\item{right_fill_dist}{Should fill to the right of the conjunction be used?}
+
+\item{compound_rel}{The relation types indicating compounds}
+
+\item{...}{specify conditions for the conjunction token. For instance, using 'pos = "VERB"' to only split VERB conjunctions.
+This is especially usefull to use different no_fill conditions.}
 }
 \value{
 
 }
 \description{
 Split conjunctions for dependency trees in Universal Dependencies
+}
+\examples{
+tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
+
+tokens \%>\%
+   split_UD_conj() \%>\%
+   plot_tree()
 }

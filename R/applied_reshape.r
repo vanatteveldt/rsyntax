@@ -45,27 +45,35 @@ spacy_split_conjunctions <- function(tokens, unpack=T) {
 #' @param tokens     a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)
 #' @param conj_rel   The dependency relation for conjunctions. By default conj 
 #' @param cc_rel     The dependency relation for the coordinating conjunction. By default cc. This will be removed.
-#' @param unpack 
-#' @param no_fill 
-#' @param min_dist 
-#' @param max_dist 
-#' @param compound 
+#' @param unpack      If TRUE (default), create separate branches for the parent and the node that inherits the parent position
+#' @param no_fill     Optionally, a character vector with relation types that will be excluded from fill
+#' @param min_dist    Optionally, a minimal distance between the conj node and its parent
+#' @param max_dist    Optionally, a maximum distance between the conj node and its parent
+#' @param right_fill_dist Should fill to the right of the conjunction be used?
+#' @param compound_rel The relation types indicating compounds
+#' @param ...        specify conditions for the conjunction token. For instance, using 'pos = "VERB"' to only split VERB conjunctions.
+#'                   This is especially usefull to use different no_fill conditions.
 #'
 #' @return
 #' @export
 #'
 #' @examples
-split_UD_conj <- function(tokens, conj_rel='conj', cc_rel='cc', unpack=T, no_fill=NULL, min_dist=0, max_dist=Inf, compound_rel = c('compound*','flat')) {
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text5',]
+#' 
+#' tokens %>%
+#'    split_UD_conj() %>%
+#'    plot_tree()
+split_UD_conj <- function(tokens, conj_rel='conj', cc_rel='cc', unpack=T, no_fill=NULL, min_dist=0, max_dist=Inf, right_fill_dist=T, compound_rel = c('compound*','flat'), ...) {
+  conj_max_window = if(right_fill_dist) Inf else 0
   tq = tquery(label='target', NOT(relation = conj_rel),
               children(relation = compound_rel, label='ignore', req=FALSE),
               fill(NOT(relation = no_fill), max_window = c(Inf,0), connected=TRUE),
-              children(relation = conj_rel, label='origin', min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
-                       fill(NOT(relation = no_fill), max_window=c(0,Inf), connected=TRUE)))
+              children(relation = conj_rel, label='origin', ..., min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
+                       fill(NOT(relation = no_fill), max_window=c(0,conj_max_window), connected=TRUE)))
   tokens = climb_tree(tokens, unpack=unpack, tq)
   if (!is.null(cc_rel)) tokens = chop(tokens, relation = 'cc')
   tokens
 }
-
 
 #' Have a node adopt its parent's position
 #' 

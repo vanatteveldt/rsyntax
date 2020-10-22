@@ -33,22 +33,22 @@ isolate_branch <- function(tokens, ..., copy_parent=TRUE, copy_parent_fill=TRUE)
   
   tokens = data.table::copy(tokens)
   if (!copy_parent) {
-    ## this is simply, because there can be no issues with nesting, so we can split everything in one go
+    ## in this case there can be no issues with nesting, so we can split everything in one go
     tq = tquery(label='parent',
                 children(..., label='branch'))
     tokens = select_nodes(tokens, tq)
     tokens = mutate_nodes(tokens, 'branch', parent = NA, relation = 'ROOT', branch_parent=parent$token_id)
-    return(tokens)  
+  } else {
+    ## if we do copy the parent, we need to do it recursively from root to bottom 
+    tokens[, .ISOLATED := FALSE]
+    tq = tquery(label='parent', .ISOLATED=FALSE, fill=copy_parent_fill,
+                        children(..., label='branch'))
+    
+    
+    tokens = rec_isolate(tokens, tq)
+    tokens[, .ISOLATED := NULL]
   }
-  
-  ## if we do copy the parent, we need to do it recursively from root to bottom 
-  tokens[, .ISOLATED := FALSE]
-  tq = tquery(label='parent', .ISOLATED=FALSE, fill=copy_parent_fill,
-                      children(..., label='branch'))
-  
-  
-  tokens = rec_isolate(tokens, tq)
-  tokens[, .ISOLATED := NULL]
+  tokens
 }
 
 rec_isolate <- function(tokens, tq) {
