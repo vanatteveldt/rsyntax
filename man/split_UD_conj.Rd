@@ -40,7 +40,7 @@ split_UD_conj(
 This is especially usefull to use different no_fill conditions.}
 }
 \value{
-
+A tokenindex
 }
 \description{
 Split conjunctions for dependency trees in Universal Dependencies

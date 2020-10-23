@@ -19,14 +19,13 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
   
   for (i in seq_along(ql)) {
     q = ql[[i]]
-    #if (only_req && !q$req) next   ## only look for required nodes. unrequired nodes are added afterwards with add_unrequired()
     if (!fill && methods::is(q, 'tQueryFill')) next   
     
     if (is.na(q$label)) {
       q$label = paste('.DROP', i) ## if label is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
     } 
     
-    
+
     if (q$NOT)
       selection = rec_selection(tokens, ids, q, NULL, fill)
     else
@@ -36,11 +35,10 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
       if (nrow(selection) > 0) {
         selection = data.table::fsetdiff(data.table::data.table(ids[,1],ids[,2], .MATCH_ID=ids[[3]]), selection[,c('doc_id','sentence','.MATCH_ID')])
       } else selection = data.table::data.table(ids[,1], ids[,2], .MATCH_ID=ids[[3]])
-      #selection[,.DROP := NA]
-      #print(selection)
     }
     
     if (q$req) {
+    #if (!methods::is(q, 'tQueryFill')) {
       if (nrow(selection) == 0) return(selection)
       out_req[['']] = selection
       if ('.DROP' %in% colnames(selection)) selection[,.DROP := NULL]
@@ -63,17 +61,12 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
     out = merge_req_and_not_req(out_req, out_not_req)
   if (!has_req && !has_not_req)
     out = data.table::data.table()
-  
-  #if (!q$label == '.DROP' && nrow(out) > 0) {
-  #  parcol = paste0(q$label, '_PARENT') 
-  #  out[, (parcol) := .MATCH_ID]
-  #}
-  #print(out)
   out
 }
 
 rec_selection <- function(tokens, ids, q, block, fill) {
   selection = select_tokens(tokens, ids=ids, q=q, block=block)
+  
   if (length(q$nested) > 0 & length(selection) > 0) {
     nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$label),with=FALSE], ql=q$nested, block=block, fill=fill) 
     ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the label column)
@@ -133,7 +126,6 @@ merge_req_and_not_req <- function(req, not_req) {
 # block    A data.table with global ids (doc_id,sentence,token_id) for excluding nodes from the search
 select_tokens <- function(tokens, ids, q, block=NULL) {
   .MATCH_ID = NULL ## bindings for data.table
-  
   selection = select_token_family(tokens, ids, q, block)
   
   if (!grepl('_FILL', q$label, fixed=TRUE)) {
@@ -207,7 +199,6 @@ token_family <- function(tokens, ids, level='children', depth=Inf, minimal=FALSE
   }
   if (depth > 1) id = deep_family(tokens, id, level, depth, minimal=minimal, block=block, replace=replace, show_level=show_level, lookup=lookup, g_id=g_id) 
   if (depth <= 1 && show_level) id = cbind(.FILL_LEVEL=as.double(rep(1,nrow(id))), id)
-  
   id
 }
 
@@ -260,7 +251,6 @@ deep_family <- function(tokens, id, level, depth, minimal=FALSE, block=NULL, rep
       id_list[[i]] = if (minimal) subset(id, select = c('doc_id','sentence','token_id','parent','.MATCH_ID')) else id
    }
     
-    #print(nrow(id_list[[i]]))
     if (nrow(id_list[[i]]) == 0) break
     i = i + 1
   }

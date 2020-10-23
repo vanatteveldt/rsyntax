@@ -48,7 +48,7 @@ apply_queries <- function(tokens, ..., as_chain=FALSE, block=NULL, check=FALSE, 
     if (is.null(.TQUERY_NAME)) .TQUERY_NAME = ''
     if (grepl(',', .TQUERY_NAME)) stop('tquery name cannot contain a comma')
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', NA, as.character(.TQUERY_NAME))
-    
+
     nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, fill=FALSE, melt = FALSE)
    
     if (!is.null(nodes)) {

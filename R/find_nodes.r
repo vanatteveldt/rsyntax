@@ -7,9 +7,9 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   nodes = filter_tokens(tokens, lookup=tquery$lookup, .G_ID=tquery$g_id, .BLOCK=block, use_index=use_index)
   if (nrow(nodes) == 0) return(NULL)
   nodes = subset(nodes, select = c('doc_id','sentence','token_id'))
-  
-  any_req_nested = any(sapply(tquery$nested, function(x) x$req))
-  if (any_req_nested) {
+
+  any_nonfill_nested = any(sapply(tquery$nested, function(x) !methods::is(x, 'tQueryFill')))
+  if (any_nonfill_nested) {
     nodes = find_nested(tokens, nodes, tquery, block, fill=FALSE, block_loop=F)
   } else {
     data.table::setnames(nodes, old = 'token_id', new='.ID')
@@ -22,7 +22,10 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   nodes = get_unique_patterns(nodes)
   
   if (root_dist) nodes = get_root_dist(tokens, nodes)
+  
+  #print(nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
+  #print(nodes)
   
   nodes = create_unique_key(nodes, name)
   if (melt) {
@@ -34,6 +37,7 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
 find_nested <- function(tokens, nodes, tquery, block, fill, block_loop) {
   .ID = NULL; .MATCH_ID = NULL
   nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill, block_loop=block_loop)
+  
   
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
@@ -115,16 +119,30 @@ get_unique_patterns <- function(nodes) {
   ln = ln[!is.na(ln$value),]
   data.table::setorderv(ln, c('doc_id','sentence','.ID','i'))
 
-  rm_i = unique(ln$i[duplicated(ln[,c('i','value')])])
-  if (length(rm_i > 0)) ln = ln[-ln[list(i=rm_i), on='i', which=T]]
+  ## rm patterns nested in other patterns
+  ids = unique(ln[,c('doc_id','sentence','.ID')])
+  nested_ids = ln[list(ids$doc_id, ids$sentence, ids$.ID), , on=c('doc_id','sentence','value')]
+  nested_ids = nested_ids[nested_ids$.ID != nested_ids$value]
+  nested_i = ln[list(nested_ids$doc_id, nested_ids$sentence, nested_ids$value), , on=c('doc_id','sentence','.ID'), which=T]
+  rm_i = unique(ln$i[nested_i])
+
+  suppressWarnings({
+  if (length(nested_i) > 0) ln = ln[-nested_i,]   ## extremely weird warning from data.table that seems ignorable
+  })
+
+  ## rm duplicate i-value pairs
+  rm_j = unique(ln$i[duplicated(ln[,c('i','value')])])
+  if (length(rm_j > 0)) ln = ln[-ln[list(i=rm_j), on='i', which=T]]
   
+  ## rm any other overlapping nodes between ids
   ln_m = merge(ln, ln[,c('doc_id','sentence','.ID','value')], by=c('doc_id','sentence','value'), allow.cartesian = T)
-  rm_j = unique(ln_m$i[ln_m$.ID.x != ln_m$.ID.y])
-  
-  if (length(rm_i) > 0 || length(rm_j) > 0)
-    nodes = nodes[-union(rm_i, rm_j),]
+  rm_k = unique(ln_m$i[ln_m$.ID.x != ln_m$.ID.y])
+
+  if (length(rm_i) > 0 || length(rm_j) > 0 || length(rm_k) > 0)
+    nodes = nodes[-unique(c(rm_i, rm_j, rm_k)),]
   
   nodes
+  
 }  
 
 

@@ -10,7 +10,7 @@ annotate_tqueries(
   ...,
   block = NULL,
   fill = TRUE,
-  overwrite = FALSE,
+  overwrite = NA,
   block_fill = FALSE,
   copy = TRUE,
   verbose = FALSE
@@ -27,7 +27,7 @@ annotate_tqueries(
 
 \item{fill}{Logical. If TRUE (default) also assign the fill nodes (as specified in the tquery). Otherwise these are ignored}
 
-\item{overwrite}{If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.}
+\item{overwrite}{Applies if column already exists. If TRUE, existing column will be overwritten. If FALSE, the existing annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.}
 
 \item{block_fill}{If TRUE (and overwrite is FALSE), the existing fill nodes will also be blocked. In other words, the new annotations will only be added if the}
 
@@ -39,11 +39,10 @@ annotate_tqueries(
 The tokenIndex data.table with the annotation columns added
 }
 \description{
-Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
-One column contains the ids for each hit. The other column contains the annotations.
+Apply queries to extract syntax patterns, and add the results as three columns to a tokenlist.
+The first column contains the ids for each hit. The second column contains the annotation label. The third column contains the fill level (which you probably won't use, but is important for some functionalities).
 Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
-}
-\details{
+
 Note that while queries only find 1 node for each labeld component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
 all children of these nodes can be annotated by settting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 }

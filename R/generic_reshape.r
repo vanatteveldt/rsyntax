@@ -29,7 +29,7 @@
 #' if (interactive()) plot_tree(tokens2)
 #' 
 #' ## this is designed to work nicely with magrittr piping
-#' if (interative()) {
+#' if (interactive()) {
 #' tokens %>%
 #'   select_nodes(tq) %>%
 #'   mutate_nodes("relative_clause", parent=NA) %>%

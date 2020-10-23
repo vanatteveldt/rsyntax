@@ -1,7 +1,8 @@
 #' Annotate a tokenlist based on rsyntax queries
 #'
-#' Apply queries to extract syntax patterns, and add the results as two columns to a tokenlist.
-#' One column contains the ids for each hit. The other column contains the annotations.
+#' @description 
+#' Apply queries to extract syntax patterns, and add the results as three columns to a tokenlist.
+#' The first column contains the ids for each hit. The second column contains the annotation label. The third column contains the fill level (which you probably won't use, but is important for some functionalities).
 #' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
 #' 
 #' Note that while queries only find 1 node for each labeld component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
@@ -12,7 +13,7 @@
 #' @param ...         One or multiple tqueries, or a list of queries, as created with \link{tquery}. Queries can be given a named by using a named argument, which will be used in the annotation_id to keep track of which query was used. 
 #' @param block       Optionally, specify ids (doc_id - sentence - token_id triples) that are blocked from querying and filling (ignoring the id and recursive searches through the id). 
 #' @param fill        Logical. If TRUE (default) also assign the fill nodes (as specified in the tquery). Otherwise these are ignored 
-#' @param overwrite   If TRUE, existing column will be overwritten. Otherwise (default), the exsting annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.
+#' @param overwrite   Applies if column already exists. If TRUE, existing column will be overwritten. If FALSE, the existing annotations in the column will be blocked, and new annotations will be added. This is identical to using multiple queries.
 #' @param block_fill  If TRUE (and overwrite is FALSE), the existing fill nodes will also be blocked. In other words, the new annotations will only be added if the 
 #' @param copy        If TRUE (default), the data.table is copied. Otherwise, it is changed by reference. Changing by reference is faster and more memory efficient, but is not predictable R style, so is optional. 
 #' @param verbose     If TRUE, report progress (only usefull if multiple queries are given)
@@ -34,7 +35,7 @@
 #' \donttest{ 
 #' if (interactive()) plot_tree(tokens, annotation='clause')
 #' }
-annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwrite=FALSE, block_fill=FALSE, copy=TRUE, verbose=FALSE) {
+annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwrite=NA, block_fill=FALSE, copy=TRUE, verbose=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -52,6 +53,7 @@ annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwr
   fill_column = paste0(column, '_fill')
   
   if (column %in% colnames(tokens)) {
+    if (is.na(overwrite)) stop(sprintf('The specified column (%s) already exists. Set overwrite argument to TRUE to overwrite the column or FALSE to consider existing annotations as a chain.', column))
     if (overwrite) {
       tokens[, (column) := NULL] 
       if (id_column %in% colnames(tokens)) tokens[, (id_column) := NULL]

@@ -30,7 +30,7 @@
 #' syntax_reader(tokens, annotation = 'clause', value = 'subject')
 #' }
 syntax_reader <- function(tokens, annotation, value=NULL, value2=NULL, meta=NULL, token_col='token', filename=NULL, view=TRUE, random_seed=NA, ...){
-  if (!methods::is(tokens, 'tokenIndex')) stop('tokens has to be a tokenIndex')
+  #if (!methods::is(tokens, 'tokenIndex')) stop('tokens has to be a tokenIndex')
   if (!is.na(random_seed)) {
     tokens = data.table::copy(tokens)
     doc_ids = unique(tokens$doc_id)
@@ -38,6 +38,8 @@ syntax_reader <- function(tokens, annotation, value=NULL, value2=NULL, meta=NULL
     doc_ids = doc_ids[sample(1:length(doc_ids))]
     tokens = tokens[doc_ids, on=c('doc_id')]
   }
+  
+  #tokens = as_tokenindex(tokens)
 
   ann_id = paste0(annotation, '_id')
   id = match(tokens[[ann_id]], unique(tokens[[ann_id]]))
@@ -69,10 +71,16 @@ syntax_highlight_tokens <- function(doc_id, tokens, ann_id, value, value2, value
   ann_i = match(ann_id, stats::na.omit(unique(ann_id)))
   colindex = tapply(ann_i, doc_i, function(x) if (all(is.na(x))) rep(NA, length(x)) else (x - min(x, na.rm = TRUE)) + 1)
   colindex = as.numeric(unlist(colindex))
-  colors = grDevices::terrain.colors(length(unique(colindex)))
   
-  alpha = rep(0.4, length(value))
-  tcolor = colors[ifelse(is.na(value), NA, colindex)]
+  ncolors = 8   ## repeat x colors over and over, so different colors are used for different annotation_ids, but we don't start a carnival
+  colindex_mod = colindex %% ncolors + 1
+  
+  colors = grDevices::palette('ggplot2')
+  #colors = grDevices::terrain.colors(ncolors+1)
+  
+  tcolor = colors[ifelse(is.na(value), NA, colindex_mod)]
+  
+  alpha = rep(0.2, length(value))
   alpha[is.na(tcolor)] = NA
   
   col = tokenbrowser::highlight_col(alpha, col=tcolor)
@@ -82,7 +90,7 @@ syntax_highlight_tokens <- function(doc_id, tokens, ann_id, value, value2, value
                       span_adjacent = TRUE, doc_id=doc_id)
   
   alpha = rep(0.8, length(value2))
-  boxcolor = colors[ifelse(is.na(value2), NA, colindex)]
+  boxcolor = colors[ifelse(is.na(value2), NA, colindex_mod)]
   alpha[is.na(boxcolor)] = NA
   
   col = tokenbrowser::highlight_col(alpha, col=boxcolor)

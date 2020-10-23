@@ -14,7 +14,7 @@
 #' @param ...        specify conditions for the conjunction token. For instance, using 'pos = "VERB"' to only split VERB conjunctions.
 #'                   This is especially usefull to use different no_fill conditions.
 #'
-#' @return
+#' @return A tokenindex
 #' @export
 #'
 #' @examples

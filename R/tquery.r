@@ -387,11 +387,9 @@ AND <- function(...) {
 #' @export
 #'
 #' @examples
-#' tquery(NOT(POS='Noun'))   
+#' tquery(NOT(POS='Noun'))  
 NOT <- function(...) {
   l = list(lookup = list(...), boolean='NOT')
   class(l) = c(class(l), 'tokenLookup')
   l
 }
-
-
