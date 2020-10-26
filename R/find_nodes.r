@@ -19,8 +19,9 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   if (nrow(nodes) == 0) return(NULL)
 
   ### possible solution for removing block within rec_search
-  if (root_dist) nodes = get_root_dist(tokens, nodes)
+  nodes = get_root_dist(tokens, nodes)
   nodes = get_unique_patterns(nodes)
+  if (!root_dist) nodes$.ROOT_DIST = NULL
   
   #print(nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
@@ -114,7 +115,7 @@ create_unique_key <- function(nodes, name){
 get_unique_patterns <- function(nodes) {
   ln = nodes
   ln$i = 1:nrow(ln)
-  ln = data.table::melt(ln, id.vars=c('doc_id','sentence','.ID','i'))
+  ln = data.table::melt(ln, id.vars=c('doc_id','sentence','.ID','i','.ROOT_DIST'))
   ln = ln[!is.na(ln$value),]
   data.table::setorderv(ln, c('doc_id','sentence','.ID','i'))
 
@@ -134,8 +135,13 @@ get_unique_patterns <- function(nodes) {
   if (length(rm_j > 0)) ln = ln[-ln[list(i=rm_j), on='i', which=T]]
   
   ## rm any other overlapping nodes between ids
-  ln_m = merge(ln, ln[,c('doc_id','sentence','.ID','value')], by=c('doc_id','sentence','value'), allow.cartesian = T)
-  rm_k = unique(ln_m$i[ln_m$.ID.x > ln_m$.ID.y])
+  ln_m = merge(ln, ln[,c('doc_id','sentence','.ID','.ROOT_DIST','value')], by=c('doc_id','sentence','value'), allow.cartesian = T)
+  ln_m$.ROOT_DIST_DIFF = ln_m$.ROOT_DIST.x - ln_m$.ROOT_DIST.y
+  dupl = ln_m$.ID.x != ln_m$.ID.y
+  dupl_select = ifelse(ln_m$.ROOT_DIST.x != ln_m$.ROOT_DIST.y, 
+                       ln_m$.ROOT_DIST.x > ln_m$.ROOT_DIST.y,       ## remove x if x lower in tree
+                       ln_m$.ID.x > ln_m$.ID.y)                     ## and if same height remove x if to the left in sentence
+  rm_k = unique(ln_m$i[dupl & dupl_select])
   
   if (length(rm_i) > 0 || length(rm_j) > 0 || length(rm_k) > 0)
     nodes = nodes[-unique(c(rm_i, rm_j, rm_k)),]
