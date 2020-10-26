@@ -75,7 +75,7 @@ syntax_highlight_tokens <- function(doc_id, tokens, ann_id, value, value2, value
   ncolors = 8   ## repeat x colors over and over, so different colors are used for different annotation_ids, but we don't start a carnival
   colindex_mod = colindex %% ncolors + 1
   
-  colors = grDevices::palette('ggplot2')
+  colors = grDevices::palette()
   #colors = grDevices::terrain.colors(ncolors+1)
   
   tcolor = colors[ifelse(is.na(value), NA, colindex_mod)]

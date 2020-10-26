@@ -19,9 +19,8 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   if (nrow(nodes) == 0) return(NULL)
 
   ### possible solution for removing block within rec_search
-  nodes = get_unique_patterns(nodes)
-  
   if (root_dist) nodes = get_root_dist(tokens, nodes)
+  nodes = get_unique_patterns(nodes)
   
   #print(nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
@@ -136,8 +135,8 @@ get_unique_patterns <- function(nodes) {
   
   ## rm any other overlapping nodes between ids
   ln_m = merge(ln, ln[,c('doc_id','sentence','.ID','value')], by=c('doc_id','sentence','value'), allow.cartesian = T)
-  rm_k = unique(ln_m$i[ln_m$.ID.x != ln_m$.ID.y])
-
+  rm_k = unique(ln_m$i[ln_m$.ID.x > ln_m$.ID.y])
+  
   if (length(rm_i) > 0 || length(rm_j) > 0 || length(rm_k) > 0)
     nodes = nodes[-unique(c(rm_i, rm_j, rm_k)),]
   
