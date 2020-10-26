@@ -112,45 +112,6 @@ create_unique_key <- function(nodes, name){
   return(nodes)
 }
 
-get_unique_patterns <- function(nodes) {
-  ln = nodes
-  ln$i = 1:nrow(ln)
-  ln = data.table::melt(ln, id.vars=c('doc_id','sentence','.ID','i','.ROOT_DIST'))
-  ln = ln[!is.na(ln$value),]
-  data.table::setorderv(ln, c('doc_id','sentence','.ID','i'))
-
-  ## rm patterns nested in other patterns
-  ids = unique(ln[,c('doc_id','sentence','.ID')])
-  nested_ids = ln[list(ids$doc_id, ids$sentence, ids$.ID), , on=c('doc_id','sentence','value')]
-  nested_ids = nested_ids[nested_ids$.ID != nested_ids$value]
-  nested_i = ln[list(nested_ids$doc_id, nested_ids$sentence, nested_ids$value), , on=c('doc_id','sentence','.ID'), which=T]
-  rm_i = unique(ln$i[nested_i])
-
-  suppressWarnings({
-  if (length(nested_i) > 0) ln = ln[-nested_i,]   ## extremely weird warning from data.table that seems ignorable
-  })
-
-  ## rm duplicate i-value pairs
-  rm_j = unique(ln$i[duplicated(ln[,c('i','value')])])
-  if (length(rm_j > 0)) ln = ln[-ln[list(i=rm_j), on='i', which=T]]
-  
-  ## rm any other overlapping nodes between ids
-  ln_m = merge(ln, ln[,c('doc_id','sentence','.ID','.ROOT_DIST','value')], by=c('doc_id','sentence','value'), allow.cartesian = T)
-  ln_m$.ROOT_DIST_DIFF = ln_m$.ROOT_DIST.x - ln_m$.ROOT_DIST.y
-  dupl = ln_m$.ID.x != ln_m$.ID.y
-  dupl_select = ifelse(ln_m$.ROOT_DIST.x != ln_m$.ROOT_DIST.y, 
-                       ln_m$.ROOT_DIST.x > ln_m$.ROOT_DIST.y,       ## remove x if x lower in tree
-                       ln_m$.ID.x > ln_m$.ID.y)                     ## and if same height remove x if to the left in sentence
-  rm_k = unique(ln_m$i[dupl & dupl_select])
-  
-  if (length(rm_i) > 0 || length(rm_j) > 0 || length(rm_k) > 0)
-    nodes = nodes[-unique(c(rm_i, rm_j, rm_k)),]
-  
-  nodes
-  
-}  
-
-
 get_root_dist <- function(tokens, nodes) {
   .ROOT_DIST = NULL
   
@@ -167,3 +128,69 @@ get_root_dist <- function(tokens, nodes) {
 }
 
 
+
+get_unique_patterns <- function(nodes) {
+  ln = nodes
+  ln$i = 1:nrow(ln)
+  ln = data.table::melt(ln, id.vars=c('doc_id','sentence','.ID','i','.ROOT_DIST'))
+  ln = ln[!is.na(ln$value),]
+  data.table::setorderv(ln, c('doc_id','sentence','.ID','i'))
+
+  ## rm duplicate i-value pairs
+  rm_i = unique(ln$i[duplicated(ln[,c('i','value')])])
+  if (length(rm_i > 0)) ln = ln[-ln[list(i=rm_i), on='i', which=T]]
+  
+  ## If nodes are matched multiple times, remove the ones where the root dist is higher
+  ## (these are most often nested in the other pattern, unless very compliated tqueries are used)
+  possible_dupl = unique(ln$value[duplicated(ln[,c('doc_id','sentence','value')])])
+  possible_dupl = unique(ln[list(value=possible_dupl),,on='value']$i)
+  dup = get_duplicates(ln[list(i=possible_dupl),,on='i'])
+  
+  ## A complication is that once we remove a duplicate/nested pattern, 
+  ## It might also solve another duplicate. So we can't just remove
+  ## all duplicates. We can see which duplicates certainly need to be removed
+  ## by looking which duplicates are not 'solved' by removing other duplicates
+  ## We then repeat this until no remain
+  ## this loop is guaranteed to remove one pattern per sentence per iteration (so it's fairly short) 
+  rm_j = rep(F, nrow(nodes))
+  while (TRUE) {
+    dupl_pat = unique(dup$i.x)    ## what are patterns (by index i in nodes) that seem to be duplicates?
+    possible_nondupl = dup[list(i.y = dupl_pat),,on='i.y',which=T,nomatch=0] ## get all duplicates where the matched pattern is a duplicate in another pattern 
+    if (length(possible_nondupl) > 0) {
+      certain_dupl = dup[-possible_nondupl]    ## if the matched pattern is not a duplicate in another pattern, we can be sure it's a definitive duplicate
+      rm_j[certain_dupl$i.x] = T
+    } else {
+      rm_j[dup$i.x] = T
+      break
+    }
+    possible_dupl = setdiff(possible_nondupl, unique(certain_dupl$i.x))  ## now repeat for remaining possible duplicates
+    dup = get_duplicates(ln[list(i=possible_dupl),,on='i'])
+  }
+  rm_j = which(rm_j)
+
+  nodes
+  if (length(rm_i) > 0 || length(rm_j) > 0)
+    nodes = nodes[-unique(c(rm_i, rm_j)),]
+  
+  nodes
+  
+}  
+
+get_duplicates <- function(ln, priority='higher') {
+  ln_m = merge(ln[,!colnames(ln) == 'variable', with=F], 
+               ln[,c('doc_id','sentence','.ID','.ROOT_DIST','value','i')], 
+               by=c('doc_id','sentence','value'), allow.cartesian = T)
+  ln_m = ln_m[ln_m$.ID.x != ln_m$.ID.y,]
+  
+  if (priority == 'higher') {
+    dupl = ifelse(ln_m$.ROOT_DIST.x != ln_m$.ROOT_DIST.y, 
+                  ln_m$.ROOT_DIST.x > ln_m$.ROOT_DIST.y,       ## remove x if x lower in tree
+                  ln_m$.ID.x > ln_m$.ID.y)                     ## and if same height remove x if to the left in sentence
+  } else {
+    dupl = ifelse(ln_m$.ROOT_DIST.x != ln_m$.ROOT_DIST.y, 
+                  ln_m$.ROOT_DIST.x < ln_m$.ROOT_DIST.y,       ## remove x if x higher in tree
+                  ln_m$.ID.x > ln_m$.ID.y)                     ## and if same height remove x if to the left in sentence
+  }
+  ui = unique(ln_m$i.x[dupl])
+  ln_m[list(i.x=ui),,on='i.x']
+}
