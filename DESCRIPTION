@@ -1,7 +1,7 @@
 Package: rsyntax
 Type: Package
 Title: Extract Semantic Relations from Text by Querying and Reshaping Syntax
-Version: 0.1.1
+Version: 0.1.2
 Date: 2020-10-22
 Author: Kasper Welbers and Wouter van Atteveldt
 Maintainer: Kasper Welbers <kasperwelbers@gmail.com>

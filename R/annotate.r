@@ -66,7 +66,7 @@ annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwr
   }
   
   nodes = apply_queries(tokens, queries, as_chain=TRUE, block=block, fill=fill, verbose=verbose)
-  
+
   if (nrow(nodes) == 0) {
     fill_column = paste0(column, '_fill')
     if (!column %in% colnames(tokens)) tokens[, (column) := factor()]
@@ -112,7 +112,6 @@ annotate_nodes <- function(tokens, nodes, column) {
   }
   
   .FILL_LEVEL = NULL
-  
   tokens = as_tokenindex(tokens)
   if (nrow(nodes) == 0) stop('Cannot annotate nodes, because no nodes are provided')
   if (ncol(nodes) <= 3) stop('Cannot annotate nodes, because no nodes are specified (using the label parameter in find_nodes() or tquery())')

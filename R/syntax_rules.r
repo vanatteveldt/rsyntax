@@ -7,6 +7,7 @@
 #'                 Can also be a data.table returned by (a previous) apply_queries, in which case all ids are blocked. 
 #' @param check    If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.
 #' @param fill     If TRUE (default) the fill nodes are added. Otherwise these are ignored, even if the queries include fill()
+#' @param return_wide If TRUE, return nodes in wide format.
 #' @param verbose  If TRUE, report progress (only useful if multiple queries are used)
 #'
 #' @export
@@ -25,7 +26,7 @@
 #'
 #' nodes = apply_queries(tokens, pas=passive, act=active)
 #' nodes
-apply_queries <- function(tokens, ..., as_chain=FALSE, block=NULL, check=FALSE, fill=TRUE, verbose=FALSE) {
+apply_queries <- function(tokens, ..., as_chain=FALSE, block=NULL, check=FALSE, fill=TRUE, return_wide=FALSE, verbose=FALSE) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -50,7 +51,7 @@ apply_queries <- function(tokens, ..., as_chain=FALSE, block=NULL, check=FALSE, 
     .TQUERY_NAME = ifelse(.TQUERY_NAME == '', NA, as.character(.TQUERY_NAME))
 
     nodes = find_nodes(tokens, r[[i]], block=block, name=.TQUERY_NAME, fill=FALSE, melt = FALSE)
-   
+    
     if (!is.null(nodes)) {
       if (as_chain) block = get_long_ids(block, nodes)
       out[[i]] = nodes  
@@ -65,15 +66,14 @@ apply_queries <- function(tokens, ..., as_chain=FALSE, block=NULL, check=FALSE, 
       if (verbose) cat(paste0('\t', names(r)[i], '\n'))
       out[[i]] = add_fill(tokens, out[[i]], r[[i]], block=block)
     }
-    out[[i]] = melt_nodes_list(out[[i]])
+    out[[i]] = if (return_wide) out[[i]] else melt_nodes_list(out[[i]])
   }
   
-
   nodes = data.table::rbindlist(out, fill=TRUE)
   #if (chain && !chain_fill && '.FILL_LEVEL' %in% colnames(d)) {
   #  data.table::setorder(d, '.FILL_LEVEL') 
   #  d = 
   #}
-  class(nodes) = c('rsyntaxNodes', class(nodes))
+  class(nodes) = if (return_wide) c('rsyntaxNodesWide', class(nodes)) else c('rsyntaxNodes', class(nodes))
   nodes
 } 

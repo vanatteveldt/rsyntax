@@ -3,17 +3,16 @@
 #'
 #' @description
 #' To find nodes you can use named arguments, where the names are column names (in the data.table on which the
-#' queries will be used) and the values are vectors with lookup values. 
-#' 
+#' queries will be used) and the values are vectors with look-up values. 
+#'
 #' Children or parents of nodes can be queried by passing the \link{children} or \link{parents} function as (named or unnamed) arguments.
 #' These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
 #'
-#' The fill() function (also see fill argument) can be nested to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
+#' The custom_fill() function (also see fill argument) can be nested to customize which children of a 'labeled' node need to be matched. It can only be nested in a query if the label argument is not NULL,
 #' and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
 #' assigned to the closest node. 
 #'   
 #' Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
-#'
 #'
 #' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
 #'                
@@ -28,15 +27,26 @@
 #' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
 #' @param label    A character vector, specifying the column name under which the selected tokens are returned. 
 #'                If NA, the column is not returned.
-#' @param fill    Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
-#'                function (a special version of the children function). 
-#' @param block   Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+#' @param fill    Logical. If TRUE (default), the default custom_fill() will be used. To more specifically control fill, you can nest the \link{custom_fill} 
+#'                function (a special version of the children function).
+#' @param block   Logical. If TRUE, the node will be blocked from being assigned (labeled). This is mainly useful if you have a node that you do not want to be assigned by fill,
 #'                but also don't want to 'label' it. Essentially, block is shorthand for using label and then removing the node afterwards. If block is TRUE, label has to be NA.
 #'                
 #'                
 #' @return        A tQuery object, that can be used with the \link{apply_queries} function.
 #' 
 #' @details 
+#' Multiple values in a name-value pair operate as OR conditions.
+#' For example, tquery(relation = c('nsubj','dobj')) means that the relation column should have the value 'nsubj' OR 'dobj'. 
+#' 
+#' If multiple named arguments are given they operate as AND conditions. 
+#' For example, tquery(relation = 'nsubj', pos = 'PROPN') means that the relation should be 'nsubj' AND the pos should be 'PROPN'.
+#' 
+#' This easily combines for the most common use case, which is to select on multiple conditions (relation AND pos), but allowing different (similar) values ('PROPN' OR 'NOUN').
+#' For example: tquery(relation = 'nsubj', pos = c('PROPN','NOUN')) means that the node should have the 'nsubj' relation, but pos can be either 'PROPN' or 'NOUN'.
+#' 
+#' For more specific behavior, the AND(), OR() and NOT() functions can be used for boolean style conditions.
+#' 
 #' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
 #' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
 #' If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
@@ -65,15 +75,15 @@ tquery <- function(..., g_id=NULL, label=NA, fill=TRUE, block=FALSE) {
   }
   
   is_fill = if (length(l) > 0) sapply(l, methods::is, 'tQueryFill') else c()
-  if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
+  if (sum(is_fill) > 1) stop('cannot nest more than one custom_fill()')
   if (any(is_fill)) {
-    if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
+    if (!fill) stop('fill cannot be FALSE if a nested custom_fill() query is given')
     if (is.na(label)) {
-      warning('fill() is used in a query where label = NA. This will be ignored, because the children of a node that is not labeld would be forgotten anyway')
+      warning('custom_fill() is used in a query where label = NA. This will be ignored, because the children of a node that is not labeld would be forgotten anyway')
       l = l[!is_fill]
     }
   } else {
-    if (fill && !is.na(label)) l[['']] = fill() 
+    if (fill && !is.na(label)) l[['']] = custom_fill() 
   }
 
   
@@ -121,15 +131,16 @@ safe_names <- function(tq, label_names=c()) {
 
 #' Search for parents or children in tquery
 #'
-#' Should only be used inside of the \link{tquery} function.
-#' Enables searching for parents or children, either direct (depth = 1) or until a given depth (depth 2 for children and grandchildren, Inf (infinite) for all).
+#' @description 
+#' Enables searching for parents or children.
+#' Should only be used inside of the \link{tquery} function, or within other children/parents functions.
+#' Look-up conditions are specified in the same way as in the tquery function.
+#'  
+#' Multiple children() or parents() functions can be nested side by side.
+#' This works as an AND condition: the node must have all these parents/children (unless the req [required] argument is set to FALSE).
 #' 
-#' Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
-#' The label argument is used to remember the global token ids (.G_ID) of the parents/children under a given column name.
 #' 
-#' the not_children and not_parents functions will make the matched children/parents a NOT condition. 
-#' 
-#' The fill() function is used to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
+#' The custom_fill() function is used to include the children of a 'labeled' node. It can only be nested in a query if the label argument is not NULL,
 #' and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
 #' assigned to the closest node.
 #'   
@@ -151,10 +162,10 @@ safe_names <- function(tq, label_names=c()) {
 #' @param depth   A positive integer, determining how deep parents/children are sought. 1 
 #'                means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
 #'                All parents/children must meet the filtering conditions (... or g_id)
-#' @param connected controlls behaviour if depth > 1 and filters are used. If FALSE, all parents/children to the given depth are retrieved, and then filtered. 
-#'                  This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
+#' @param connected Controls behavior if depth > 1 and filters are used. If FALSE, all parents/children to the given depth are retrieved, and then filtered. 
+#'                  This way, grandchildren that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
 #'                  If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved. 
-#' @param fill    Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+#' @param fill    Logical. If TRUE (default), the default custom_fill() will be used. To more specifically control fill, you can nest the \link{custom_fill} 
 #'                function (a special version of the children function). 
 #' @param block   Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
 #'                but also don't want to 'label' it. Essentially, block is shorthand for using label and then removing the node afterwards. If block is TRUE, label has to be NA.
@@ -165,13 +176,27 @@ safe_names <- function(tq, label_names=c()) {
 #' @details 
 #' Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
 #' that clearly shows the different levels. As shown in the examples, the idea is that each line is a node, and to look for parents
-#' or children, we put them on the next line with indentation (in RStudio, it should automatically allign correctly when you press enter inside
+#' or children, we put them on the next line with indentation (in RStudio, it should automatically align correctly when you press enter inside
 #' of the children() or parents() functions). 
 #' 
 #' There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
 #' By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
 #' If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
 #' Multiple flags can be combined, such as lemma__RI, or lemma__IR  (order of flags is irrelevant)
+#' 
+#' The not_children and not_parents functions will make the matched children/parents a NOT condition. Note that this is different from using the NOT() look-up function.
+#' NOT operates at the node level, so you specify that a node should NOT be matched if certain conditions are met. the not_parents and not_children functions operate 
+#' at the pattern level, so you can specify that a pattern is invalid if these parents/children are matched.
+#' 
+#' Next to the OR, AND, and NOT functions, children/parents functions can have the special BREAK function for cases where depth > 1.
+#' If depth > 1 in the children, parents or fill function, the children/parents will
+#' be retrieved recursively (i.e. children, children of children, etc.).
+#' If the look-up conditions (e.g., relation = 'nsubj') are not satisfied, a node 
+#' will not be matched by the query, but the search will still continue for it's
+#' parents/children. The special BREAK look-up function allows you to specify a condition
+#' for breaking the recursive loop (lending it's name from the `break` in a for loop).
+#' An example is that you might want to stop the recursive loop in a custom_fill() once it encounters
+#' a nested sentence, such as a relative clause: custom_fill(BREAK(relation = 'relcl')). 
 #' 
 #' @return Should not be used outside of \link{tquery}
 #' @name nested_nodes
@@ -196,19 +221,22 @@ children <- function(..., g_id=NULL, label=NA, req=TRUE, depth=1, connected=FALS
   }
   
   is_fill = if (length(l) > 0) sapply(l, methods::is, 'tQueryFill') else c()
-  if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
+  if (sum(is_fill) > 1) stop('cannot nest more than one custom_fill()')
   if (any(is_fill)) {
-    if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
+    if (!fill) stop('fill cannot be FALSE if a nested custom_fill() query is given')
     if (is.na(label)) {
-      warning('fill() is used in a query where label = NA. This will be ignored, because the children of a node that is not labeld would be forgotten anyway')
+      warning('custom_fill() is used in a query where label = NA. This will be ignored, because the children of a node that is not labeld would be forgotten anyway')
       l = l[!is_fill]
     }
   } else {
-    if (fill && !is.na(label)) l[['']] = fill() 
+    if (fill && !is.na(label)) l[['']] = custom_fill() 
   }
  
   if (length(l) > 0) {
     is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill') 
+    is_break = sapply(l, methods::is, 'tokenLookupBreak')
+    if (any(is_break) & connected) stop('Cannot use BREAK if connected = TRUE (note that this is also redundant')
+    
     for (fill_i in which(sapply(l, methods::is, 'tQueryFill'))) {
       if (!is.na(label)) {
         l[[fill_i]]$label = paste(label, 'FILL', sep='_')
@@ -217,9 +245,9 @@ children <- function(..., g_id=NULL, label=NA, req=TRUE, depth=1, connected=FALS
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=FALSE, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup = l[!(is_nested | is_break)], nested=l[is_nested], BREAK=l[is_break], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=FALSE, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=FALSE, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, BREAK=list(), level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, recursive=FALSE, max_window=max_window, min_window=min_window)
   }
   
   
@@ -242,10 +270,12 @@ not_children <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
-    if (any(sapply(l, methods::is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    is_break = sapply(l, methods::is, 'tokenLookupBreak')
+    if (any(is_break) & connected) stop('Cannot use BREAK if connected = TRUE (note that this is also redundant')
+    if (any(sapply(l, methods::is, 'tQueryFill'))) stop('custom_fill() cannot be used in not_ queries (not_children, not_parents)')
+    q = list(g_id=g_id, label=label, lookup = l[!(is_nested | is_break)], nested=l[is_nested], BREAK=l[is_break], level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, BREAK=list(), level = 'children', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   }
   
   
@@ -274,20 +304,23 @@ parents <- function(..., g_id=NULL, label=NA, req=TRUE, depth=1, connected=FALSE
 
   
   is_fill = if (length(l) > 0) sapply(l, methods::is, 'tQueryFill') else c()
-  if (sum(is_fill) > 1) stop('cannot nest more than one fill()')
+  if (sum(is_fill) > 1) stop('cannot nest more than one custom_fill()')
   if (any(is_fill)) {
-    if (!fill) stop('fill cannot be FALSE if a nested fill() query is given')
+    if (!fill) stop('fill cannot be FALSE if a nested custom_fill() query is given')
     if (is.na(label)) {
-      warning('fill() is used in a query where label = NA. This will be ignored, because the children of a node that is not labeld would be forgotten anyway')
+      warning('custom_fill() is used in a query where label = NA. This will be ignored, because the children of a node that is not labeld would be forgotten anyway')
       l = l[!is_fill]
     }
   } else {
-    if (fill && !is.na(label)) l[['']] = fill() 
+    if (fill && !is.na(label)) l[['']] = custom_fill() 
   }
   
 
   if (length(l) > 0) {
     is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
+    is_break = sapply(l, methods::is, 'tokenLookupBreak')
+    if (any(is_break) & connected) stop('Cannot use BREAK if connected = TRUE (note that this is also redundant')
+    
     for (fill_i in which(sapply(l, methods::is, 'tQueryFill'))) {
       if (!is.na(label)) {
         l[[fill_i]]$label = paste(label, 'FILL', sep='_')
@@ -296,9 +329,9 @@ parents <- function(..., g_id=NULL, label=NA, req=TRUE, depth=1, connected=FALSE
         l = l[-fill_i]
       }
     }
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup = l[!(is_nested | is_break)], nested=l[is_nested], BREAK=l[is_break], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, BREAK=list(), level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   }
   
   class(q) = c('tQueryParent', class(q))
@@ -318,10 +351,13 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(I
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
-    if (any(sapply(l, methods::is, 'tQueryFill'))) stop('fill() cannot be used in not_ queries (not_children, not_parents)')
-    q = list(g_id=g_id, label=label, lookup = l[!is_nested], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    is_break = sapply(l, methods::is, 'tokenLookupBreak')
+    if (any(is_break) & connected) stop('Cannot use BREAK if connected = TRUE (note that this is also redundant')
+    
+    if (any(sapply(l, methods::is, 'tQueryFill'))) stop('custom_fill() cannot be used in not_ queries (not_children, not_parents)')
+    q = list(g_id=g_id, label=label, lookup = l[!(is_nested | is_break)], nested=l[is_nested], level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label=label, lookup =NULL, nested=NULL, BREAK=list(), level = 'parents', req=req, NOT=NOT, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   }
   
   class(q) = c('tQueryParent', class(q))
@@ -329,29 +365,94 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(I
 }
 
 
-#' @rdname nested_nodes
+
+#' Specify custom fill behavior
+#'
+#' @description 
+#' If a tquery(), parents() or children() function has set a label, all children of the matched node (that are not matched by another query) will also be given this label.
+#' This is called the 'fill' heuristic.
+#' The custom_fill() function can be used to give more specific conditions for which children need to be labeled.
+#' 
+#' The function can be used almost identically to the children() function. The specification of the look-up conditions works in the same way.
+#' 
+#' For the custom_fill function, the special BREAK() look-up function is particularly powerful.
+#' custom_fill will recursively search for children, children of children, etc.
+#' The look-up conditions in custom_fill determine which of all these direct and indirect children to label.
+#' Often, however, you would want to the recursive loop to 'break' when certain conditions are met.
+#' For instance, to ignore children in a relative clause: custom_fill(BREAK(relation = 'relcl'))
+#' 
+#'   
+#' @param ...     Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
+#'                
+#'                The name in the name-value pairs need to match a column in the data.table, and the value needs to be a vector of the same data type as the column.
+#'                By default, search uses case sensitive matching, with the option of using common wildcards (* for any number of characters, and ? for a single character).
+#'                Alternatively, flags can be used to to change this behavior to 'fixed' (__F), 'igoring case' (__I) or 'regex' (__R). See details for more information. 
+#'                
+#'                If multiple name-value pairs are given, they are considered as AND statements, but see details for syntax on using OR statements, and combinations.
+#'                
+#'                To look for parents and children of the nodes that are found, you can use the \link{parents} and \link{children} functions as (named or unnamed) arguments. 
+#'                These functions have the same query arguments as tquery, but with some additional arguments. 
+#' @param g_id    Find nodes by global id, which is the combination of the doc_id, sentence and token_id. Passed as a data.frame or data.table with 3 columns: (1) doc_id, (2) sentence and (3) token_id. 
+#' @param depth   A positive integer, determining how deep parents/children are sought. 1 
+#'                means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
+#'                All parents/children must meet the filtering conditions (... or g_id)
+#' @param connected Controls behavior if depth > 1 and filters are used. If FALSE, all parents/children to the given depth are retrieved, and then filtered. 
+#'                  This way, grandchildren that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
+#'                  If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved. 
+#' @param max_window  Set the max token distance of the children/parents to the node. Has to be either a numerical vector of length 1 for distance in both directions, or a 
+#'                vector of length 2, where the first value is the max distance to the left, and the second value the max distance to the right. Default is c(Inf, Inf) meaning that no max distance is used.
+#' @param min_window  Like max_window, but for the min distance. Default is c(0,0) meaning that no min is used.
+#' 
+#' @return Should not be used outside of \link{tquery}
+#' @examples 
+#' tokens = tokens_spacy[tokens_spacy$doc_id == 'text4',]
+#' 
+#' ## custom fill rule that ignores relative clauses
+#' no_relcl_fill = custom_fill(BREAK(relation='relcl'))
+#' 
+#' tq = tquery(label = 'verb', pos='VERB', fill=FALSE,
+#'          children(label = 'subject', relation = 'nsubj', no_relcl_fill),
+#'          children(label = 'object', relation = 'dobj', no_relcl_fill))
+#'          
+#' tokens = annotate_tqueries(tokens, "clause", tq)
+#' tokens
 #' @export
-fill <- function(..., g_id=NULL, depth=Inf, connected=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
+custom_fill <- function(..., g_id=NULL, depth=Inf, connected=FALSE, max_window=c(Inf,Inf), min_window=c(0,0)) {
   if (length(min_window) == 1) min_window = c(min_window,min_window)
   if (length(max_window) == 1) max_window = c(max_window,max_window)
   #select = deparse(bquote_s(substitute(select)))
   l = list(...)
   if (length(l) > 0) {
     is_nested = sapply(l, methods::is, 'tQueryParent') | sapply(l, methods::is, 'tQueryChild')  | sapply(l, methods::is, 'tQueryFill')
-    if (any(is_nested)) stop('Cannot use nested queries (children(), parents(), etc.) in fill()')
-    q = list(g_id=g_id, label='fill', lookup = l[!is_nested], nested=l[is_nested], level = 'children', req=FALSE, NOT=FALSE, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    is_break = sapply(l, methods::is, 'tokenLookupBreak')
+    
+    if (any(is_nested)) stop('Cannot use nested queries (children(), parents(), etc.) in custom_fill()')
+    q = list(g_id=g_id, label='fill', lookup = l[!(is_nested | is_break)], nested=l[is_nested], BREAK=l[is_break], level = 'children', req=FALSE, NOT=FALSE, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   } else {
-    q = list(g_id=g_id, label='fill', lookup =NULL, nested=NULL, level = 'children', req=FALSE, NOT=FALSE, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
+    q = list(g_id=g_id, label='fill', lookup =NULL, nested=NULL, BREAK=list(), level = 'children', req=FALSE, NOT=FALSE, depth=depth, connected=connected, max_window=max_window, min_window=min_window)
   }
   
   class(q) = c('tQueryFill', class(q))
   q
 }
 
+#' Specify custom fill behavior
+#'
+#' @description 
+#' 
+#' This is soft deprecated, with the new preferred function being custom_fill to avoid namespace conflicts with tidyr::fill() and data.table::fill()
+#' 
+#' @param ...     passes to custom_fill
+#' 
+#' @return Should not be used outside of \link{tquery}
+#' @export
+fill <- function(...) {
+  custom_fill(...)
+}
 
 #' Use OR search in tquery
 #' 
-#' @param ... name-value pairs for lookup terms. see ?query.
+#' @param ... name-value pairs for look-up terms. see ?query.
 #'
 #' @return A list, to be used as input to \link{tquery}
 #' @export
@@ -360,13 +461,17 @@ fill <- function(..., g_id=NULL, depth=Inf, connected=FALSE, max_window=c(Inf,In
 #' tquery(OR(lemma = 'walk', POS='Noun'))
 OR <- function(...) {
   l = list(lookup = list(...), boolean='OR')
+  for (cl in sapply(l$lookup, class, simplify=F)) {
+    if (any(grepl('tQuery', cl))) stop('Boolean function AND cannot contain nested tqueries/parents/children')
+    if (any(grepl('tokenLookupBreak', cl))) stop('Special Boolean function BREAK cannot be nested within other boolean functions')
+  }
   class(l) = c(class(l), 'tokenLookup')
   l
 }
 
 #' Use AND search in tquery
 #' 
-#' @param ... name-value pairs for lookup terms. see ?query.
+#' @param ... name-value pairs for look-up terms. see ?query.
 #'
 #' @return A list, to be used as input to \link{tquery}
 #' @export
@@ -375,13 +480,17 @@ OR <- function(...) {
 #' tquery(AND(lemma = 'walk', POS='Noun'))   ## is also the default
 AND <- function(...) {
   l = list(lookup = list(...), boolean='AND')
+  for (cl in sapply(l$lookup, class, simplify=F)) {
+    if (any(grepl('tQuery', cl))) stop('Boolean function AND cannot contain nested tqueries/parents/children')
+    if (any(grepl('tokenLookupBreak', cl))) stop('Special Boolean function BREAK cannot be nested within other boolean functions')
+  }
   class(l) = c(class(l), 'tokenLookup')
   l
 }
 
 #' Use NOT search in tquery
 #' 
-#' @param ... name-value pairs for lookup terms. see ?query.
+#' @param ... name-value pairs for look-up terms. see ?query.
 #'
 #' @return A list, to be used as input to \link{tquery}
 #' @export
@@ -390,6 +499,45 @@ AND <- function(...) {
 #' tquery(NOT(POS='Noun'))  
 NOT <- function(...) {
   l = list(lookup = list(...), boolean='NOT')
+  for (cl in sapply(l$lookup, class, simplify=F)) {
+    if (any(grepl('tQuery', cl))) stop('Boolean function NOT cannot contain nested tqueries/parents/children')
+    if (any(grepl('tokenLookupBreak', cl))) stop('Special Boolean function BREAK cannot be nested within other boolean functions')
+  }
   class(l) = c(class(l), 'tokenLookup')
   l
 }
+
+
+
+#' A special NOT condition if depth > 1
+#' 
+#' If depth > 1 in the children, parents or fill function, the children/parents will
+#' be retrieved recursively (i.e. children, children of children, etc.).
+#' If the look-up conditions (e.g., relation = 'nsubj') are not satisfied, a node 
+#' will not be matched by the query, but the search will still continue for it's
+#' parents/children. The special BREAK look-up function allows you to specify a condition
+#' for breaking the recursive loop (lending it's name from the `break` in a for loop).
+#' An example is that you might want to stop the recursive loop in a custom_fill() once it encounters
+#' a nested sentence, such as a relative clause: custom_fill(BREAK(relation = 'relcl')). 
+#' 
+#' @param ... name-value pairs for look-up terms. see ?query.
+#'
+#' @return A list, to be used as input to \link{tquery}
+#' @export
+#'
+#' @examples
+#' tquery(NOT(POS='Noun'))  
+BREAK <- function(...) {
+  l = list(lookup = list(...), boolean='NOT')
+  for (cl in sapply(l$lookup, class, simplify=F)) {
+    if (any(grepl('tQuery', cl))) stop('Special Boolean function BREAK cannot contain nested tqueries/parents/children')
+    if (any(grepl('tokenLookupBreak', cl))) stop('Special Boolean function BREAK cannot be nested within other boolean functions')
+  }
+  class(l) = c(class(l), 'tokenLookupBreak')
+  l
+}
+
+
+
+
+

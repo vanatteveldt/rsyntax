@@ -1,6 +1,6 @@
 melt_nodes_list <- function(nodes, fill_only_first=TRUE) {
   .ROLE = NULL; token_id = NULL; .FILL_LEVEL = NULL
-  ## the nodes created in find_nodes have a weird structure, which is only usefull for efficiently merging data.tables
+  ## the nodes created in find_nodes have a weird structure, which is only useful for internal use
   ## here we melt the nodes to a more convenient format
   
   for (.RM in grep('^BLOCK', colnames(nodes), value=TRUE)) 

@@ -7,7 +7,7 @@
 split_UD_conj(
   tokens,
   conj_rel = "conj",
-  cc_rel = "cc",
+  cc_rel = c("cc", "cc:preconj"),
   unpack = T,
   no_fill = NULL,
   min_dist = 0,

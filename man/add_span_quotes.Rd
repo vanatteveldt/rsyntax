@@ -43,7 +43,7 @@ In some contexts and languages it makes sense to add single quotes, but in that 
 also use the quote_subset argument. For instance, in Spacy (and probably other UD based annotations), single quotes in posessives (e.g., Bob's, scholars') have a
 PART POS tag, whereas quotation symbols have PUNCT, NOUN, VERB, or ADJ (for some reason).}
 
-\item{quote_subset}{Optionally, and expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
+\item{quote_subset}{Optionally, an expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
 pos != "PART" can be used for the example mentioned in add_quote_symbols.}
 
 \item{copy}{If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)}

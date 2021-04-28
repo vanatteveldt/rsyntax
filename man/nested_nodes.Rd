@@ -6,7 +6,6 @@
 \alias{not_children}
 \alias{parents}
 \alias{not_parents}
-\alias{fill}
 \title{Search for parents or children in tquery}
 \usage{
 children(
@@ -52,15 +51,6 @@ not_parents(
   max_window = c(Inf, Inf),
   min_window = c(0, 0)
 )
-
-fill(
-  ...,
-  g_id = NULL,
-  depth = Inf,
-  connected = FALSE,
-  max_window = c(Inf, Inf),
-  min_window = c(0, 0)
-)
 }
 \arguments{
 \item{...}{Accepts two types of arguments: name-value pairs for finding nodes (i.e. rows), and functions to look for parents/children of these nodes.
@@ -86,11 +76,11 @@ make the object optional.}
 means that only direct parents and children of the node are retrieved. 2 means children and grandchildren, etc.
 All parents/children must meet the filtering conditions (... or g_id)}
 
-\item{connected}{controlls behaviour if depth > 1 and filters are used. If FALSE, all parents/children to the given depth are retrieved, and then filtered. 
-This way, grandchilden that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
+\item{connected}{Controls behavior if depth > 1 and filters are used. If FALSE, all parents/children to the given depth are retrieved, and then filtered. 
+This way, grandchildren that satisfy the filter conditions are retrieved even if their parents do not satisfy the conditions.
 If TRUE, the filter is applied at each level of depth, so that only fully connected branches of nodes that satisfy the conditions are retrieved.}
 
-\item{fill}{Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+\item{fill}{Logical. If TRUE (default), the default custom_fill() will be used. To more specifically control fill, you can nest the \link{custom_fill} 
 function (a special version of the children function).}
 
 \item{block}{Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
@@ -105,27 +95,40 @@ vector of length 2, where the first value is the max distance to the left, and t
 Should not be used outside of \link{tquery}
 }
 \description{
-Should only be used inside of the \link{tquery} function.
-Enables searching for parents or children, either direct (depth = 1) or until a given depth (depth 2 for children and grandchildren, Inf (infinite) for all).
-}
-\details{
-Searching for parents/children within find_nodes works as an AND condition: if it is used, the node must have these parents/children.
-The label argument is used to remember the global token ids (.G_ID) of the parents/children under a given column name.
+Enables searching for parents or children.
+Should only be used inside of the \link{tquery} function, or within other children/parents functions.
+Look-up conditions are specified in the same way as in the tquery function.
+ 
+Multiple children() or parents() functions can be nested side by side.
+This works as an AND condition: the node must have all these parents/children (unless the req [required] argument is set to FALSE).
 
-the not_children and not_parents functions will make the matched children/parents a NOT condition. 
 
-The fill() function is used to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
+The custom_fill() function is used to include the children of a 'labeled' node. It can only be nested in a query if the label argument is not NULL,
 and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
 assigned to the closest node.
-
-
+}
+\details{
 Having nested queries can be confusing, so we tried to develop the find_nodes function and the accompanying functions in a way
 that clearly shows the different levels. As shown in the examples, the idea is that each line is a node, and to look for parents
-or children, we put them on the next line with indentation (in RStudio, it should automatically allign correctly when you press enter inside
+or children, we put them on the next line with indentation (in RStudio, it should automatically align correctly when you press enter inside
 of the children() or parents() functions). 
 
 There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
 By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
 If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).
 Multiple flags can be combined, such as lemma__RI, or lemma__IR  (order of flags is irrelevant)
+
+The not_children and not_parents functions will make the matched children/parents a NOT condition. Note that this is different from using the NOT() look-up function.
+NOT operates at the node level, so you specify that a node should NOT be matched if certain conditions are met. the not_parents and not_children functions operate 
+at the pattern level, so you can specify that a pattern is invalid if these parents/children are matched.
+
+Next to the OR, AND, and NOT functions, children/parents functions can have the special BREAK function for cases where depth > 1.
+If depth > 1 in the children, parents or fill function, the children/parents will
+be retrieved recursively (i.e. children, children of children, etc.).
+If the look-up conditions (e.g., relation = 'nsubj') are not satisfied, a node 
+will not be matched by the query, but the search will still continue for it's
+parents/children. The special BREAK look-up function allows you to specify a condition
+for breaking the recursive loop (lending it's name from the `break` in a for loop).
+An example is that you might want to stop the recursive loop in a custom_fill() once it encounters
+a nested sentence, such as a relative clause: custom_fill(BREAK(relation = 'relcl')).
 }

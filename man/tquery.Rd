@@ -23,10 +23,10 @@ These functions have the same query arguments as tquery, but with some additiona
 \item{label}{A character vector, specifying the column name under which the selected tokens are returned. 
 If NA, the column is not returned.}
 
-\item{fill}{Logical. If TRUE (default), the default fill() will be used (this is identical to nesting fill(); see description). To more specifically controll fill, you can nest the \link{fill} 
+\item{fill}{Logical. If TRUE (default), the default custom_fill() will be used. To more specifically control fill, you can nest the \link{custom_fill} 
 function (a special version of the children function).}
 
-\item{block}{Logical. If TRUE, the node will be blocked from being assigned (labeld). This is mainly usefull if you have a node that you do not want to be assigned by fill,
+\item{block}{Logical. If TRUE, the node will be blocked from being assigned (labeled). This is mainly useful if you have a node that you do not want to be assigned by fill,
 but also don't want to 'label' it. Essentially, block is shorthand for using label and then removing the node afterwards. If block is TRUE, label has to be NA.}
 }
 \value{
@@ -34,18 +34,29 @@ A tQuery object, that can be used with the \link{apply_queries} function.
 }
 \description{
 To find nodes you can use named arguments, where the names are column names (in the data.table on which the
-queries will be used) and the values are vectors with lookup values. 
+queries will be used) and the values are vectors with look-up values. 
 
 Children or parents of nodes can be queried by passing the \link{children} or \link{parents} function as (named or unnamed) arguments.
 These functions use the same query format as the tquery function, and children and parents can be nested recursively to find children of children etc. 
 
-The fill() function (also see fill argument) can be nested to include the children of a 'labeld' node. It can only be nested in a query if the label argument is not NULL,
+The custom_fill() function (also see fill argument) can be nested to customize which children of a 'labeled' node need to be matched. It can only be nested in a query if the label argument is not NULL,
 and by default will include all children of the node that have not been assigned to another node. If two nodes have a shared child, the child will be
 assigned to the closest node. 
   
 Please look at the examples below for a recommended syntactic style for using the find_nodes function and these nested functions.
 }
 \details{
+Multiple values in a name-value pair operate as OR conditions.
+For example, tquery(relation = c('nsubj','dobj')) means that the relation column should have the value 'nsubj' OR 'dobj'. 
+
+If multiple named arguments are given they operate as AND conditions. 
+For example, tquery(relation = 'nsubj', pos = 'PROPN') means that the relation should be 'nsubj' AND the pos should be 'PROPN'.
+
+This easily combines for the most common use case, which is to select on multiple conditions (relation AND pos), but allowing different (similar) values ('PROPN' OR 'NOUN').
+For example: tquery(relation = 'nsubj', pos = c('PROPN','NOUN')) means that the node should have the 'nsubj' relation, but pos can be either 'PROPN' or 'NOUN'.
+
+For more specific behavior, the AND(), OR() and NOT() functions can be used for boolean style conditions.
+
 There are several flags that can be used to change search condition. To specify flags, add a double underscore and the flag character to the name in the name value pairs (...).
 By adding the suffix __R, query terms are considered to be regular expressions, and the suffix __I uses case insensitive search (for normal or regex search).
 If the suffix __F is used, only exact matches are valid (case sensitive, and no wildcards).

@@ -5,7 +5,7 @@
 #' 
 #' By default, all columns in the data are included as labels. This can be changes by using the ... argument.
 #' 
-#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
+#' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}. Can also be a corpustools tCorpus.
 #' @param ...         Optionally, select which columns to include as labels and how to present them. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)  
 #' @param sentence_i  By default, plot_tree uses the first sentence (sentence_i = 1) in the data. sentence_i can be changed to select other sentences by position (the i-th unique sentence in the data). Note that sentence_i does not refer to the values in the sentence column (for this use the sentence argument together with doc_id)
 #' @param doc_id      Optionally, the document id can be specified. If so, sentence_i refers to the i-th sentence within the given document. 
@@ -50,6 +50,7 @@
 #' }
 #' }
 plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=FALSE, pdf_file=NULL, allign_text=TRUE, ignore_rel=NULL, all_lower=FALSE, all_abbrev=NULL, textsize=1, spacing=1, use_color=TRUE, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=FALSE, viewer_mode=TRUE, viewer_size=c(100,100)) {  
+  if (methods::is(tokens, 'tCorpus')) tokens = tokens$tokens
   if (pdf_viewer && is.null(pdf_file)) pdf_file = tempfile('plot_tree', fileext = '.pdf')
   if (!is.null(pdf_file)) if (!grepl('\\.pdf$', pdf_file)) stop('pdf_file needs to have extension ".pdf"')
   if (!is.null(pdf_file)) viewer_mode = FALSE
@@ -149,7 +150,6 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   added = as.numeric(igraph::V(g)$name)
   added = (round(added) - added) != 0
   if (any(added)) {
-    
     col = ifelse(added, ifelse(use_color, 'red', 'darkgrey'),'black')
   } else col = 'black'
   

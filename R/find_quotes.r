@@ -26,7 +26,7 @@
 #'                      In some contexts and languages it makes sense to add single quotes, but in that case it is oftne necessary to 
 #'                      also use the quote_subset argument. For instance, in Spacy (and probably other UD based annotations), single quotes in posessives (e.g., Bob's, scholars') have a
 #'                      PART POS tag, whereas quotation symbols have PUNCT, NOUN, VERB, or ADJ (for some reason).   
-#' @param quote_subset  Optionally, and expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
+#' @param quote_subset  Optionally, an expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
 #'                      pos != "PART" can be used for the example mentioned in add_quote_symbols. 
 #' @param copy          If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)
 #'
@@ -84,6 +84,7 @@
 #' syntax_reader(tokens, annotation = 'quote', value = 'source')
 #' }
 add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, add_quote_symbols=NULL, quote_subset=NULL, copy=TRUE) {
+  is_quoted = NULL
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -102,7 +103,7 @@ add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='so
   }
   is_quote = get_quote_positions(tokens, text_col, is_quote_regex=quote_regex, par_col = par_col, space_col = space_col, quote_subset=quote_subset)
 
-  ## if a previously found source occurs in a span quote (all source nodes within the quote), remove it. nested queries are a challenge for another day
+  ## if a previously found source occurs in a span quote (all source nodes within the quote), remove it. nested quotes are a challenge for another day
   tokens = remove_nested_source(tokens, is_quote, quote_col, source_val)
   quotes = tokens[!is.na(is_quote),]
   quotes$.QUOTE = is_quote[!is.na(is_quote)]
@@ -111,6 +112,11 @@ add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='so
   if (!is.null(tqueries))
     tokens = add_new_source(tokens, is_quote, quotes, quote_col, source_val, quote_val, tqueries, lag_sentences) ## adds by reference
 
+  verbatim_col = paste(quote_col, 'verbatim', sep='_')
+  suppressWarnings({
+    ## I don't like this solution, but data.table can give a useless warning
+    tokens[, (verbatim_col) := !is.na(is_quote) & !is.na(tokens[[quote_col]]) & quote_val == 'quote']
+  })
   tokens[]
 }
 

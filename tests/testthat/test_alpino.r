@@ -26,7 +26,7 @@ alpino_quote_queries <- function(verbs=DUTCH_SAY_VERBS, exclude_verbs=NULL) {
   
   # y, stelt x
   xstelt = tquery(label='quote', 
-                  fill(NOT(relation='tag')),
+                  custom_fill(NOT(relation='tag')),
                   children(label='verb', relation='tag', lemma = verbs,
                            children(label = 'source', relation=c('su'))))
   

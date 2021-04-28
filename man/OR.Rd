@@ -7,7 +7,7 @@
 OR(...)
 }
 \arguments{
-\item{...}{name-value pairs for lookup terms. see ?query.}
+\item{...}{name-value pairs for look-up terms. see ?query.}
 }
 \value{
 A list, to be used as input to \link{tquery}

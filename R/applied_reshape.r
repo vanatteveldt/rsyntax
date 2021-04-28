@@ -25,7 +25,7 @@
 #'    split_UD_conj() %>%
 #'    plot_tree()
 #' }
-split_UD_conj <- function(tokens, conj_rel='conj', cc_rel='cc', unpack=T, no_fill=NULL, min_dist=0, max_dist=Inf, right_fill_dist=T, compound_rel = c('compound*','flat'), ...) {
+split_UD_conj <- function(tokens, conj_rel='conj', cc_rel=c('cc','cc:preconj'), unpack=T, no_fill=NULL, min_dist=0, max_dist=Inf, right_fill_dist=T, compound_rel = c('compound*','flat'), ...) {
   conj_max_window = if(right_fill_dist) Inf else 0
   tq = tquery(label='target', NOT(relation = conj_rel),
               children(relation = compound_rel, label='ignore', req=FALSE),
@@ -33,7 +33,7 @@ split_UD_conj <- function(tokens, conj_rel='conj', cc_rel='cc', unpack=T, no_fil
               children(relation = conj_rel, label='origin', ..., min_window=c(min_dist,min_dist), max_window = c(max_dist,max_dist),
                        fill(NOT(relation = no_fill), max_window=c(0,conj_max_window), connected=TRUE)))
   tokens = climb_tree(tokens, unpack=unpack, tq)
-  if (!is.null(cc_rel)) tokens = chop(tokens, relation = 'cc')
+  if (!is.null(cc_rel)) tokens = chop(tokens, relation = cc_rel)
   tokens
 }
 
@@ -85,7 +85,7 @@ climb_tree <- function(.tokens, tq, unpack=TRUE, isolate=TRUE, take_fill=TRUE, g
     data.table::setDTthreads(rsyntax_threads())
   }
   
-  target = NULL; new_parent = NULL; branch_parent = NULL
+  target = NULL; new_parent = NULL; tree_parent = NULL
   i = 1
   out = list()
   
@@ -100,13 +100,13 @@ climb_tree <- function(.tokens, tq, unpack=TRUE, isolate=TRUE, take_fill=TRUE, g
   .tokens = .tokens[filt, on=c('doc_id','sentence')]
   data.table::setattr(.tokens, '.nodes', value = last_nodes)  
   
-  if (!'branch_parent' %in% colnames(.tokens)) .tokens[, branch_parent := numeric()]
+  if (!'tree_parent' %in% colnames(.tokens)) .tokens[, tree_parent := numeric()]
   
   while (TRUE) {
     if (take_fill) .tokens = copy_fill(.tokens, 'target', 'origin', only_new=only_new)
     if (give_fill) .tokens = copy_fill(.tokens, 'origin', 'target', only_new=only_new)
     
-    .tokens = mutate_nodes(.tokens, 'origin', parent=target$parent, relation=target$relation, branch_parent=target$branch_parent)
+    .tokens = mutate_nodes(.tokens, 'origin', parent=target$parent, relation=target$relation, tree_parent=target$tree_parent, tree_relation='conj')
     
     if (unpack) {
       tq2 = tquery(label = 'child', g_id = last_nodes$nodes[,c('doc_id','sentence','origin')],

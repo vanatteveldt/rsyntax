@@ -10,7 +10,8 @@ as_tokenindex(
   sentence = c("sentence", "sentence_id"),
   token_id = c("token_id"),
   parent = c("parent", "head_token_id"),
-  relation = c("relation", "dep_rel")
+  relation = c("relation", "dep_rel"),
+  paragraph = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ as_tokenindex(
 \item{parent}{candidate names for the parent id column. Has to be numeric}
 
 \item{relation}{candidate names for the relation column}
+
+\item{paragraph}{Optionally, the name of a column with paragraph ids. This is only necessary if sentences are numbered per paragraph, and therefore not unique within documents. If given, sentences are re-indexed to be unique within documents.}
 }
 \value{
 a tokenIndex

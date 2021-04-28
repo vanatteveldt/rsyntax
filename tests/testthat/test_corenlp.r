@@ -79,8 +79,6 @@ test_that("extracting quotes works with coreNLP", {
   #John says Mary is great.
   quotes = get_quotes(tokens[tokens$sentence == 1,])
   testthat::expect_equal(nrow(quotes), 6)
-  tokens[tokens$sentence == 1,] %>%
-    plot_tree()
   
   .check(tokens, quotes, source="John", verb="says", quote=c("Mary",'is','great','.'))
   

@@ -28,7 +28,7 @@ plot_tree(
 )
 }
 \arguments{
-\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.}
+\item{tokens}{A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}. Can also be a corpustools tCorpus.}
 
 \item{...}{Optionally, select which columns to include as labels and how to present them. Can be quoted or unquoted names and expressions, using columns in the tokenIndex. For example, plot_tree(tokens, token, pos) will use the $token and $pos columns in tokens. You can also use expressions for easy controll of visulizations. For example: plot_tree(tokens, tolower(token), abbreviate(pos,1)). (note that abbreviate() is really usefull here)}
 

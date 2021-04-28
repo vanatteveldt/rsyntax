@@ -11,6 +11,7 @@ apply_queries(
   block = NULL,
   check = FALSE,
   fill = TRUE,
+  return_wide = FALSE,
   verbose = FALSE
 )
 }
@@ -27,6 +28,8 @@ Can also be a data.table returned by (a previous) apply_queries, in which case a
 \item{check}{If TRUE, return a warning if nodes occur in multiple patterns, which could indicate that the find_nodes query is not specific enough.}
 
 \item{fill}{If TRUE (default) the fill nodes are added. Otherwise these are ignored, even if the queries include fill()}
+
+\item{return_wide}{If TRUE, return nodes in wide format.}
 
 \item{verbose}{If TRUE, report progress (only useful if multiple queries are used)}
 }

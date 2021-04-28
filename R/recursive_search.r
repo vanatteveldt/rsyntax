@@ -150,29 +150,16 @@ select_tokens <- function(tokens, ids, q, block=NULL) {
 }
 
 select_token_family <- function(tokens, ids, q, block) {
-  #print(tokens)
   if (q$connected) {
     selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=TRUE, show_level = TRUE, lookup=q$lookup, g_id=q$g_id)
   } else {
-    ## here implement if (q$break)
-    ## where break is a lookup list, to be used in token_family.
-    ## this way the break lookup will be used to control the recursion, and the filter_tokens after token_family will be used to select which tokens pass the selection.
-    ## fill(NOT(relation='relcl'), connected=T) can then be written as fill(break(relation = 'conj'))
-    ## can't call it break though. perhaps BREAK?
-    ## best way to conceptualize this is as a special NOT() operator for cases where depth > 1.
-    ## like NOT it means, do not find this, but when depth>1 NOT means continue, and BREAK means BREAK
-    
-    ## should we keep 'connected'? Essentially becaomes BREAK(NOT()), but might be nice to have
-    ## we're actually saying whether when a match is not made, it should continue (connected=F) or break (connected=T).
-    ## should default be continue, and then rename connected to break?
-    
-    ## owh, hey: I can just plug q$break_depth into token_family here if it's NULL when not specified.
-    selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=TRUE, show_level = TRUE)
+    selection = token_family(tokens, ids=ids, level=q$level, depth=q$depth, block=block, replace=TRUE, show_level = TRUE, lookup=q$BREAK)
     if (!data.table::haskey(selection)) data.table::setkeyv(selection, c('doc_id','sentence','token_id'))
     selection = filter_tokens(selection, q$lookup, .G_ID = q$g_id)
   }
   selection
 }
+
 
 # Get the parents or children of a set of ids
 #

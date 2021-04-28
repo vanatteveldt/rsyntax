@@ -21,7 +21,7 @@ the tokenindex
 }
 \description{
 cuts of a branch at the nodes that match the lookup arguents (...).
-A "branch_parent" column is added to the tokenindex, that indicates for the new roots
+A "tree_parent" column is added to the tokenindex, that indicates for the new roots
 which node the parent was.
 }
 \examples{

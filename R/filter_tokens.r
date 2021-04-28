@@ -33,7 +33,7 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=TRUE) 
     .V = lookup[[lookup_i]]
     if (is.null(.V)) next
     
-    if (methods::is(.V, 'tokenLookup')) {
+    if (methods::is(.V, 'tokenLookup') | methods::is(.V, 'tokenLookupBreak')) {
       result = lookup_tokens(tokens, .V$lookup, boolean=.V$boolean)
       if (is.null(result)) next
     } else {

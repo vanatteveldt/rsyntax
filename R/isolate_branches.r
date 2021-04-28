@@ -1,7 +1,7 @@
 #' Isolate a branch in a dependency tree
 #'
 #' cuts of a branch at the nodes that match the lookup arguents (...).
-#' A "branch_parent" column is added to the tokenindex, that indicates for the new roots
+#' A "tree_parent" column is added to the tokenindex, that indicates for the new roots
 #' which node the parent was.  
 #'
 #' @param tokens   A tokenindex
@@ -37,7 +37,7 @@ isolate_branch <- function(tokens, ..., copy_parent=TRUE, copy_parent_fill=TRUE)
     tq = tquery(label='parent',
                 children(..., label='branch'))
     tokens = select_nodes(tokens, tq)
-    tokens = mutate_nodes(tokens, 'branch', parent = NA, relation = 'ROOT', branch_parent=parent$token_id)
+    tokens = mutate_nodes(tokens, 'branch', parent = NA, relation = 'ROOT', tree_parent=parent$token_id)
   } else {
     ## if we do copy the parent, we need to do it recursively from root to bottom 
     tokens[, .ISOLATED := FALSE]
@@ -59,7 +59,7 @@ rec_isolate <- function(tokens, tq) {
   if (nrow(selected_nodes(tokens)$nodes) == 0) return(tokens)
   tokens = copy_nodes(tokens, 'parent', 'parent_copy', only_new = F, copy_fill=TRUE)
   tokens = mutate_nodes(tokens, 'branch', parent = parent_copy$token_id)
-  tokens = mutate_nodes(tokens, 'parent_copy', parent = NA, relation = 'ROOT', branch_parent=parent$parent, .ISOLATED=TRUE)
+  tokens = mutate_nodes(tokens, 'parent_copy', parent = NA, relation = 'ROOT', tree_parent=parent$parent, .ISOLATED=TRUE)
   rec_isolate(tokens, tq)
 }
 
@@ -113,20 +113,20 @@ get_branch_id <- function(tokens) {
 }
 
 print_sentences <- function(tokens, sentence_i=1, token_col='token') {
-  doc_id = sentence = branch_parent_id = NULL
+  doc_id = sentence = tree_parent_id = NULL
   
   sentences = unique(tokens[,c('doc_id','sentence')])
   if (sentence_i > nrow(sentences)) stop('sentence_i is higher than number of sentences in tokens')
   sents = get_branch_id(tokens[sentences[1,], on=c('doc_id','sentence')])
   
-  bp = sents[!is.na(sents$branch_parent),c('doc_id','sentence','branch_parent','token_id')]
-  bp = merge(bp, sents[,c('doc_id','sentence','token_id','branch_id')], by.x=c('doc_id','sentence','branch_parent'), by.y=c('doc_id','sentence','token_id'), all.x=TRUE)
-  sents[bp, branch_parent_id := bp$branch_id, on=c('doc_id','sentence','token_id')]
+  bp = sents[!is.na(sents$tree_parent),c('doc_id','sentence','tree_parent','token_id')]
+  bp = merge(bp, sents[,c('doc_id','sentence','token_id','branch_id')], by.x=c('doc_id','sentence','tree_parent'), by.y=c('doc_id','sentence','token_id'), all.x=TRUE)
+  sents[bp, tree_parent_id := bp$branch_id, on=c('doc_id','sentence','token_id')]
   
   get_bp <- function(x) if (any(!is.na(x))) first(stats::na.omit(x)) else numeric()
-  sents = sents[,list(doc_id=unique(doc_id), sentence=unique(sentence), branch_parent=get_bp(branch_parent_id), text=paste(get(token_col), collapse=' ')), by='branch_id']
+  sents = sents[,list(doc_id=unique(doc_id), sentence=unique(sentence), tree_parent=get_bp(tree_parent_id), text=paste(get(token_col), collapse=' ')), by='branch_id']
   
-  for (i in which(is.na(sents$branch_parent))) {
+  for (i in which(is.na(sents$tree_parent))) {
     rec_print_sentences(sents, i)
     cat('\n')
   }
@@ -137,7 +137,7 @@ rec_print_sentences <- function(sents, ivec, level=1) {
   if (length(ivec) == 0) return(NULL)
   for (i in ivec) {
     cat(rep('  ', level), gsub('\n', '', sents$text[i]), '\n')
-    rec_print_sentences(sents, which(floor(sents$branch_parent) == floor(sents$branch_id[i])), level=level+1)
+    rec_print_sentences(sents, which(floor(sents$tree_parent) == floor(sents$branch_id[i])), level=level+1)
   }
 }
 

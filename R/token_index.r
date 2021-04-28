@@ -15,12 +15,13 @@
 #' @param token_id   candidate names for the  token id column. Has to be numeric (Some parsers return token_id's as numbers with a prefix (t_1, w_1))
 #' @param parent     candidate names for the parent id column. Has to be numeric
 #' @param relation   candidate names for the relation column
+#' @param paragraph  Optionally, the name of a column with paragraph ids. This is only necessary if sentences are numbered per paragraph, and therefore not unique within documents. If given, sentences are re-indexed to be unique within documents.
 #'
 #' @return   a tokenIndex
 #' @export
 #' @examples
 #' as_tokenindex(tokens_corenlp)
-as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel')) {
+as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('sentence', 'sentence_id'), token_id=c('token_id'), parent=c('parent','head_token_id'), relation=c('relation','dep_rel'), paragraph=NULL) {
   if (rsyntax_threads() != data.table::getDTthreads()) {
     old_threads = data.table::getDTthreads()
     on.exit(data.table::setDTthreads(old_threads))
@@ -71,6 +72,15 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
       tokens[, sentence := cumsum(sentence), by='doc_id']
     }
   }
+  
+  if (!is.null(paragraph)) {
+    .sentence = NULL; sentence = NULL
+    data.table::setorderv(tokens, c('doc_id',paragraph, 'sentence','token_id'))
+    sents = unique(tokens[,c('doc_id',paragraph,'sentence'), with=F], by = c('doc_id',paragraph, 'sentence'))
+    sents[, .sentence := 1:length(sentence), by=c('doc_id')]
+    tokens[sents, .sentence := .sentence, on=c('doc_id',paragraph,'sentence')]  
+  }
+  if (anyDuplicated(tokens[,c('doc_id','sentence','token_id')])) stop('tokenIndex has duplicate doc_id - sentence - token_id tripples. This can for instance happen if sentences are numbered within paragraphs (sentence 1 in par 1, sentence 1 in par 2, etc). If this is the cause, you might solve it with the "paragraph" argument.')
 
   if (new_index) {
     is_own_parent = tokens$parent == tokens$token_id
@@ -90,6 +100,7 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
     tokens = fix_missing_parents(tokens, warn)
     data.table::setattr(tokens, name = 'class', c('tokenIndex', class(tokens)))
   }
+  
   
   tokens[]
 }
