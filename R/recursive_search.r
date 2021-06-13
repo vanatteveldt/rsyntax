@@ -25,7 +25,6 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
       q$label = paste('.DROP', i) ## if label is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
     } 
     
-
     if (q$NOT)
       selection = rec_selection(tokens, ids, q, NULL, fill)
     else
@@ -38,10 +37,12 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
     }
     
     if (q$req) {
-    #if (!methods::is(q, 'tQueryFill')) {
       if (nrow(selection) == 0) return(selection)
       out_req[['']] = selection
-      if ('.DROP' %in% colnames(selection)) selection[,.DROP := NULL]
+      
+      dropcols = grep('.DROP.*', colnames(selection), value=TRUE)
+      if (length(dropcols) > 0) selection[, (dropcols) := NULL]
+      
       if (block_loop) 
         block = get_long_ids(block, selection)
       
@@ -72,6 +73,7 @@ rec_selection <- function(tokens, ids, q, block, fill) {
     nested = rec_find(tokens, ids=selection[,c('doc_id','sentence',q$label),with=FALSE], ql=q$nested, block=block, fill=fill) 
     ## The .MATCH_ID column in 'nested' is used to match nested results to the token_id of the current level (stored under the label column)
     is_req = any(sapply(q$nested, function(x) x$req))
+    
     if (nrow(nested) > 0) {
       if (is_req) {
         selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE) 

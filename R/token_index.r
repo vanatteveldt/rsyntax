@@ -74,6 +74,8 @@ as_tokenindex <- function(tokens, doc_id=c('doc_id','document_id'), sentence=c('
   }
   
   if (!is.null(paragraph)) {
+    browser()
+    
     .sentence = NULL; sentence = NULL
     data.table::setorderv(tokens, c('doc_id',paragraph, 'sentence','token_id'))
     sents = unique(tokens[,c('doc_id',paragraph,'sentence'), with=F], by = c('doc_id',paragraph, 'sentence'))
