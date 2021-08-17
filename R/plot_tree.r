@@ -22,6 +22,7 @@
 #' @param use_color   If true, use colors
 #' @param max_curve   A number for controlling the allowed amount of curve in the edges. 
 #' @param palette     A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation
+#' @param rel_on_edge If TRUE, print relation label on edge instead of above the node
 #' @param pdf_viewer  If TRUE, view the plot as a pdf. If no pdf_file is specified, the pdf will be saved to the temp folder
 #' @param viewer_mode By default, the plot is saved as a PNG embedded in a HTML and opened in the viewer. This hack makes it independent of the 
 #'                    size of the plotting device and enables scrolling. By setting viewer_mode to False, the current plotting device is used.
@@ -49,7 +50,7 @@
 #'    plot_tree(token, pos, annotation='clause')
 #' }
 #' }
-plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=FALSE, pdf_file=NULL, allign_text=TRUE, ignore_rel=NULL, all_lower=FALSE, all_abbrev=NULL, textsize=1, spacing=1, use_color=TRUE, max_curve=0.3, palette=grDevices::terrain.colors, pdf_viewer=FALSE, viewer_mode=TRUE, viewer_size=c(100,100)) {  
+plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, annotation=NULL, only_annotation=FALSE, pdf_file=NULL, allign_text=TRUE, ignore_rel=NULL, all_lower=FALSE, all_abbrev=NULL, textsize=1, spacing=1, use_color=TRUE, max_curve=0.3, palette=grDevices::terrain.colors, rel_on_edge=F, pdf_viewer=FALSE, viewer_mode=TRUE, viewer_size=c(100,100)) {  
   if (methods::is(tokens, 'tCorpus')) tokens = tokens$tokens
   if (pdf_viewer && is.null(pdf_file)) pdf_file = tempfile('plot_tree', fileext = '.pdf')
   if (!is.null(pdf_file)) if (!grepl('\\.pdf$', pdf_file)) stop('pdf_file needs to have extension ".pdf"')
@@ -91,6 +92,10 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   g = igraph::graph.data.frame(edges, vertices=nodes, directed = TRUE)
   igraph::V(g)$id = as.numeric(igraph::V(g)$name)
   
+  if (all_lower) igraph::E(g)$relation = tolower(igraph::E(g)$relation)
+  if (!is.null(all_abbrev)) igraph::E(g)$relation = abbreviate(igraph::E(g)$relation, all_abbrev)
+  
+  
   ## order nodes, split by roots
   comps = igraph::decompose(g)
   if (length(comps) > 1) {
@@ -111,10 +116,10 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   
   co = g$layout
   e = igraph::get.edges(g, igraph::E(g))
-  co[,1] = arrange_horizontal(g, text, tree_boundaries)
-  g = format_edges(g, max_curve, e)
+  #co[,1] = arrange_horizontal(g, text, tree_boundaries)
+  g = format_edges(g, max_curve, e, rel_on_edge)
   nlevels = max(co[,2]) - min(co[,2])  ## remember for png mode
-  co[,2] = arrange_vertical(co, text_cols)
+  #co[,2] = arrange_vertical(co, text_cols)
 
   
   ## make empty plot to get positions in current plot device
@@ -141,8 +146,8 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   g = set_graph_attr(g, e, cex, ignore_rel, palette, use_color) 
  
   graphics::plot(g, layout=co, rescale=FALSE, add=TRUE)
-  graphics::text(co[,1], co[,2]+(0.02*cex), labels=igraph::V(g)$rel_label, 
-       col = 'black', cex=cex*0.9, pos=3, font = 3)
+  if (!rel_on_edge) graphics::text(co[,1], co[,2]+(0.02*cex), labels=igraph::V(g)$rel_label, 
+                                     col = 'black', cex=cex*0.9, pos=3, font = 3)
 
   ## add text and lines
   
@@ -240,7 +245,7 @@ width_boundaries <- function(width, tree_boundaries) {
 
 centered_width <- function(width) (width / 2) + data.table::shift(width / 2, type = 'lead', fill=0)
 
-format_edges <- function(g, max_curve, e) {
+format_edges <- function(g, max_curve, e, label) {
   ## format edges
   vdist = (e[,2] - e[,1])
   maxcurve = 1 / (1 + exp(-max(abs(vdist))*0.05))
@@ -250,6 +255,14 @@ format_edges <- function(g, max_curve, e) {
   igraph::E(g)$curved = curve
   igraph::E(g)$width = 2
   igraph::E(g)$color = 'darkgrey'
+  if (label) {
+    igraph::E(g)$label = igraph::E(g)$relation
+    igraph::E(g)$label.dist = 0
+    igraph::E(g)$label.degree = 3*pi
+    igraph::E(g)$label.color = 'black'
+    igraph::E(g)$label.font = 3
+    
+  }
   g  
 }
 

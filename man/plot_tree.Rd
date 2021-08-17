@@ -22,6 +22,7 @@ plot_tree(
   use_color = TRUE,
   max_curve = 0.3,
   palette = grDevices::terrain.colors,
+  rel_on_edge = F,
   pdf_viewer = FALSE,
   viewer_mode = TRUE,
   viewer_size = c(100, 100)
@@ -61,6 +62,8 @@ plot_tree(
 \item{max_curve}{A number for controlling the allowed amount of curve in the edges.}
 
 \item{palette}{A function for creating a vector of n contiguous colors. See ?terrain.colors for standard functions and documentation}
+
+\item{rel_on_edge}{If TRUE, print relation label on edge instead of above the node}
 
 \item{pdf_viewer}{If TRUE, view the plot as a pdf. If no pdf_file is specified, the pdf will be saved to the temp folder}
 
