@@ -116,10 +116,10 @@ plot_tree <-function(tokens, ..., sentence_i=1, doc_id=NULL, sentence=NULL, anno
   
   co = g$layout
   e = igraph::get.edges(g, igraph::E(g))
-  #co[,1] = arrange_horizontal(g, text, tree_boundaries)
+  co[,1] = arrange_horizontal(g, text, tree_boundaries)
   g = format_edges(g, max_curve, e, rel_on_edge)
   nlevels = max(co[,2]) - min(co[,2])  ## remember for png mode
-  #co[,2] = arrange_vertical(co, text_cols)
+  co[,2] = arrange_vertical(co, text_cols)
 
   
   ## make empty plot to get positions in current plot device
