@@ -24,4 +24,6 @@ src/*.dll
 
 .query_test.r
 
+env/*
+
 

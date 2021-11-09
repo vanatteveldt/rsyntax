@@ -3,7 +3,6 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   tokens = as_tokenindex(tokens)  
   block = get_long_ids(block)
   
-  #nodes_list = list()
   nodes = filter_tokens(tokens, lookup=tquery$lookup, .G_ID=tquery$g_id, .BLOCK=block, use_index=use_index)
   if (nrow(nodes) == 0) return(NULL)
   nodes = subset(nodes, select = c('doc_id','sentence','token_id'))
@@ -15,6 +14,7 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
     data.table::setnames(nodes, old = 'token_id', new='.ID')
     if (!is.na(tquery$label)) nodes[,(tquery$label) := .ID]
   } 
+
   if (is.null(nodes)) return(NULL)  
   if (nrow(nodes) == 0) return(NULL)
 
@@ -36,8 +36,24 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
 
 find_nested <- function(tokens, nodes, tquery, block, fill, block_loop) {
   .ID = NULL; .MATCH_ID = NULL
+
   nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill, block_loop=block_loop)
   
+  #is_req = any(sapply(tquery$nested, function(x) x$req))
+  #if (!is_req) {
+  #  nodes = nested
+  #} else {
+  #  ## special case: if all nested nodes are !req, 
+  #}
+  #if (nrow(nested) > 0) {
+  #  if (is_req) {
+  #    nodes = merge(nodes, nested, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE) 
+  #  } else {
+  #    nodes = merge(nodes, nested, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE) 
+  #  }
+  #} else {
+  #  if (is_req) return(NULL)
+  #}
   
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
@@ -91,13 +107,7 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
 }
 
 create_unique_key <- function(nodes, name){
-  #if (ncol(nodes) > 3) {
-  #  key = paste0(name, '(', nodes$.ID, ':', do.call(paste, args = c(nodes[,-(1:3)], sep='.')), ')')
-  #} else {
-  #  key = paste0(name, '(', nodes$.ID, ')')
-  #}      
   id_col = setdiff(colnames(nodes), c('doc_id','sentence','.ID'))[1]
-  #key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', match(nodes$.ID, unique(nodes$.ID)))
   if (!is.na(name)) {
     key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', nodes[[id_col]])
   } else {

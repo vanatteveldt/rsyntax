@@ -25,10 +25,12 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
       q$label = paste('.DROP', i) ## if label is not used, the temporary .DROP name is used to hold the queries during search. .DROP columns are removed when no longer needed
     } 
     
-    if (q$NOT)
+    if (q$NOT) {
       selection = rec_selection(tokens, ids, q, NULL, fill)
-    else
+    } else {
       selection = rec_selection(tokens, ids, q, block, fill)
+    }
+   
   
     if (q$NOT) {
       if (nrow(selection) > 0) {
@@ -54,19 +56,21 @@ rec_find <- function(tokens, ids, ql, block=NULL, fill=TRUE, block_loop=T) {
   has_req = length(out_req) > 0  
   has_not_req = length(out_not_req) > 0  
   
+  
   if (has_req && !has_not_req) 
     out = merge_req(out_req)
   if (!has_req && has_not_req)
-    out = merge_not_req(out_not_req)
+    out = merge_not_req(ids, out_not_req)
   if (has_req && has_not_req)
-    out = merge_req_and_not_req(out_req, out_not_req)
+    out = merge_req_and_not_req(ids, out_req, out_not_req)
   if (!has_req && !has_not_req)
     out = data.table::data.table()
-  #print(out)
+  
   out
 }
 
 rec_selection <- function(tokens, ids, q, block, fill) {
+  
   selection = select_tokens(tokens, ids=ids, q=q, block=block)
   
   if (length(q$nested) > 0 & length(selection) > 0) {
@@ -78,7 +82,7 @@ rec_selection <- function(tokens, ids, q, block, fill) {
       if (is_req) {
         selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE) 
       } else {
-        selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE) 
+      selection = merge(selection, nested, by.x=c('doc_id','sentence',q$label), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE) 
       }
     } else {
       if (is_req) selection = data.table::data.table(.MATCH_ID = numeric(), doc_id=numeric(), sentence=numeric(), .DROP = numeric())
@@ -99,19 +103,20 @@ merge_req <- function(req) {
 }
 
 ## merge a list of results where results are not required: req[[1]] OR req[[2]] OR etc.
-merge_not_req <- function(not_req) {
+merge_not_req <- function(ids, not_req) {
   out = data.table::data.table()
   for (dt in not_req) {
     out = if (nrow(out) == 0) dt else merge(out, dt, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all=TRUE)
   }
-  out
+  merge(out, ids, by.x=c('doc_id','sentence','.MATCH_ID'), by.y=colnames(ids), allow.cartesian=TRUE, all.y=TRUE)
 }
 
 ## merge req and not_req results: (req[[1]] AND req[[2]] AND etc.) AND (not_req[[1]] OR not_req[[2]] OR etc).)
-merge_req_and_not_req <- function(req, not_req) {
+merge_req_and_not_req <- function(ids, req, not_req) {
+  
   out = merge_req(req)
   if (nrow(out) > 0) {
-    out_not_req = merge_not_req(not_req)
+    out_not_req = merge_not_req(ids, not_req)
     if (nrow(out_not_req) > 0) {
       out = merge(out, out_not_req, by=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE)
     }
