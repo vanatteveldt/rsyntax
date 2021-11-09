@@ -374,6 +374,8 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(I
 #' The custom_fill() function can be used to give more specific conditions for which children need to be labeled.
 #' 
 #' The function can be used almost identically to the children() function. The specification of the look-up conditions works in the same way.
+#' NOTE that custom_fill, just like the children() function, should be passed as an unnamed argument, and NOT to the 'fill' argument 
+#' (which is the boolean argument for whether fill should be used)
 #' 
 #' For the custom_fill function, the special BREAK() look-up function is particularly powerful.
 #' custom_fill will recursively search for children, children of children, etc.
@@ -410,6 +412,8 @@ not_parents <- function(..., g_id=NULL, depth=1, connected=FALSE, max_window=c(I
 #' ## custom fill rule that ignores relative clauses
 #' no_relcl_fill = custom_fill(BREAK(relation='relcl'))
 #' 
+#' ## add custom fill as argument in children(). NOTE that it should be
+#' ## passed as an unnamed argument (and not to the fill boolean argument)
 #' tq = tquery(label = 'verb', pos='VERB', fill=FALSE,
 #'          children(label = 'subject', relation = 'nsubj', no_relcl_fill),
 #'          children(label = 'object', relation = 'dobj', no_relcl_fill))
