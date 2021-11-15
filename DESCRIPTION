@@ -1,7 +1,7 @@
 Package: rsyntax
 Type: Package
 Title: Extract Semantic Relations from Text by Querying and Reshaping Syntax
-Version: 0.1.2
+Version: 0.1.3
 Date: 2021-06-13
 Author: Kasper Welbers and Wouter van Atteveldt
 Maintainer: Kasper Welbers <kasperwelbers@gmail.com>
@@ -19,6 +19,8 @@ Imports:
     base64enc,
     png,
     data.table (>= 1.11.8)
+Enhances:
+    spacyr
 LazyData: true
 Encoding: UTF-8
 Description: Various functions for querying and reshaping dependency trees, 
