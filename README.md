@@ -39,7 +39,7 @@ tokens = udpipe('Mary Jane loves John Smith, and Mary is loved by John', 'englis
 ```
 
 rsyntax requires the tokens to be in a certain format. The
-as\_tokenindex() function converts a data.frame to this format. For
+as_tokenindex() function converts a data.frame to this format. For
 popular parsers in R (spacyr and udpipe) the correct column name
 specifications are known, so the following is sufficient.
 
@@ -52,30 +52,16 @@ tokens = as_tokenindex(tokens)
 
 To query a dependency tree, it is important to have a good understanding
 of what these trees look like, and how this tree data is represented in
-a data.frame format. To facilitate this understanding, the plot\_tree
+a data.frame format. To facilitate this understanding, the plot_tree
 function visualizes the dependency tree, together with a given selection
 of columns from the data (see working paper for why this is possible for
-most types of dependency
-trees).
+most types of dependency trees).
 
 ``` r
 plot_tree(tokens, token, lemma, upos)
 ```
 
-<object data="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf" type="application/pdf" width="700px" height="700px">
-
-<embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-1.pdf">
-
-<p>
-
-If browser does not show PDF, you can view it
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-1.pdf">here</a>.
-
-</p>
-
-</embed>
-
-</object>
+<img src="man/figures/README-fig1-1.png" width="100%" />
 
 Note that this function only prints one sentence a time, so if the
 sentence is not specified it uses the first sentence in the data.
@@ -144,13 +130,13 @@ tokens[,c('doc_id','sentence','token','clause','clause_fill')]
 #>  3:   doc1        1 loves    verb           0
 #>  4:   doc1        1  John  object           0
 #>  5:   doc1        1 Smith  object           1
-#>  6:   doc1        1     ,  object           2
-#>  7:   doc1        1   and  object           2
-#>  8:   doc1        1  Mary  object           2
-#>  9:   doc1        1    is  object           2
-#> 10:   doc1        1 loved  object           1
-#> 11:   doc1        1    by  object           3
-#> 12:   doc1        1  John  object           2
+#>  6:   doc1        1     ,    verb           2
+#>  7:   doc1        1   and    verb           2
+#>  8:   doc1        1  Mary    verb           2
+#>  9:   doc1        1    is    verb           2
+#> 10:   doc1        1 loved    verb           1
+#> 11:   doc1        1    by    verb           3
+#> 12:   doc1        1  John    verb           2
 ```
 
 In the output we see that “Mary Jane” is labeled as subject, “loves” is
@@ -158,7 +144,7 @@ labeled as verb, but also that ALL the rest is labeled as object,
 including “, and Mary is loved by John”. The reason for this is that by
 default, rsyntax will label all children of a matched token with the
 same label. We call this behavior the “fill” heuristic. In the
-clause\_fill column you also see at what level a token was matched. The
+clause_fill column you also see at what level a token was matched. The
 value 0 means the match itself, 1 means a direct child, etc. The default
 setting to fill all children is weird in this example, but in the next
 section we show how this behavior can be customized.
@@ -200,8 +186,7 @@ To use the `fill()` function in a tquery, we simply pass it to one (or
 multiple) of the labeled nodes, similar to how you would pass the
 `children` function. Here we use the `fill_mwe` as specified above for
 both the subject and object nodes. Also, we set `fill = F` for the
-‘verb’ node, as an example of how to disable fill for a specific
-node.
+‘verb’ node, as an example of how to disable fill for a specific node.
 
 ``` r
 direct = tquery(label = 'verb', upos = 'VERB', fill=F,
@@ -218,8 +203,8 @@ that you want to use multiple times, the above approach is a good
 strategy to reduce redundancy in your code.
 
 In case you didn’t believe us, this actually works. Here we run the
-annotate\_tqueries function again. Very importantly, note that we add
-the `overwrite = TRUE` argument, which means that we’ll overwrite the
+annotate_tqueries function again. Very importantly, note that we add the
+`overwrite = TRUE` argument, which means that we’ll overwrite the
 previous “clause” column. (By default, annotate would not overwrite
 previous results, which enables another way of chaining queries that we
 won’t discuss here.)
@@ -291,31 +276,17 @@ tokens[,c('doc_id','sentence','token','clause', 'clause_id')]
 #> 12:   doc1        1  John subject pas#doc1.1.10
 ```
 
-This time, the sentence has two annotations. In the clause\_id column
-you can also see that the first one was found with the direct (dir)
-tquery, and the second one with the passive (pas) tquery.
+This time, the sentence has two annotations. In the clause_id column you
+can also see that the first one was found with the direct (dir) tquery,
+and the second one with the passive (pas) tquery.
 
-This can also be visualized with the `plot_tree`
-function.
+This can also be visualized with the `plot_tree` function.
 
 ``` r
 plot_tree(tokens, token, lemma, upos, annotation='clause')
 ```
 
-<object data="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-2.pdf" type="application/pdf" width="700px" height="700px">
-
-<embed src="https://github.com/vanatteveldt/rsyntax/raw/master/man/figures/README-tree-2.pdf">
-
-<p>
-
-(If browser does not show PDF, you can view it
-<a href="https://github.com/vanatteveldt/rsyntax/blob/master/man/figures/README-tree-2.pdf">here</a>.)
-
-</p>
-
-</embed>
-
-</object>
+<img src="man/figures/README-unnamed-chunk-17-1.png" width="100%" />
 
 ### Using chaining in a smart way
 
@@ -329,8 +300,8 @@ When multiple tqueries are passed to `annotate_tqueries`, each token can
 only be matched once. In case multiple queries match the same token, the
 following rules are applied to determine which query wins.
 
-  - Queries earlier in the chain have priority.
-  - Direct matches have priority over fill. So, even if a query earlier
+-   Queries earlier in the chain have priority.
+-   Direct matches have priority over fill. So, even if a query earlier
     in the chain matched certain tokens, the next queries can still use
     the fill tokens.
 
