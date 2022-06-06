@@ -49,7 +49,6 @@ test_that("find_nodes works", {
                                       parents(label='grandparent', fill=FALSE)),
                               children(label='child', relation='obj1', fill=FALSE,
                                        children(label='grandchild', relation='mod', fill=FALSE))))
-  
   expect_equal(nrow(family), 4)
   expect_equal(family$token_id, c(53,45,51,50))
   

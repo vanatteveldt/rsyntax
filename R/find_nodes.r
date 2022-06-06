@@ -23,11 +23,10 @@ find_nodes <- function(tokens, tquery, block=NULL, use_index=TRUE, name=NA, fill
   nodes = get_unique_patterns(nodes)
   if (!root_dist) nodes$.ROOT_DIST = NULL
   
-  #print(nodes)
   if (fill) nodes = add_fill(tokens, nodes, tquery, block=nodes)
-  #print(nodes)
+
   
-  nodes = create_unique_key(nodes, name)
+  nodes = create_unique_key(nodes, name, tquery)
   if (melt) {
     nodes = melt_nodes_list(nodes)
   }
@@ -38,22 +37,6 @@ find_nested <- function(tokens, nodes, tquery, block, fill, block_loop) {
   .ID = NULL; .MATCH_ID = NULL
 
   nodes = rec_find(tokens, ids=nodes, ql=tquery$nested, block=block, fill=fill, block_loop=block_loop)
-  
-  #is_req = any(sapply(tquery$nested, function(x) x$req))
-  #if (!is_req) {
-  #  nodes = nested
-  #} else {
-  #  ## special case: if all nested nodes are !req, 
-  #}
-  #if (nrow(nested) > 0) {
-  #  if (is_req) {
-  #    nodes = merge(nodes, nested, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE) 
-  #  } else {
-  #    nodes = merge(nodes, nested, by.x=c('doc_id','sentence','token_id'), by.y=c('doc_id','sentence','.MATCH_ID'), allow.cartesian=TRUE, all.x=TRUE) 
-  #  }
-  #} else {
-  #  if (is_req) return(NULL)
-  #}
   
   if (nrow(nodes) == 0) return(NULL)
   nodes[, .ID := .MATCH_ID]
@@ -80,7 +63,6 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
     }
   } 
   
-
   if (any(is_fill)) {
     if (is.na(tquery$label)) {
       if (level == 1) match_id = '.ID' else return(nodes)
@@ -106,14 +88,25 @@ add_fill <- function(tokens, nodes, tquery, block, level=1) {
   unique(nodes)
 }
 
-create_unique_key <- function(nodes, name){
-  id_col = setdiff(colnames(nodes), c('doc_id','sentence','.ID'))[1]
+get_top_label <- function(tquery) {
+  ## get the first label in a tquery.
+  if (!is.na(tquery$label)) return(tquery$label)
+  if (!is.null(tquery$nested)) {
+    for (nested in tquery$nested) {
+      label = get_top_label(nested)
+      if (!is.na(label)) return(label)
+    }
+  }
+  return(NA)
+}
+
+create_unique_key <- function(nodes, name, tquery){
+  id_col = get_top_label(tquery)
   if (!is.na(name)) {
     key = paste0(name, '#', nodes$doc_id, '.', nodes$sentence, '.', nodes[[id_col]])
   } else {
     key = paste0(nodes$doc_id, '.', nodes$sentence, '.', nodes[[id_col]])
   }
-
 
   nodes$.ID = paste0(nodes$doc_id, '...', nodes$sentence, '...', nodes$.ID) ## quick fix for matching on 3 columns
   key = key[match(nodes$.ID, nodes$.ID)] ## give same id to nodes with same .ID
@@ -124,7 +117,6 @@ create_unique_key <- function(nodes, name){
 
 get_root_dist <- function(tokens, nodes) {
   .ROOT_DIST = NULL
-  
   tf = token_family(tokens, unique(data.table(doc_id=nodes$doc_id, sentence=nodes$sentence, token_id=nodes$.ID)), 
                     depth=Inf, level='parents', minimal=TRUE, show_level=TRUE, replace=TRUE)
   tf = data.table::setorderv(tf, cols = '.FILL_LEVEL', order = -1)
