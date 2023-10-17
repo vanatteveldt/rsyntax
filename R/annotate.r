@@ -5,8 +5,8 @@
 #' The first column contains the ids for each hit. The second column contains the annotation label. The third column contains the fill level (which you probably won't use, but is important for some functionalities).
 #' Only nodes that are given a name in the tquery (using the 'label' parameter) will be added as annotation.
 #' 
-#' Note that while queries only find 1 node for each labeld component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
-#' all children of these nodes can be annotated by settting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
+#' Note that while queries only find 1 node for each labeled component of a pattern (e.g., quote queries have 1 node for "source" and 1 node for "quote"), 
+#' all children of these nodes can be annotated by setting fill to TRUE. If a child has multiple ancestors, only the most direct ancestors are used (see documentation for the fill argument).
 #' 
 #' @param tokens      A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param column      The name of the column in which the annotations are added. The unique ids are added as column_id
@@ -86,7 +86,7 @@ annotate_tqueries <- function(tokens, column, ..., block=NULL, fill=TRUE, overwr
 #' Note that you can also directly use \link{annotate}.
 #' 
 #' @param tokens  A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
-#' @param nodes   An rsyntaxNodes A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
+#' @param nodes   An rsyntaxNodes data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
 #' @param column  The name of the column in which the annotations are added. The unique ids are added as [column]_id, and the fill values are added as [column]_fill.
 #'
 #' @export
@@ -147,7 +147,7 @@ annotate_nodes <- function(tokens, nodes, column) {
 #'
 #' @param tokens     A tokenIndex data.table, or any data.frame coercible with \link{as_tokenindex}.
 #' @param nodes      A data.table, as created with \link{apply_queries}. Can be a list of multiple data.tables.
-#' @param use        Optionally, specify which columns from nodes to add. Other than convenient, this is slighly different 
+#' @param use        Optionally, specify which columns from nodes to add. Other than convenient, this is slightly different 
 #'                   from subsetting the columns in 'nodes' beforehand if fill is TRUE. When the children are collected,
 #'                   the ids from the not-used columns are still blocked (see 'block')
 #' @param token_cols A character vector, specifying which columns from tokens to include in the output
