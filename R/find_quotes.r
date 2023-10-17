@@ -1,13 +1,13 @@
 #' Add span quotes to a source-quote annotations
 #'
 #' @description
-#' Quotes can span across sentences, which makes it impossible to find them based on dependency tree quories. 
+#' Quotes can span across sentences, which makes it impossible to find them based on dependency tree queries. 
 #' This function can be used as post-processing, AFTER using tqueries to find 'source' and 'quote' nodes, to add some of these quotes. 
 #' 
 #' The quotes themselves are often easy to detect due to the use of quotation marks. There are two common ways of indicating the sources.
 #' 
 #' Firstly, the source might be used before the start of the quote (Steve said: "hey a quote!". "I like quotes!").
-#' Secondly, the source might be implied in the sentence where the quotes starts, or the sentence before that (Steve was mad. "What a stupid way of quoting me!"). 
+#' Secondly, the source might be implied in the sentence where the quote starts, or the sentence before that (Steve was mad. "What a stupid way of quoting me!"). 
 #'
 #' In the first case, the source can be found with a tquery. If there is a source (source_val) in the quote_col that is linked to a part of the quote (quote_val), this function will add the rest of the quote. 
 #' 
@@ -20,13 +20,13 @@
 #' @param quote_val     The value in quote_col that indicates the quote
 #' @param tqueries      A list of tqueries, that will be performed to find source candidates. The order of the queries determines which source candidates are preferred. It would make sense to use the same value as in source_val in the 'label' argument for the tquery.
 #' @param par_col       If available in the parser output, the column with the paragraph id. We can assume that quotes do not span across paragraphs. By using this argument, quotes that are not properly closed (uneven number of quotes) will stop at the end of the paragraph 
-#' @param space_col     If par_col is not used, paragraphs will be identified based on hard enters in the text_col. In some parsers, there is an additional "space" column that hold the whitespace and linebreaks, which can be included here. 
+#' @param space_col     If par_col is not used, paragraphs will be identified based on hard enters in the text_col. In some parsers, there is an additional "space" column that hold the whitespace and line breaks, which can be included here. 
 #' @param lag_sentences The max number of sentences looked backwards to find source candidates. Default is 1, which means the source candidates have to occur in the sentence where the quote begins (lag = 0) or the sentence before that (lag = 1) 
 #' @param add_quote_symbols   Optionally, add additional punctuation symbols for finding quotation marks. 
-#'                      In some contexts and languages it makes sense to add single quotes, but in that case it is oftne necessary to 
-#'                      also use the quote_subset argument. For instance, in Spacy (and probably other UD based annotations), single quotes in posessives (e.g., Bob's, scholars') have a
+#'                      In some contexts and languages it makes sense to add single quotes, but in that case it is often necessary to 
+#'                      also use the quote_subset argument. For instance, in Spacy (and probably other UD based annotations), single quotes in possessives (e.g., Bob's, scholars') have a
 #'                      PART POS tag, whereas quotation symbols have PUNCT, NOUN, VERB, or ADJ (for some reason).   
-#' @param quote_subset  Optionally, an expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/cant be quotation marks. For example,
+#' @param quote_subset  Optionally, an expression to be evaluated on the columns of 'tokens' for selecting/deselecting tokens that can/can't be quotation marks. For example,
 #'                      pos != "PART" can be used for the example mentioned in add_quote_symbols. 
 #' @param copy          If TRUE, deep copy the data.table (use if output tokens do not overwrite input tokens)
 #'
@@ -65,7 +65,7 @@
 #' tokens = annotate_tqueries(tokens, 'quote', dir=direct, nos=nosrc, acc=according)
 #' tokens
 #'
-#' ## now we add the span quotes. If a span quote is found, the algorithm will first
+#' ## Now we add the span quotes. If a span quote is found, the algorithm will first
 #' ## look for already annotated sources as source candidates. If there are none,
 #' ## additional tqueries can be used to find candidates. Here we simply look for
 #' ## the most recent PERSON entity
@@ -80,7 +80,7 @@
 #'                          tqueries=last_person)
 #' tokens
 #' 
-#' ## view as full text
+#' ## View as full text
 #' syntax_reader(tokens, annotation = 'quote', value = 'source')
 #' }
 add_span_quotes <- function(tokens, text_col, quote_col='quotes', source_val='source', quote_val='quote', tqueries=NULL, par_col=NULL, space_col=NULL, lag_sentences=1, add_quote_symbols=NULL, quote_subset=NULL, copy=TRUE) {

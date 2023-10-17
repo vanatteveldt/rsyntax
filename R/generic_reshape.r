@@ -6,7 +6,7 @@
 #' @param fill_only_first   Logical, should a node only be filled once, with the nearest (first) labeled node?
 #' @param .one_per_sentence If true, only one match per sentence is used, giving priority to paterns closest to the root (or fartest from the root if .order = -1). 
 #'                          This is sometimes necessary to deal with recursion.
-#' @param .order            If .one_per_sentence is used, .order determines whether the paterns closest to (1) or farthest away (-1) are used.
+#' @param .order            If .one_per_sentence is used, .order determines whether the patterns closest to (1) or farthest away (-1) are used.
 #'                        
 #' @return A tokenIndex with a .nodes attribute, that enables the use of reshape operations on the selected nodes
 #' @export
@@ -131,8 +131,10 @@ unselect_nodes <- function(.tokens) {
   .tokens
 }
 
+#' Extract nodes selected with select_nodes()
+#'
 #' If select_nodes() is used, the selected nodes can be extracted with selected_nodes().
-#' This is mainly for internal use, but it can also be usefull for debugging, and to controll
+#' This is mainly for internal use, but it can also be useful for debugging, and to control
 #' loops of reshape operation (e.g. break if no selected nodes left)
 #'
 #' @param .tokens A tokenIndex in which nodes are selected with \link{select_nodes}.  
@@ -681,7 +683,7 @@ increment_sub_id <- function(x) {
   dec = ifelse(dec > 0, stringi::stri_extract_first_regex(x, '[0-9]+$'), '0')
   dec = as.numeric(stringi::stri_reverse(dec)) + 1
   sub_id = as.numeric(stringi::stri_reverse(sprintf('%.1f', dec)))
-  round(int_x + sub_id, 6) ## round is necessary, because sub_id is sliiiiiigly more than what you see, which messes up the stri_count_regex for number of digits 
+  round(int_x + sub_id, 6) ## round is necessary, because sub_id is sliiiiiightly more than what you see, which messes up the stri_count_regex for number of digits 
 }
 
 add_sub_id <- function(.tokens, ids) {
