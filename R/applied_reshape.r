@@ -2,7 +2,7 @@
 
 #' Split conjunctions for dependency trees in Universal Dependencies 
 #'
-#' @param tokens     a tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)
+#' @param tokens     A tokenIndex based on texts parsed with \code{\link[spacyr]{spacy_parse}} (with dependency=TRUE)
 #' @param conj_rel   The dependency relation for conjunctions. By default conj 
 #' @param cc_rel     The dependency relation for the coordinating conjunction. By default cc. This will be removed.
 #' @param unpack      If TRUE (default), create separate branches for the parent and the node that inherits the parent position
@@ -11,10 +11,10 @@
 #' @param max_dist    Optionally, a maximum distance between the conj node and its parent
 #' @param right_fill_dist Should fill to the right of the conjunction be used?
 #' @param compound_rel The relation types indicating compounds
-#' @param ...        specify conditions for the conjunction token. For instance, using 'pos = "VERB"' to only split VERB conjunctions.
+#' @param ...        Specify conditions for the conjunction token. For instance, using 'pos = "VERB"' to only split VERB conjunctions.
 #'                   This is especially usefull to use different no_fill conditions.
 #'
-#' @return A tokenindex
+#' @return A tokenIndex
 #' @export
 #'
 #' @examples
@@ -39,7 +39,7 @@ split_UD_conj <- function(tokens, conj_rel='conj', cc_rel=c('cc','cc:preconj'), 
 
 #' Have a node adopt its parent's position
 #' 
-#' given a tquery that identfies a node labeled "origin", that has a parent labeled "target", 
+#' Given a tquery that identifies a node labeled "origin", that has a parent labeled "target", 
 #' recursively have child adopt the parent's position (parent and relation column)
 #' and adopt parents fill nodes. only_new restricts adding fill nodes to relations that child
 #' does not already have. This seems to be a good heuristic for dealing with argument drop
@@ -50,7 +50,7 @@ split_UD_conj <- function(tokens, conj_rel='conj', cc_rel=c('cc','cc:preconj'), 
 #' @param isolate     If unpack is TRUE and isolate is TRUE (default is FALSE), isolate the new branch by recursively unpacking 
 #' @param take_fill   If TRUE (default), give the node that will inherit the parent position a copy of the parent children (but only if it does not already have children with this relation; see only_new)
 #' @param give_fill   If TRUE (default), copy the children of the node that will inherit the parent position to the parent (but only if it does not already have children with this relation; see only_new)
-#' @param only_new    A characetr vector giving one or multiple column names that need to be unique for take_fill and give_fill
+#' @param only_new    A character vector giving one or multiple column names that need to be unique for take_fill and give_fill
 #' @param max_iter    The climb tree function repeatedly resolves the first conjunction it encounters in a sentence. This can lead to many iterations
 #'                    for sentences with many (nested) conjunctions. It could be the case that in unforseen cases or with certain parsers
 #'                    an infinite loop is reached, which is why we use a max_iter argument that breaks the loop and sends a warning if the max is reached.
@@ -114,7 +114,7 @@ climb_tree <- function(.tokens, tq, unpack=TRUE, isolate=TRUE, take_fill=TRUE, g
       .tokens = select_nodes(.tokens, tq2, fill_only_first = FALSE) 
       ## copy the parent 
       .tokens = copy_nodes(.tokens, 'parent', 'new_parent', copy_fill = FALSE)
-      ## point the duplicate children towards new  copy
+      ## point the duplicate children towards new copy
       .tokens = mutate_nodes(.tokens, 'child', parent=new_parent$token_id)
       ## and add the parent fill for which relation is not already in copy
       .tokens = copy_fill(.tokens, 'parent', 'new_parent', only_new = 'relation')
@@ -200,9 +200,9 @@ one_per_sentence <- function(.tokens) {
 }
 
 
-#' Chop of a branch of the tree
+#' Chop off a branch of the tree
 #'
-#' Using the query language for tquery, chop of the branch down from the node that is found
+#' Using the query language for tquery, chop off the branch down from the node that is found
 #'
 #' @param .tokens A tokenIndex
 #' @param ... Arguments passed to tquery. For instance, relation = 'punct' cuts off all punctuation dependencies (in universal dependencies)
