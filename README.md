@@ -140,7 +140,7 @@ tokens[,c('doc_id','sentence','token','clause','clause_fill')]
 ```
 
 In the output we see that “Mary Jane” is labeled as subject, “loves” is
-labeled as verb, but also that ALL the rest is labeled as object,
+labeled as verb, but also that ALL the rest is labeled as verb,
 including “, and Mary is loved by John”. The reason for this is that by
 default, rsyntax will label all children of a matched token with the
 same label. We call this behavior the “fill” heuristic. In the
@@ -157,8 +157,8 @@ would be to control what specific nodes to fill by nesting the `fill()`
 function. For example, we can say that for the subject and object we
 only want to ‘fill’ the tokens that form a multiword expression (MWE).
 In Universal Dependencies this is indicated with the ‘flat’, ‘fixed’ and
-‘compound’ relations (see the (Universal Dependencies Relations
-table)\[<https://universaldependencies.org/u/dep/>\]). Here we use the
+‘compound’ relations (see the [Universal Dependencies Relations
+table](https://universaldependencies.org/u/dep/). Here we use the
 fill function to specify that we only want to fill tokens where the
 relation has one of these values. Note that specifying lookup values in
 `fill()` works in the same way as in the `children()` function.
