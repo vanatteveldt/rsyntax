@@ -9,8 +9,6 @@ test_that("find_nodes works", {
                     tquery(label='id',lemma='dat', fill=FALSE))
   
   
-  
-  
   expect_equal(nrow(dat), 1)
   expect_equal(dat$token_id, 45)
   
@@ -68,8 +66,11 @@ test_that("find_nodes works", {
   expect_equal(unique(nodes1$.ID), unique(nodes3$.ID))
   expect_true(length(unique(nodes$.ID))< length(unique(nodes1$.ID)))
   
-  find_nodes(test_req, 
-              tquery(POS = 'VB*', label='verb',
-                     children(relation = 'nsubj', label='subject'),
-                     children(relation = 'dobj', label='object', req=FALSE)))
+  
+  # test using regex (__R) and perl regex (__P)
+  wildcards = find_nodes(test_req, tquery(POS = 'VB*', label='verb'))
+  regex = find_nodes(test_req, tquery(POS__R = 'VB.*', label='verb'))
+  perl = find_nodes(test_req, tquery(POS__P = 'VB.*', label='verb'))
+  expect_equal(wildcards, regex)
+  expect_equal(regex, perl)
 })

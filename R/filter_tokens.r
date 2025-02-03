@@ -25,7 +25,6 @@ filter_tokens <- function(tokens, lookup=list(), .G_ID=NULL, .G_PARENT=NULL, .BL
   tokens
 }
 
-
 lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=TRUE) {
   i = NULL
   for (lookup_i in seq_along(lookup)) {
@@ -42,9 +41,10 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=TRUE) 
       if (use_index) if (!.N %in% data.table::indices(tokens)) data.table::setindexv(tokens, .COLNAME)
 
       .V = prepare_terms(.V, tokens[[.COLNAME]], 
-                         ignore_case = grepl('__N?R?F?I', .N), 
-                         regex = grepl('__N?I?F?R', .N),
-                         fixed = grepl('__N?R?I?F', .N))
+                         ignore_case = grepl('__N?R?F?P?I', .N), 
+                         regex = grepl('__N?I?F?P?R', .N),
+                         fixed = grepl('__N?R?I?P?F', .N),
+                         perl = grepl('__N?I?F?P?P', .N))
       result = tokens[list(.V), on=(.COLNAME), which=TRUE, nomatch=0, allow.cartesian=TRUE]
     }
     if (is.null(i)) {
@@ -59,18 +59,19 @@ lookup_tokens <- function(tokens, lookup=list(), boolean='AND', use_index=TRUE) 
   i
 }
 
-get_full_terms <- function(x, terms, batchsize=25, ignore_case=TRUE) {
+get_full_terms <- function(x, terms, batchsize=25, ignore_case=TRUE, perl=F) {
   terms = if (methods::is(terms, 'factor')) levels(terms) else unique(terms)
   if (length(x) > 1) { ## if there are multiple terms, make batches of terms and turn each batch into a single regex
     x = split(as.character(x), ceiling(seq_along(x)/batchsize))
     x = sapply(x, stringi::stri_paste, collapse='|')
     out = rep(FALSE, length(x))
     for(xbatch in x){
-      out = out | grepl(xbatch, terms, ignore.case=ignore_case)
+      out = out | grepl(xbatch, terms, ignore.case=ignore_case, perl = perl)
     }
   } else {
-    out = grepl(as.character(x), terms, ignore.case=ignore_case)
+    out = grepl(as.character(x), terms, ignore.case=ignore_case, perl = perl)
   }
+   
   terms[out]
 }
 
@@ -80,13 +81,19 @@ search_term_regex <- function(patterns) {
   paste0('\\b',patterns,'\\b')                              # set word boundaries
 }
 
-prepare_terms <- function(x, terms, ignore_case=TRUE, regex=FALSE, fixed=FALSE) {
+prepare_terms <- function(x, terms, ignore_case=TRUE, regex=FALSE, fixed=FALSE, perl_regex=FALSE) {
   if (ignore_case && fixed) warning('ignore_case (__I) is not used, because fixed (__F) is also used')
+  if (perl_regex) {
+    perl = TRUE
+    regex = TRUE
+  } else {
+    perl = FALSE
+  }
   if (regex && fixed) warning('regex (__R) is not used, because fixed (__F) is also used')
   if (fixed) return(x)
   
   if (regex) {
-    return(get_full_terms(x, terms, ignore_case = ignore_case)) 
+    return(get_full_terms(x, terms, ignore_case = ignore_case, perl=perl)) 
   } else {
     if (ignore_case) {
       x = search_term_regex(x)
